@@ -1,0 +1,7 @@
+__pycache__/
+checkpoints/
+logs/
+.ipynb_checkpoints/
+models/*/
+*.out
+*.egg-info/

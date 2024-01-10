@@ -1,0 +1,12 @@
+channels:
+    - conda-forge
+name:
+    synaptic-reconstruction
+dependencies:
+    - python-elf
+    - napari
+    - pip
+    - pyqt
+    - magicgui
+    - pip:
+        - napari-skimage-regionprops
