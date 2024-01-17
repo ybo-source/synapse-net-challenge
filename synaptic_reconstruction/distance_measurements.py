@@ -3,10 +3,11 @@ import multiprocessing as mp
 import numpy as np
 
 from concurrent import futures
-from scipy.ndimage import distance_transform_edt
+from scipy.ndimage import distance_transform_edt, binary_dilation
 from sklearn.metrics import pairwise_distances
 
 from skimage.measure import regionprops
+from skimage.draw import line_nd
 from tqdm import tqdm
 
 
@@ -112,14 +113,18 @@ def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors, ignore_l
 
 
 def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=None, scale=None):
-    assert (pairs is not None) or (n_neighbors is not None)
 
     auto_dists = np.load(measurement_path)
     distances, seg_ids = auto_dists["distances"], list(auto_dists["seg_ids"])
     start_points, end_points = auto_dists["endpoints1"], auto_dists["endpoints2"]
 
-    if n_neighbors is not None:
+    if pairs is None and n_neighbors is not None:
         pairs = extract_nearest_neighbors(distances, seg_ids, n_neighbors)
+    elif pairs is None:
+        pairs = [
+            [id1, id2] for id1 in seg_ids for id2 in seg_ids if id1 < id2
+        ]
+
     assert pairs is not None
     pair_indices = (
         np.array([seg_ids.index(pair[0]) for pair in pairs]),
@@ -159,5 +164,44 @@ def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=Non
         "id_b": pairs[:, 1],
         "distance": distances,
     }
-
     return lines, properties
+
+
+def keep_direct_distances(segmentation, measurement_path, line_dilation=0, scale=None):
+    """Filter out all distances that are not direct.
+    I.e. distances that cross another segmented object.
+    """
+    distance_lines, properties = create_distance_lines(measurement_path, scale=scale)
+
+    ids_a, ids_b = properties["id_a"], properties["id_b"]
+    filtered_ids_a, filtered_ids_b = [], []
+
+    for i, line in tqdm(enumerate(distance_lines), total=len(distance_lines)):
+        id_a, id_b = ids_a[i], ids_b[i]
+
+        start, stop = line
+        line = line_nd(start, stop, endpoint=True)
+
+        if line_dilation > 0:
+            # TODO make this more efficient, ideally by dilating the mask coordinates
+            # instead of dilating the actual mask.
+            # We turn the line into a binary mask and dilate it to have some tolerance.
+            line_vol = np.zeros_like(segmentation)
+            line_vol[line] = 1
+            line_vol = binary_dilation(line_vol, iterations=line_dilation)
+        else:
+            line_vol = line
+
+        # Check if we cross any other segments:
+        # Extract the unique ids in the segmentation that overlap with the segmentation.
+        # We count this as a direct distance if no other object overlaps with the line.
+        line_seg_ids = np.unique(segmentation[line_vol])
+        line_seg_ids = np.setdiff1d(line_seg_ids, [0, id_a, id_b])
+
+        if len(line_seg_ids) == 0:  # No other objet is overlapping, we keep the line.
+            filtered_ids_a.append(id_a)
+            filtered_ids_b.append(id_b)
+
+    print("Keeping", len(filtered_ids_a), "/", len(ids_a), "distance pairs")
+    filtered_pairs = [[ida, idb] for ida, idb in zip(filtered_ids_a, filtered_ids_b)]
+    return filtered_pairs
