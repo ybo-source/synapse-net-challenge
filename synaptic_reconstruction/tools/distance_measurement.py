@@ -1,6 +1,3 @@
-# TODO:
-# - how do we save the results for further analysis?
-
 import argparse
 import os
 import multiprocessing as mp
@@ -10,11 +7,19 @@ import imageio.v3 as imageio
 import napari
 
 from elf.io import open_file
+from magicgui import magicgui
 from napari_skimage_regionprops import add_table
 
 from skimage.transform import rescale
 
-from ..distance_measurements import create_distance_lines, measure_pairwise_object_distances
+from ..distance_measurements import (
+    create_distance_lines,
+    measure_pairwise_object_distances,
+    keep_direct_distances,
+)
+
+DISTANCE_MEASUREMENT_PATH = None
+VIEW_SCALE = None
 
 
 def _downsample(data, scale, is_seg=False):
@@ -26,9 +31,39 @@ def _downsample(data, scale, is_seg=False):
     return data
 
 
-# TODO add widget to update the number of neighbors for the lines
+@magicgui(call_button="Visualize Distances")
+def measurement_widget(
+    viewer: napari.Viewer,
+    compute_direct_distances: bool = True,
+    compute_neighbor_distances: int = 0,
+) -> None:
+    if compute_direct_distances:
+        n_neighbors = None
+        segmentation = viewer.layers["segmentation"].data
+        # TODO: we may want to "max-project" the segmentation before doing it (i.e. take the union of the mask
+        # for an object across all slices and project it to all of z). This would make the exclusion
+        # criterion a bit more stringent and avoid passing slighly above / below other objects.
+        pairs = keep_direct_distances(segmentation, DISTANCE_MEASUREMENT_PATH, scale=VIEW_SCALE)
+    else:
+        assert compute_neighbor_distances > 0
+        n_neighbors = compute_neighbor_distances
+        pairs = None
+
+    lines, properties = create_distance_lines(
+        DISTANCE_MEASUREMENT_PATH, n_neighbors=n_neighbors, scale=VIEW_SCALE, pairs=pairs,
+    )
+    if "line" in viewer.layers:  # TODO update the line layer
+        pass
+    else:  # create a new line layer
+        line_layer = viewer.add_shapes(lines, shape_type="line", properties=properties, name="distances")
+        add_table(line_layer, viewer)
+
+
 # TODO take pixel size as argument for the distance measurement
-def measure_distances(tomogram, segmentation, distance_measurement_path, n_neighbors=3, bb=None, scale=2):
+def measure_distances(tomogram, segmentation, distance_measurement_path, view_scale=2):
+    global VIEW_SCALE, DISTANCE_MEASUREMENT_PATH
+    VIEW_SCALE = view_scale
+    DISTANCE_MEASUREMENT_PATH = distance_measurement_path
 
     if not os.path.exists(distance_measurement_path):
         warnings.warn(
@@ -41,20 +76,17 @@ def measure_distances(tomogram, segmentation, distance_measurement_path, n_neigh
             segmentation, "boundary", n_threads=cpu_count, resolution=resolution, save_path=distance_measurement_path,
         )
 
-    lines, properties = create_distance_lines(
-        distance_measurement_path, n_neighbors=n_neighbors, bb=bb, scale=scale
-    )
-
-    if scale > 1:
-        tomogram = _downsample(tomogram, scale=scale)
-        segmentation = _downsample(segmentation, scale=scale, is_seg=True)
+    if view_scale > 1:
+        tomogram = _downsample(tomogram, scale=view_scale)
+        segmentation = _downsample(segmentation, scale=view_scale, is_seg=True)
     assert tomogram.shape == segmentation.shape, f"{tomogram.shape}, {segmentation.shape}"
 
     viewer = napari.Viewer()
     viewer.add_image(tomogram, visible=False)
     viewer.add_labels(segmentation)
-    line_layer = viewer.add_shapes(lines,  shape_type="line", properties=properties, name="distances")
-    add_table(line_layer, viewer)
+
+    viewer.window.add_dock_widget(measurement_widget)
+
     napari.run()
 
 
@@ -63,7 +95,6 @@ def main():
     parser.add_argument("-i", "--image_path", help="Filepath for the tomogram", required=True)
     parser.add_argument("-s", "--segmentation_path", help="Filepath for the segmentation", required=True)
     parser.add_argument("-m", "--measurement_path", help="Filepath for the distance measurement result", required=True)
-    parser.add_argument("--neighbors", type=int, default=3)
     parser.add_argument("--scale", type=int, default=2)
 
     args = parser.parse_args()
@@ -72,6 +103,5 @@ def main():
     segmentation = imageio.imread(args.segmentation_path)
 
     measure_distances(
-        tomogram, segmentation, args.measurement_path,
-        n_neighbors=args.neighbors, scale=args.scale,
+        tomogram, segmentation, args.measurement_path, view_scale=args.scale,
     )
