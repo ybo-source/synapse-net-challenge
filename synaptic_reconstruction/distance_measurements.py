@@ -32,6 +32,9 @@ def compute_boundary_distances(segmentation, resolution, n_threads):
     end_points1 = np.zeros((n, n, 3), dtype="int")
     end_points2 = np.zeros((n, n, 3), dtype="int")
 
+    properties = regionprops(segmentation)
+    properties = {prop.label: prop for prop in properties}
+
     def compute_distances_for_object(i):
 
         seg_id = seg_ids[i]
@@ -42,18 +45,24 @@ def compute_boundary_distances(segmentation, resolution, n_threads):
                 continue
 
             ngb_id = seg_ids[j]
+            prop = properties[ngb_id]
 
-            mask = segmentation == ngb_id
-            ngb_dist = distances.copy()
+            bb = prop.bbox
+            offset = np.array(bb[:3])
+            bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
+
+            mask = segmentation[bb] == ngb_id
+            ngb_dist, ngb_index = distances[bb], indices[(slice(None),) + bb]
             ngb_dist[~mask] = np.inf
             min_point_ngb = np.unravel_index(np.argmin(ngb_dist), shape=mask.shape)
 
             min_dist = distances[min_point_ngb]
 
-            min_point = tuple(ind[min_point_ngb] for ind in indices)
+            min_point = tuple(ind[min_point_ngb] for ind in ngb_index)
             pairwise_distances[i, j] = min_dist
 
             end_points1[i, j] = min_point
+            min_point_ngb = [off + minp for off, minp in zip(offset, min_point_ngb)]
             end_points2[i, j] = min_point_ngb
 
     n_threads = mp.cpu_count() if n_threads is None else n_threads
@@ -67,7 +76,7 @@ def compute_boundary_distances(segmentation, resolution, n_threads):
 
 def measure_pairwise_object_distances(
     segmentation,
-    distance_type,
+    distance_type="boundary",
     resolution=None,
     n_threads=None,
     save_path=None,
@@ -93,6 +102,72 @@ def measure_pairwise_object_distances(
     return distances, endpoints1, endpoints2, seg_ids
 
 
+def compute_seg_object_distances(segmentation, segmented_object, resolution):
+    distance_map, indices = distance_transform_edt(segmented_object == 0, return_indices=True, sampling=resolution)
+
+    seg_ids = np.unique(segmentation)[1:].tolist()
+    n = len(seg_ids)
+
+    distances = np.zeros(n)
+    endpoints1 = np.zeros((n, 3), dtype="int")
+    endpoints2 = np.zeros((n, 3), dtype="int")
+
+    # We use this so often, it should be refactored.
+    props = regionprops(segmentation)
+    for prop in tqdm(props):
+        bb = prop.bbox
+        offset = np.array(bb[:3])
+        bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
+
+        label = prop.label
+        mask = segmentation[bb] == label
+
+        dist, idx = distance_map[bb], indices[(slice(None),) + bb]
+        dist[~mask] = np.inf
+
+        min_dist_coord = np.argmin(dist)
+        min_dist_coord = np.unravel_index(min_dist_coord, mask.shape)
+        distance = dist[min_dist_coord]
+
+        object_coord = tuple(idx_[min_dist_coord] for idx_ in idx)
+        object_id = segmented_object[object_coord]
+        assert object_id != 0
+
+        seg_idx = seg_ids.index(label)
+        distances[seg_idx] = distance
+        endpoints1[seg_idx] = object_coord
+
+        min_dist_coord = [off + minc for off, minc in zip(offset, min_dist_coord)]
+        endpoints2[seg_idx] = min_dist_coord
+
+    return distances, endpoints1, endpoints2, np.array(seg_ids)
+
+
+def measure_segmentation_to_object_distances(
+    segmentation,
+    segmented_object,
+    distance_type="boundary",
+    resolution=None,
+    save_path=None,
+):
+    if distance_type == "boundary":
+        distances, endpoints1, endpoints2, seg_ids = compute_seg_object_distances(
+            segmentation, segmented_object, resolution
+        )
+    else:
+        raise NotImplementedError
+
+    if save_path is not None:
+        np.savez(
+            save_path,
+            distances=distances,
+            endpoints1=endpoints1,
+            endpoints2=endpoints2,
+            seg_ids=seg_ids,
+        )
+    return distances, endpoints1, endpoints2, seg_ids
+
+
 def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors, ignore_lower_diag=True):
     distance_matrix = pairwise_distances.copy()
 
@@ -112,6 +187,7 @@ def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors, ignore_l
     return pairs
 
 
+# TODO update this for extracting only up to a max distance
 def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=None, scale=None):
 
     auto_dists = np.load(measurement_path)
@@ -164,6 +240,27 @@ def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=Non
         "id_b": pairs[:, 1],
         "distance": distances,
     }
+    return lines, properties
+
+
+def create_object_distance_lines(measurement_path, max_distance=None, scale=None):
+    auto_dists = np.load(measurement_path)
+    distances, seg_ids = auto_dists["distances"], auto_dists["seg_ids"]
+    start_points, end_points = auto_dists["endpoints1"], auto_dists["endpoints2"]
+
+    if max_distance is not None:
+        distance_mask = distances <= max_distance
+        distances, seg_ids = distances[distance_mask], seg_ids[distance_mask]
+        start_points, end_points = start_points[distance_mask], end_points[distance_mask]
+
+    assert len(distances) == len(seg_ids) == len(start_points) == len(end_points)
+    lines = np.array([[start, end] for start, end in zip(start_points, end_points)])
+
+    if scale is not None:
+        scale_factor = np.array(3 * [scale])[None, None]
+        lines //= scale_factor
+
+    properties = {"id": seg_ids, "distance": distances}
     return lines, properties
 
 

@@ -11,6 +11,7 @@ def segment_ribbon(
     n_slices_exclude: int = 15,
     max_vesicle_distance: int = 10,
     min_vesicles_per_ribbon: int = 15,
+    require_ribbon=True,
 ):
     """Derive ribbon segmentation from ribbon predictions by
     filtering out ribbons that don't have sufficient associated vesicles.
@@ -47,6 +48,8 @@ def segment_ribbon(
 
         vesicle_mask = vesicle_segmentation[bb] == prop.label
         dist, idx = ribbon_dist[bb], ribbon_idx[(slice(None),) + bb]
+        dist[~vesicle_mask] = np.inf
+
         min_dist_point = np.argmin(dist)
         min_dist_point = np.unravel_index(min_dist_point, vesicle_mask.shape)
 
@@ -66,8 +69,15 @@ def segment_ribbon(
     # keeping only the ribbons with sufficient number of associated vesicles.
     full_ribbon_segmentation = np.zeros(original_shape, dtype="uint8")
     output_id = 1
+
+    max_count = max(vesicle_counts.values())
+    if max_count < min_vesicles_per_ribbon and require_ribbon:
+        print("The max count", max_count, "is smaller than", min_vesicles_per_ribbon)
+        print("Resetting the min count to it")
+        min_vesicles_per_ribbon = max_count
+
     for ribbon_id, vesicle_count in vesicle_counts.items():
-        if vesicle_count > min_vesicles_per_ribbon:
+        if vesicle_count >= min_vesicles_per_ribbon:
             full_ribbon_segmentation[slice_mask][ribbon_segmentation == ribbon_id] = output_id
             output_id += 1
 
