@@ -39,6 +39,38 @@ def compute_all_distances(vesicles, ribbon, pd, boundaries, resolution, save_fol
     return ves_save, ribbon_save, pd_save, boundary_save
 
 
+def _get_data(tomo_path):
+    vesicle_path = tomo_path.replace(".rec", "_vesicles.tif")
+    ribbon_path = tomo_path.replace(".rec", "_ribbon.tif")
+    pd_path = tomo_path.replace(".rec", "_pd.tif")
+    boundary_path = tomo_path.replace(".rec", "_boundary.tif")
+    assert os.path.exists(vesicle_path), vesicle_path
+    assert os.path.exists(ribbon_path), ribbon_path
+    assert os.path.exists(pd_path), pd_path
+    assert os.path.exists(boundary_path), boundary_path
+    vesicles = imageio.imread(vesicle_path)
+    ribbon = imageio.imread(ribbon_path)
+    pd = imageio.imread(pd_path)
+    boundaries = imageio.imread(boundary_path)
+    return vesicles, ribbon, pd, boundaries
+
+
+def precompute_all_distances(data_root):
+    for root, dirs, files in os.walk(data_root):
+        dirs.sort()
+
+        for ff in files:
+            path = os.path.join(root, ff)
+            if not path.endswith(".rec"):
+                continue
+            with mrcfile.open(path, "r") as f:
+                resolution = f.voxel_size.tolist()
+            vesicles, ribbon, pd, boundaries = _get_data(path)
+            save_folder = os.path.join(root, "distances")
+            os.makedirs(save_folder, exist_ok=True)
+            compute_all_distances(vesicles, ribbon, pd, boundaries, resolution, save_folder)
+
+
 def visualize_distances(
     tomo, vesicles, ribbon, pd, boundaries,
     distance_path_vesicles, distance_path_ribbon, distance_path_pd, distance_path_boundaries,
@@ -102,19 +134,7 @@ def process_distance_measurements(tomo_path, show):
     resolution = [res / 10 for res in resolution]
     print("The resolution is", resolution)
 
-    vesicle_path = tomo_path.replace(".rec", "_vesicles.tif")
-    ribbon_path = tomo_path.replace(".rec", "_ribbon.tif")
-    pd_path = tomo_path.replace(".rec", "_pd.tif")
-    boundary_path = tomo_path.replace(".rec", "_boundary.tif")
-    assert os.path.exists(vesicle_path), vesicle_path
-    assert os.path.exists(ribbon_path), ribbon_path
-    assert os.path.exists(pd_path), pd_path
-    assert os.path.exists(boundary_path), boundary_path
-
-    vesicles = imageio.imread(vesicle_path)
-    ribbon = imageio.imread(ribbon_path)
-    pd = imageio.imread(pd_path)
-    boundaries = imageio.imread(boundary_path)
+    vesicles, ribbon, pd, boundaries = _get_data(tomo_path)
     if pd.sum() == 0:
         # Empty postsynaptic density is not yet supported
         raise NotImplementedError
@@ -141,9 +161,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("tomo_path")
     parser.add_argument("-s", "--show", action="store_true")
+    parser.add_arguemtn("-a", "--compute_all_distances", action="store_true")
 
     args = parser.parse_args()
-    process_distance_measurements(args.tomo_path, show=args.show)
+    if args.compute_all_distances:
+        precompute_all_distances(args.tomo_path)
+    else:
+        process_distance_measurements(args.tomo_path, show=args.show)
 
 
 if __name__ == "__main__":
