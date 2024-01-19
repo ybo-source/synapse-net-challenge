@@ -36,12 +36,6 @@ def segment_presynaptic_density(
     # Label the presyn predictions.
     presyn_segmentation = label(presyn_prediction)
 
-    # import napari
-    # v = napari.Viewer()
-    # v.add_image(ribbon_dist)
-    # v.add_labels(presyn_segmentation)
-    # napari.run()
-
     # Associate presynaptic densities with ribbons.
     ribbon_matches = {}
     props = regionprops(presyn_segmentation)
