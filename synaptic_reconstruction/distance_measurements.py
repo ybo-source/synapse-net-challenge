@@ -243,10 +243,17 @@ def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=Non
     return lines, properties
 
 
-def create_object_distance_lines(measurement_path, max_distance=None, scale=None):
+def create_object_distance_lines(measurement_path, max_distance=None, seg_ids=None, scale=None):
     auto_dists = np.load(measurement_path)
-    distances, seg_ids = auto_dists["distances"], auto_dists["seg_ids"]
+    distances, all_seg_ids = auto_dists["distances"], auto_dists["seg_ids"]
     start_points, end_points = auto_dists["endpoints1"], auto_dists["endpoints2"]
+
+    if seg_ids is None:
+        seg_ids = all_seg_ids
+    else:
+        id_mask = np.isin(all_seg_ids, seg_ids)
+        distances = distances[id_mask]
+        start_points, end_points = start_points[id_mask], end_points[id_mask]
 
     if max_distance is not None:
         distance_mask = distances <= max_distance
@@ -302,3 +309,39 @@ def keep_direct_distances(segmentation, measurement_path, line_dilation=0, scale
     print("Keeping", len(filtered_ids_a), "/", len(ids_a), "distance pairs")
     filtered_pairs = [[ida, idb] for ida, idb in zip(filtered_ids_a, filtered_ids_b)]
     return filtered_pairs
+
+
+def filter_blocked_segmentation_to_object_distances(
+    segmentation, measurement_path, line_dilation=0, scale=None, seg_ids=None
+):
+    distance_lines, properties = create_object_distance_lines(measurement_path, seg_ids=seg_ids, scale=scale)
+    all_seg_ids = properties["id"]
+
+    filtered_ids = []
+    for seg_id, line in tqdm(zip(all_seg_ids, distance_lines), total=len(distance_lines)):
+        if (seg_ids is not None) and (seg_id not in seg_ids):
+            continue
+
+        start, stop = line
+        line = line_nd(start, stop, endpoint=True)
+
+        if line_dilation > 0:
+            # TODO make this more efficient, ideally by dilating the mask coordinates
+            # instead of dilating the actual mask.
+            # We turn the line into a binary mask and dilate it to have some tolerance.
+            line_vol = np.zeros_like(segmentation)
+            line_vol[line] = 1
+            line_vol = binary_dilation(line_vol, iterations=line_dilation)
+        else:
+            line_vol = line
+
+        # Check if we cross any other segments:
+        # Extract the unique ids in the segmentation that overlap with the segmentation.
+        # We count this as a direct distance if no other object overlaps with the line.
+        line_seg_ids = np.unique(segmentation[line_vol])
+        line_seg_ids = np.setdiff1d(line_seg_ids, [0, seg_id])
+
+        if len(line_seg_ids) == 0:  # No other objet is overlapping, we keep the line.
+            filtered_ids.append(seg_id)
+
+    return filtered_ids

@@ -3,6 +3,7 @@ import os
 import imageio.v3 as imageio
 
 import mrcfile
+import numpy as np
 import pandas
 
 from elf.io import open_file
@@ -12,6 +13,7 @@ from synaptic_reconstruction.distance_measurements import (
     measure_segmentation_to_object_distances,
     create_distance_lines,
     create_object_distance_lines,
+    filter_blocked_segmentation_to_object_distances,
 )
 
 
@@ -71,6 +73,52 @@ def precompute_all_distances(data_root):
             compute_all_distances(vesicles, ribbon, pd, boundaries, resolution, save_folder)
 
 
+def assign_vesicles_to_pools(vesicles, distance_path_ribbon, distance_path_pd, distance_path_boundaries, scale=None):
+    def load_dist(measurement_path, seg_ids=None):
+        auto_dists = np.load(measurement_path)
+        distances, this_seg_ids = auto_dists["distances"], auto_dists["seg_ids"]
+        if seg_ids is not None:
+            assert np.array_equal(seg_ids, this_seg_ids)
+        return distances, this_seg_ids
+
+    ribbon_distances, seg_ids = load_dist(distance_path_ribbon)
+    pd_distances, _ = load_dist(distance_path_pd, seg_ids=seg_ids)
+    bd_distances, _ = load_dist(distance_path_boundaries, seg_ids=seg_ids)
+
+    # Find the vesicles that are ribbon associated (RA-V).
+    # Criterion: vesicles are closer than 80 nm to ribbon and they are in the first row
+    # (i.e. not blocked by another vesicle).
+    rav_ribbon_distance = 80  # nm
+    rav_ids = seg_ids[ribbon_distances < rav_ribbon_distance]
+    # Filter out the blocked vesicles.
+    rav_ids = filter_blocked_segmentation_to_object_distances(
+        vesicles, distance_path_ribbon, seg_ids=rav_ids, scale=scale,
+    )
+
+    # Find the vesicles that are membrane proximal (MP-V).
+    # Criterion: vesicles are closer than 50 nm to the membrane and closer than 100 nm to the PD.
+    mpv_pd_distance = 100  # nm
+    mpv_bd_distance = 50  # nm
+    mpv_ids = seg_ids[np.logical_and(pd_distances < mpv_pd_distance, bd_distances < mpv_bd_distance)]
+
+    # Find the vesicles that are membrane docked (Docked-V).
+    # Criterion: vesicles are closer than 2 nm to the membrane and closer than 100 nm to the PD.
+    docked_pd_distance = 100  # nm
+    docked_bd_distance = 2  # nm
+    docked_ids = seg_ids[np.logical_and(pd_distances < docked_pd_distance, bd_distances < docked_bd_distance)]
+
+    # Keep only the vesicle ids that are in one of the three categories.
+    vesicle_ids = np.unique(np.concatenate([rav_ids, mpv_ids, docked_ids]))
+
+    # Create a dictionary to map vesicle ids to their corresponding pool.
+    # (RA-V get's over-written by MP-V, which is correct).
+    pool_assignments = {vid: "RA-V" for vid in rav_ids}
+    pool_assignments.update({vid: "MP-V" for vid in mpv_ids})
+    pool_assignments.update({vid: "Docked-V" for vid in docked_ids})
+
+    return vesicle_ids, pool_assignments
+
+
 def visualize_distances(
     tomo, vesicles, ribbon, pd, boundaries,
     distance_path_vesicles, distance_path_ribbon, distance_path_pd, distance_path_boundaries,
@@ -85,24 +133,43 @@ def visualize_distances(
     pd = _downsample(pd, is_seg=True, scale=scale)
     boundaries = _downsample(boundaries, is_seg=True, scale=scale)
 
-    # TODO compute the pairs to filter in the vesicles here
+    # Associate the vesicles with vesicle pools.
+    vesicle_ids, pool_assignments = assign_vesicles_to_pools(
+        vesicles, distance_path_ribbon, distance_path_pd, distance_path_boundaries, scale=scale
+    )
+    # TODO for which pairs of vesicles do we measure distances? Only RA-V to RA-V etc. or between all pools?
+    # Do we need to take into account blocking by the ribbon, or do we measure distances across the ribbon?
     ves_lines, ves_props = create_distance_lines(distance_path_vesicles, n_neighbors=3, scale=scale)
-    ribbon_lines, ribbon_props = create_object_distance_lines(distance_path_ribbon, max_distance=50, scale=scale)
-    pd_lines, pd_props = create_object_distance_lines(distance_path_pd, max_distance=50, scale=scale)
+    # TODO which distances are of interest? (All vesicles or only RA-V?)
+    ribbon_lines, ribbon_props = create_object_distance_lines(distance_path_ribbon, seg_ids=vesicle_ids, scale=scale)
+    # TODO which distances are of interest? (All vesicles or only MP-V + Docked-V?)
+    pd_lines, pd_props = create_object_distance_lines(distance_path_pd, seg_ids=vesicle_ids, scale=scale)
     boundary_lines, boundary_props = create_object_distance_lines(
-        distance_path_boundaries, max_distance=50, scale=scale
+        distance_path_boundaries, seg_ids=vesicle_ids, scale=scale
     )
 
     ves_dist = pandas.DataFrame(ves_props)
     ribbon_dist = pandas.DataFrame(ribbon_props)
     pd_dist = pandas.DataFrame(pd_props)
     boundary_dist = pandas.DataFrame(boundary_props)
+    ves_assignments = pandas.DataFrame.from_dict(
+        {
+            "id": list(pool_assignments.keys()),
+            "pool": list(pool_assignments.values()),
+        }
+    )
     if not show:
-        return ves_dist, ribbon_dist, pd_dist, boundary_dist
+        return ves_assignments, ves_dist, ribbon_dist, pd_dist, boundary_dist
+
+    vesicle_pools = np.zeros_like(vesicles)
+    for pool_id, pool_name in enumerate(("RA-V", "MP-V", "Docked-V"), 1):
+        ves_ids_pool = [vid for vid, pname in pool_assignments.items() if pname == pool_name]
+        vesicle_pools[np.isin(vesicles, ves_ids_pool)] = pool_id
 
     v = napari.Viewer()
     v.add_image(tomo)
-    v.add_labels(vesicles)
+    v.add_labels(vesicles, visible=False)
+    v.add_labels(vesicle_pools)
     v.add_labels(ribbon)
     v.add_labels(pd, name="presynaptic-density")
     v.add_labels(boundaries)
@@ -114,12 +181,13 @@ def visualize_distances(
 
     napari.run()
 
-    return ves_dist, ribbon_dist, pd_dist, boundary_dist
+    return ves_assignments, ves_dist, ribbon_dist, pd_dist, boundary_dist
 
 
-def to_excel(vesicle_distances, ribbon_distances, pd_distances, boundary_distances, result_path):
-    vesicle_distances.to_excel(result_path, sheet_name="vesicle-vesicle-distances", index=False)
+def to_excel(ves_assignments, vesicle_distances, ribbon_distances, pd_distances, boundary_distances, result_path):
+    ves_assignments.to_excel(result_path, sheet_name="vesicle-pools", index=False)
     with pandas.ExcelWriter(result_path, engine="openpyxl", mode="a") as writer:
+        vesicle_distances.to_excel(writer, sheet_name="vesicle-vesicle-distances", index=False)
         ribbon_distances.to_excel(writer, sheet_name="vesicle-ribbon-distances", index=False)
         pd_distances.to_excel(writer, sheet_name="vesicle-pd-distances", index=False)
         boundary_distances.to_excel(writer, sheet_name="vesicle-boundary-distances", index=False)
@@ -147,12 +215,12 @@ def process_distance_measurements(tomo_path, show):
 
     with open_file(tomo_path, "r") as f:
         tomo = f["data"][:]
-    ves_dist, ribbon_dist, pd_dist, boundary_dist = visualize_distances(
+    ves_assignments, ves_dist, ribbon_dist, pd_dist, boundary_dist = visualize_distances(
         tomo, vesicles, ribbon, pd, boundaries, ves_dist, ribbon_dist, boundary_dist, pd_dist, show=show
     )
 
     out_path = os.path.join(distance_save_folder, "distances.xlsx")
-    to_excel(ves_dist, ribbon_dist, pd_dist, boundary_dist, result_path=out_path)
+    to_excel(ves_assignments, ves_dist, ribbon_dist, pd_dist, boundary_dist, result_path=out_path)
 
 
 def main():
@@ -161,7 +229,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("tomo_path")
     parser.add_argument("-s", "--show", action="store_true")
-    parser.add_arguemtn("-a", "--compute_all_distances", action="store_true")
+    parser.add_argument("-a", "--compute_all_distances", action="store_true")
 
     args = parser.parse_args()
     if args.compute_all_distances:

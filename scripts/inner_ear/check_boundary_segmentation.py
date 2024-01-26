@@ -40,13 +40,6 @@ def main():
                 print("Boundary segmentation is already there, skip!")
                 continue
 
-            save_path_pd = raw_path.replace(".rec", "_pd.tif")
-            assert os.path.exists(save_path_pd)
-            pd_segmentation = imageio.imread(save_path_pd)
-            if pd_segmentation.sum() == 0:
-                print("Did not find a presynapyic density, skipping!")
-                continue
-
             fname = os.path.basename(raw_path)
             pred_name = fname.replace(".rec", "_MemBrain_seg_v10_alpha.ckpt_segmented.mrc")
             boundary_pred_path = os.path.join("./predictions", pred_name)
@@ -57,7 +50,15 @@ def main():
             with open_file(raw_path, "r") as f:
                 tomo = f["data"][:]
 
-            boundary_segmentation = check_boundary_segmentation(tomo, boundary_pred, pd_segmentation)
+            save_path_pd = raw_path.replace(".rec", "_pd.tif")
+            assert os.path.exists(save_path_pd)
+            pd_segmentation = imageio.imread(save_path_pd)
+            if pd_segmentation.sum() == 0:
+                print("Did not find a presynapyic density, skipping!")
+                boundary_segmentation = boundary_pred
+            else:
+                boundary_segmentation = check_boundary_segmentation(tomo, boundary_pred, pd_segmentation)
+
             imageio.imwrite(save_path_boundary, boundary_segmentation, compression="zlib")
 
 
