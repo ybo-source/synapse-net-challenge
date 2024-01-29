@@ -73,7 +73,14 @@ def precompute_all_distances(data_root):
             compute_all_distances(vesicles, ribbon, pd, boundaries, resolution, save_folder)
 
 
-def assign_vesicles_to_pools(vesicles, distance_path_ribbon, distance_path_pd, distance_path_boundaries, scale=None):
+def assign_vesicles_to_pools(
+    vesicles,
+    distance_path_ribbon,
+    distance_path_pd,
+    distance_path_boundaries,
+    scale=None
+):
+
     def load_dist(measurement_path, seg_ids=None):
         auto_dists = np.load(measurement_path)
         distances, this_seg_ids = auto_dists["distances"], auto_dists["seg_ids"]

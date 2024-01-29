@@ -60,7 +60,7 @@ def measurement_widget(
 
 
 # TODO take pixel size as argument for the distance measurement
-def measure_distances(tomogram, segmentation, distance_measurement_path, view_scale=2):
+def measure_distances(tomogram, segmentation, distance_measurement_path, view_scale=2, resolution=None):
     global VIEW_SCALE, DISTANCE_MEASUREMENT_PATH
     VIEW_SCALE = view_scale
     DISTANCE_MEASUREMENT_PATH = distance_measurement_path
@@ -70,7 +70,6 @@ def measure_distances(tomogram, segmentation, distance_measurement_path, view_sc
             "Could not find measurement result at {distance_measurement_path}."
             "Will compute the distance measurement result, this will take some time!"
         )
-        resolution = None  # TODO expose as parameter
         cpu_count = mp.cpu_count()
         measure_pairwise_object_distances(
             segmentation, "boundary", n_threads=cpu_count, resolution=resolution, save_path=distance_measurement_path,
