@@ -59,7 +59,6 @@ def measurement_widget(
         add_table(line_layer, viewer)
 
 
-# TODO take pixel size as argument for the distance measurement
 def measure_distances(tomogram, segmentation, distance_measurement_path, view_scale=2, resolution=None):
     global VIEW_SCALE, DISTANCE_MEASUREMENT_PATH
     VIEW_SCALE = view_scale

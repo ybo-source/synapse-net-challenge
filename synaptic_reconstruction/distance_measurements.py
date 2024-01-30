@@ -56,7 +56,7 @@ def compute_boundary_distances(segmentation, resolution, n_threads):
             ngb_dist[~mask] = np.inf
             min_point_ngb = np.unravel_index(np.argmin(ngb_dist), shape=mask.shape)
 
-            min_dist = distances[min_point_ngb]
+            min_dist = ngb_dist[min_point_ngb]
 
             min_point = tuple(ind[min_point_ngb] for ind in ngb_index)
             pairwise_distances[i, j] = min_dist
