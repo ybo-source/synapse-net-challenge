@@ -168,7 +168,7 @@ def measure_segmentation_to_object_distances(
     return distances, endpoints1, endpoints2, seg_ids
 
 
-def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors):
+def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors, remove_duplicates=True):
     distance_matrix = pairwise_distances.copy()
 
     # Set the diagonal (distance to self) to infinity.
@@ -188,19 +188,22 @@ def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors):
         pairs.extend([[min(seg_id, ngb_id), max(seg_id, ngb_id)] for ngb_id in ngb_ids])
 
     pairs = np.array(pairs)
-    pairs = np.unique(pairs, axis=0)
+    if remove_duplicates:
+        pairs = np.unique(pairs, axis=0)
+    else:
+        pairs = np.sort(pairs, axis=0)
     return pairs
 
 
 # TODO update this for extracting only up to a max distance
-def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=None, scale=None):
+def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=None, scale=None, remove_duplicates=True):
 
     auto_dists = np.load(measurement_path)
     distances, seg_ids = auto_dists["distances"], list(auto_dists["seg_ids"])
     start_points, end_points = auto_dists["endpoints1"], auto_dists["endpoints2"]
 
     if pairs is None and n_neighbors is not None:
-        pairs = extract_nearest_neighbors(distances, seg_ids, n_neighbors)
+        pairs = extract_nearest_neighbors(distances, seg_ids, n_neighbors, remove_duplicates=remove_duplicates)
     elif pairs is None:
         pairs = [
             [id1, id2] for id1 in seg_ids for id2 in seg_ids if id1 < id2
