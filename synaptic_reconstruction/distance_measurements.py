@@ -168,12 +168,15 @@ def measure_segmentation_to_object_distances(
     return distances, endpoints1, endpoints2, seg_ids
 
 
-def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors, ignore_lower_diag=True):
+def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors):
     distance_matrix = pairwise_distances.copy()
 
+    # Set the diagonal (distance to self) to infinity.
     distance_matrix[np.diag_indices(len(distance_matrix))] = np.inf
-    if ignore_lower_diag:
-        distance_matrix[np.tril_indices_from(distance_matrix)] = np.inf
+    # Mirror the distances.
+    # (We only compute upper triangle, but need to take all distances into account here)
+    tril_indices = np.tril_indices_from(distance_matrix)
+    distance_matrix[tril_indices] = distance_matrix.T[tril_indices]
 
     neighbor_distances = np.sort(distance_matrix, axis=1)[:, :n_neighbors]
     neighbor_indices = np.argsort(distance_matrix, axis=1)[:, :n_neighbors]
@@ -182,8 +185,10 @@ def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors, ignore_l
     for i, (dists, inds) in enumerate(zip(neighbor_distances, neighbor_indices)):
         seg_id = seg_ids[i]
         ngb_ids = [seg_ids[j] for j, dist in zip(inds, dists) if np.isfinite(dist)]
-        pairs.extend([[seg_id, ngb_id] for ngb_id in ngb_ids if ngb_id > seg_id])
+        pairs.extend([[min(seg_id, ngb_id), max(seg_id, ngb_id)] for ngb_id in ngb_ids])
 
+    pairs = np.array(pairs)
+    pairs = np.unique(pairs, axis=0)
     return pairs
 
 

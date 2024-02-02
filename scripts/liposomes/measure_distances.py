@@ -17,8 +17,8 @@ TOMO_ROOT = "/home/user2/data/corrected_tomos_mrc"
 SEG_ROOT = "/home/user2/data/results"
 
 # ON MY LAPTOP
-# TOMO_ROOT = "/home/pape/Work/data/moser/lipids-julia/corrected_tomos_mrc"
-# SEG_ROOT = "/home/pape/Work/data/moser/lipids-julia/results"
+TOMO_ROOT = "/home/pape/Work/data/moser/lipids-julia/corrected_tomos_mrc"
+SEG_ROOT = "/home/pape/Work/data/moser/lipids-julia/results"
 
 
 def get_data(name, version):
@@ -56,15 +56,14 @@ def export_distance_measurements(version, export_path):
 
     distance_folder = os.path.join(SEG_ROOT, f"v{version}", "distances")
     distance_paths = sorted(glob(os.path.join(distance_folder, "*.npz")))
-    assert len(seg_paths) == len(distance_paths)
+    assert len(seg_paths) == len(distance_paths), f"{len(seg_paths)}, {len(distance_paths)}"
 
     def measure_direct_distances(distance_path, seg_path):
         segmentation = imageio.imread(seg_path)
         segmentation = _downsample(segmentation, scale=2, is_seg=True)
-        pairs = keep_direct_distances(segmentation, distance_path, scale=2)
-        _, distances = create_distance_lines(
-            distance_path, n_neighbors=5, scale=2, pairs=pairs,
-        )
+        # pairs = keep_direct_distances(segmentation, distance_path, scale=2)
+        pairs = None
+        _, distances = create_distance_lines(distance_path, n_neighbors=1, scale=2, pairs=pairs)
         return pd.DataFrame(distances)
 
     os.makedirs(export_path, exist_ok=True)
