@@ -188,10 +188,9 @@ def extract_nearest_neighbors(pairwise_distances, seg_ids, n_neighbors, remove_d
         pairs.extend([[min(seg_id, ngb_id), max(seg_id, ngb_id)] for ngb_id in ngb_ids])
 
     pairs = np.array(pairs)
+    pairs = np.sort(pairs, axis=1)
     if remove_duplicates:
         pairs = np.unique(pairs, axis=0)
-    else:
-        pairs = np.sort(pairs, axis=0)
     return pairs
 
 

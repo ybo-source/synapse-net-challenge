@@ -8,9 +8,7 @@ import pandas as pd
 from elf.io import open_file
 
 from synaptic_reconstruction.distance_measurements import measure_pairwise_object_distances
-from synaptic_reconstruction.tools.distance_measurement import (
-    measure_distances, _downsample, keep_direct_distances, create_distance_lines
-)
+from synaptic_reconstruction.tools.distance_measurement import measure_distances, _downsample, create_distance_lines
 
 # ON WORKSTATION
 TOMO_ROOT = "/home/user2/data/corrected_tomos_mrc"
@@ -58,19 +56,21 @@ def export_distance_measurements(version, export_path):
     distance_paths = sorted(glob(os.path.join(distance_folder, "*.npz")))
     assert len(seg_paths) == len(distance_paths), f"{len(seg_paths)}, {len(distance_paths)}"
 
-    def measure_direct_distances(distance_path, seg_path):
+    def measure_nn_distances(distance_path, seg_path):
         segmentation = imageio.imread(seg_path)
         segmentation = _downsample(segmentation, scale=2, is_seg=True)
         # pairs = keep_direct_distances(segmentation, distance_path, scale=2)
         pairs = None
-        _, distances = create_distance_lines(distance_path, n_neighbors=1, scale=2, pairs=pairs)
+        _, distances = create_distance_lines(
+            distance_path, n_neighbors=1, scale=2, pairs=pairs, remove_duplicates=False
+        )
         return pd.DataFrame(distances)
 
     os.makedirs(export_path, exist_ok=True)
     for seg_path, distance_path in zip(seg_paths, distance_paths):
         fname = Path(distance_path).stem
         out_path = os.path.join(export_path, f"{fname}.xlsx")
-        distances = measure_direct_distances(distance_path, seg_path)
+        distances = measure_nn_distances(distance_path, seg_path)
         distances.to_excel(out_path, index=False)
 
 
