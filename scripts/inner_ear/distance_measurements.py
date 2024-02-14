@@ -7,6 +7,7 @@ import numpy as np
 import pandas
 
 from elf.io import open_file
+from skimage.measure import regionprops
 
 from synaptic_reconstruction.distance_measurements import (
     measure_segmentation_to_object_distances,
@@ -128,10 +129,20 @@ def assign_vesicles_to_pools(
     return vesicle_ids, pool_assignments
 
 
+def compute_radii(vesicles, vesicle_ids, resolution):
+    props = regionprops(vesicles)
+    radii = {
+        prop.label: resolution[0] * (prop.axis_minor_length + prop.axis_major_length) / 2
+        for prop in props
+    }
+    radii = [radii[ves_id] for ves_id in vesicle_ids]
+    return radii
+
+
 def visualize_distances(
     tomo, vesicles, ribbon, pd, boundaries,
     distance_path_ribbon, distance_path_pd, distance_path_boundaries,
-    scale=2, show=True,
+    resolution, scale=2, show=True,
 ):
     import napari
     from synaptic_reconstruction.tools.distance_measurement import _downsample
@@ -148,6 +159,7 @@ def visualize_distances(
     )
     #
     # ves_lines, ves_props = create_distance_lines(distance_path_vesicles, n_neighbors=3, scale=scale)
+    vesicle_radii = compute_radii(vesicles, vesicle_ids, resolution)
 
     # Only the RA-V distances
     ribbon_lines, ribbon_props = create_object_distance_lines(
@@ -168,6 +180,7 @@ def visualize_distances(
         {
             "id": list(pool_assignments.keys()),
             "pool": list(pool_assignments.values()),
+            "radius [nm]": vesicle_radii,
         }
     )
     if not show:
@@ -196,12 +209,32 @@ def visualize_distances(
     return ves_assignments, ribbon_dist, pd_dist, boundary_dist
 
 
-def to_excel(ves_assignments, ribbon_distances, pd_distances, boundary_distances, result_path):
+def to_excel(
+    ves_assignments,
+    ribbon_distances,
+    pd_distances,
+    boundary_distances,
+    morphology_measurements,
+    result_path
+):
     ves_assignments.to_excel(result_path, sheet_name="vesicle-pools", index=False)
     with pandas.ExcelWriter(result_path, engine="openpyxl", mode="a") as writer:
         ribbon_distances.to_excel(writer, sheet_name="vesicle-ribbon-distances", index=False)
         pd_distances.to_excel(writer, sheet_name="vesicle-pd-distances", index=False)
         boundary_distances.to_excel(writer, sheet_name="vesicle-boundary-distances", index=False)
+        morphology_measurements.to_excel(writer, sheet_name="morphology", index=False)
+
+
+# Any more morphology?
+# Surface?
+def compute_morphology(ribbon, pd):
+    ribbon_size = ribbon.sum()  # in pixels
+    pd_size = pd.sum()  # in pixels
+    morphology = pandas.DataFrame({
+        "structure": ["ribbon", "presynaptic-density"],
+        "size [pixel]": [ribbon_size, pd_size]
+    })
+    return morphology
 
 
 def process_distance_measurements(tomo_path, show):
@@ -224,14 +257,22 @@ def process_distance_measurements(tomo_path, show):
         vesicles, ribbon, pd, boundaries, resolution, distance_save_folder
     )
 
+    # Compute additional morphology for the PD and Ribbon
+    morphology_measurements = compute_morphology(ribbon, pd)
+
     with open_file(tomo_path, "r") as f:
         tomo = f["data"][:]
     ves_assignments, ribbon_dist, pd_dist, boundary_dist = visualize_distances(
-        tomo, vesicles, ribbon, pd, boundaries, ribbon_dist, pd_dist, boundary_dist, show=show
+        tomo, vesicles, ribbon, pd, boundaries, ribbon_dist, pd_dist, boundary_dist,
+        resolution=resolution, show=show
     )
 
-    out_path = os.path.join(distance_save_folder, "distances.xlsx")
-    to_excel(ves_assignments, ribbon_dist, pd_dist, boundary_dist, result_path=out_path)
+    out_path = os.path.join(distance_save_folder, "measurements.xlsx")
+    to_excel(
+        ves_assignments, ribbon_dist, pd_dist, boundary_dist,
+        morphology_measurements=morphology_measurements,
+        result_path=out_path,
+    )
 
 
 # FIXME check the distances, they are not showing the correct ones for PD and Boundaries (appear to be switched)
