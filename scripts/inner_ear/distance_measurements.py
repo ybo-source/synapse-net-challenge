@@ -275,7 +275,6 @@ def process_distance_measurements(tomo_path, show):
     )
 
 
-# FIXME check the distances, they are not showing the correct ones for PD and Boundaries (appear to be switched)
 def main():
     # path on laptop
     parser = argparse.ArgumentParser()
