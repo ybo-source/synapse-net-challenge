@@ -52,7 +52,7 @@ def compute_boundary_distances(segmentation, resolution, n_threads):
             bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 
             mask = segmentation[bb] == ngb_id
-            ngb_dist, ngb_index = distances[bb], indices[(slice(None),) + bb]
+            ngb_dist, ngb_index = distances[bb].copy(), indices[(slice(None),) + bb]
             ngb_dist[~mask] = np.inf
             min_point_ngb = np.unravel_index(np.argmin(ngb_dist), shape=mask.shape)
 
@@ -122,7 +122,7 @@ def compute_seg_object_distances(segmentation, segmented_object, resolution):
         label = prop.label
         mask = segmentation[bb] == label
 
-        dist, idx = distance_map[bb], indices[(slice(None),) + bb]
+        dist, idx = distance_map[bb].copy(), indices[(slice(None),) + bb]
         dist[~mask] = np.inf
 
         min_dist_coord = np.argmin(dist)
