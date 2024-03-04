@@ -99,11 +99,13 @@ def assign_vesicles_to_pools(
     # Criterion: vesicles are closer than 80 nm to ribbon and they are in the first row
     # (i.e. not blocked by another vesicle).
     rav_ribbon_distance = 80  # nm
-    rav_ids = seg_ids[ribbon_distances < rav_ribbon_distance]
+    rav_ids_all = seg_ids[ribbon_distances < rav_ribbon_distance]
     # Filter out the blocked vesicles.
     rav_ids = filter_blocked_segmentation_to_object_distances(
-        vesicles, distance_path_ribbon, seg_ids=rav_ids, scale=scale,
+        vesicles, distance_path_ribbon, seg_ids=rav_ids_all, scale=scale,
     )
+    n_blocked = len(rav_ids_all) - len(rav_ids)
+    print(n_blocked, "ribbon associated vesicles were blocked by the ribbon.")
 
     # Find the vesicles that are membrane proximal (MP-V).
     # Criterion: vesicles are closer than 50 nm to the membrane and closer than 100 nm to the PD.
@@ -249,7 +251,10 @@ def process_distance_measurements(tomo_path, show):
     vesicles, ribbon, pd, boundaries = _get_data(tomo_path)
     if pd.sum() == 0:
         # Empty postsynaptic density is not yet supported
-        raise NotImplementedError
+        raise NotImplementedError(
+            "This tomogram is missing predictions for a post-synaptic density."
+            "We cannot compute vesicle pools for this yet."
+        )
 
     distance_save_folder = os.path.join(os.path.split(tomo_path)[0], "distances")
     os.makedirs(distance_save_folder, exist_ok=True)
@@ -257,15 +262,15 @@ def process_distance_measurements(tomo_path, show):
         vesicles, ribbon, pd, boundaries, resolution, distance_save_folder
     )
 
-    # Compute additional morphology for the PD and Ribbon
-    morphology_measurements = compute_morphology(ribbon, pd)
-
     with open_file(tomo_path, "r") as f:
         tomo = f["data"][:]
     ves_assignments, ribbon_dist, pd_dist, boundary_dist = visualize_distances(
         tomo, vesicles, ribbon, pd, boundaries, ribbon_dist, pd_dist, boundary_dist,
         resolution=resolution, show=show
     )
+
+    # Compute additional morphology for the PD and Ribbon
+    morphology_measurements = compute_morphology(ribbon, pd)
 
     out_path = os.path.join(distance_save_folder, "measurements.xlsx")
     to_excel(
@@ -281,10 +286,14 @@ def main():
     parser.add_argument("tomo_path")
     parser.add_argument("-s", "--show", action="store_true")
     parser.add_argument("-a", "--compute_all_distances", action="store_true")
+    parser.add_argument("--compute_all_results", action="store_true")
 
     args = parser.parse_args()
     if args.compute_all_distances:
         precompute_all_distances(args.tomo_path)
+    # TODO compute all the results!
+    elif args.compute_all_results:
+        pass
     else:
         process_distance_measurements(args.tomo_path, show=args.show)
 

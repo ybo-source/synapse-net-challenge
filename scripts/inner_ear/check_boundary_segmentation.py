@@ -25,6 +25,7 @@ def check_boundary_segmentation(tomo, boundary_pred, pd_segmentation):
 
 def main():
     raw_root = "/home/pape/Work/data/moser/em-susi/04_wild_type_strong_stimulation/NichtAnnotiert"
+    # seg_root = "/home/pape/Work/data/moser/em-susi/results/synaptic_structures/v4/segmentations/NichtAnnotiert"
 
     for root, dirs, files in os.walk(raw_root):
         dirs.sort()
@@ -40,12 +41,21 @@ def main():
                 print("Boundary segmentation is already there, skip!")
                 continue
 
+            # With MemBrain
             fname = os.path.basename(raw_path)
             pred_name = fname.replace(".rec", "_MemBrain_seg_v10_alpha.ckpt_segmented.mrc")
             boundary_pred_path = os.path.join("./predictions", pred_name)
             assert os.path.exists(boundary_pred_path), boundary_pred_path
             with open_file(boundary_pred_path, "r") as f:
                 boundary_pred = f["data"][:]
+
+            # With our predictions
+            # fname = os.path.relpath(raw_path, raw_root)
+            # fname = fname.replace(".rec", ".h5")
+            # seg_path = os.path.join(seg_root, fname)
+            # assert os.path.exists(seg_path), seg_path
+            # with open_file(seg_path, "r") as f:
+            #     boundary_pred = f["seg"][2]
 
             with open_file(raw_path, "r") as f:
                 tomo = f["data"][:]

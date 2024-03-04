@@ -27,7 +27,7 @@ def check_ribbon_segmentation(tomo, ribbon_pred, vesicles):
 def main():
     raw_root = "/home/pape/Work/data/moser/em-susi/04_wild_type_strong_stimulation/NichtAnnotiert"
     vesicle_seg_root = "/home/pape/Work/data/moser/em-susi/results/vesicles/v1/segmentations/NichtAnnotiert"
-    seg_root = "/home/pape/Work/data/moser/em-susi/results/synaptic_structures/v2/segmentations/NichtAnnotiert"
+    seg_root = "/home/pape/Work/data/moser/em-susi/results/synaptic_structures/v4/segmentations/NichtAnnotiert"
 
     for root, dirs, files in os.walk(raw_root):
         dirs.sort()
@@ -51,7 +51,7 @@ def main():
             seg_path = os.path.join(seg_root, fname)
 
             assert os.path.exists(vesicle_path)
-            assert os.path.exists(seg_path)
+            assert os.path.exists(seg_path), seg_path
 
             with open_file(raw_path, "r") as f:
                 tomo = f["data"][:]

@@ -24,7 +24,7 @@ def check_presyn_segmentation(tomo, presyn_pred, ribbon_segmentation):
 
 def main():
     raw_root = "/home/pape/Work/data/moser/em-susi/04_wild_type_strong_stimulation/NichtAnnotiert"
-    seg_root = "/home/pape/Work/data/moser/em-susi/results/synaptic_structures/v2/segmentations/NichtAnnotiert"
+    seg_root = "/home/pape/Work/data/moser/em-susi/results/synaptic_structures/v4/segmentations/NichtAnnotiert"
 
     for root, dirs, files in os.walk(raw_root):
         dirs.sort()
