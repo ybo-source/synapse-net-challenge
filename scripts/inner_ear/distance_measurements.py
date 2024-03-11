@@ -7,7 +7,7 @@ import numpy as np
 import pandas
 
 from elf.io import open_file
-from skimage.measure import regionprops
+from skimage.measure import regionprops, marching_cubes, mesh_surface_area
 
 from synaptic_reconstruction.distance_measurements import (
     measure_segmentation_to_object_distances,
@@ -219,22 +219,39 @@ def to_excel(
     morphology_measurements,
     result_path
 ):
-    ves_assignments.to_excel(result_path, sheet_name="vesicle-pools", index=False)
+    # Merge all vesicle features into one table.
+    table = ves_assignments.merge(ribbon_distances, on="id")
+    table = table.rename(columns={"distance": "ribbon_distance [nm]"})
+
+    table = table.merge(pd_distances, on="id")
+    table = table.rename(columns={"distance": "pd_distance [nm]"})
+
+    table = table.merge(boundary_distances, on="id")
+    table = table.rename(columns={"distance": "boundary_distance [nm]"})
+
+    table = table.sort_values(by="pool")
+
+    table.to_excel(result_path, sheet_name="vesicles", index=False)
+    print(result_path)
     with pandas.ExcelWriter(result_path, engine="openpyxl", mode="a") as writer:
-        ribbon_distances.to_excel(writer, sheet_name="vesicle-ribbon-distances", index=False)
-        pd_distances.to_excel(writer, sheet_name="vesicle-pd-distances", index=False)
-        boundary_distances.to_excel(writer, sheet_name="vesicle-boundary-distances", index=False)
         morphology_measurements.to_excel(writer, sheet_name="morphology", index=False)
 
 
-# Any more morphology?
-# Surface?
+def compute_surface(vol):
+    verts, faces, _, _ = marching_cubes(vol)
+    surface_area = mesh_surface_area(verts, faces)
+    return surface_area
+
+
 def compute_morphology(ribbon, pd):
     ribbon_size = ribbon.sum()  # in pixels
     pd_size = pd.sum()  # in pixels
+    ribbon_surface = compute_surface(ribbon)
+    pd_surface = compute_surface(pd)
     morphology = pandas.DataFrame({
         "structure": ["ribbon", "presynaptic-density"],
-        "size [pixel]": [ribbon_size, pd_size]
+        "volume [pixel]": [ribbon_size, pd_size],
+        "surface [pixel]": [ribbon_surface, pd_surface],
     })
     return morphology
 
