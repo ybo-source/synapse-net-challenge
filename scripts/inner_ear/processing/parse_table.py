@@ -10,9 +10,9 @@ def parse_table(table_path, data_root, require_local_path=True):
     local_paths = []
 
     prefix = "Electron-Microscopy-Susi/Analyse"
-    for _, row in table.iterrows():
+    for i, row in table.iterrows():
         # Skip empty rows.
-        if row.Bedingung:
+        if row.Bedingung == "":
             local_paths.append("")
             continue
         if isinstance(row.Bedingung, float) and np.isnan(row.Bedingung):
@@ -25,7 +25,7 @@ def parse_table(table_path, data_root, require_local_path=True):
                 row["Ribbon-Orientierung"].lower(), str(int(row["OwnCloud-Unterordner"]))
             )
         except ValueError as e:
-            print(row)
+            print(i, ":", row)
             raise e
 
         if not os.path.exists(path):
@@ -37,6 +37,7 @@ def parse_table(table_path, data_root, require_local_path=True):
 
     assert len(local_paths) == len(table)
     table["Local Path"] = local_paths
+    table = table.dropna(how="all")
     return table
 
 
