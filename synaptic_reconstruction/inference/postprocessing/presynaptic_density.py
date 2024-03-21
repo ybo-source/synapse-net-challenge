@@ -8,7 +8,7 @@ from tqdm import tqdm
 def segment_presynaptic_density(
     presyn_prediction: np.array,
     ribbon_segmentation: np.array,
-    n_slices_exclude: int = 15,
+    n_slices_exclude: int,
     max_distance_to_ribbon: int = 15,
 ):
     """Derive presynaptic density segmentation from predictions by
@@ -30,7 +30,7 @@ def segment_presynaptic_density(
     presyn_prediction = presyn_prediction[slice_mask]
     ribbon_segmentation = ribbon_segmentation[slice_mask]
 
-    # Compute the distance to a ribbon.G
+    # Compute the distance to a ribbon.
     ribbon_dist, ribbon_idx = distance_transform_edt(ribbon_segmentation == 0, return_indices=True)
 
     # Label the presyn predictions.

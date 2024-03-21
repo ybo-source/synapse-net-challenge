@@ -8,7 +8,7 @@ from tqdm import tqdm
 def segment_ribbon(
     ribbon_prediction: np.array,
     vesicle_segmentation: np.array,
-    n_slices_exclude: int = 15,
+    n_slices_exclude: int,
     max_vesicle_distance: int = 10,
     min_vesicles_per_ribbon: int = 15,
     require_ribbon=True,
@@ -70,7 +70,13 @@ def segment_ribbon(
     full_ribbon_segmentation = np.zeros(original_shape, dtype="uint8")
     output_id = 1
 
-    max_count = max(vesicle_counts.values())
+    try:
+        max_count = max(vesicle_counts.values())
+    except ValueError:
+        print("No vesicles were matched to a ribbon")
+        print("Skipping postprocessing and returning the initial input")
+        full_ribbon_segmentation[slice_mask] = ribbon_prediction
+        return full_ribbon_segmentation
     if max_count < min_vesicles_per_ribbon and require_ribbon:
         print("The max count", max_count, "is smaller than", min_vesicles_per_ribbon)
         print("Resetting the min count to it")

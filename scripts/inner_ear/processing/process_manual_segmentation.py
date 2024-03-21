@@ -10,7 +10,7 @@ from synaptic_reconstruction.file_utils import get_data_path
 
 from parse_table import parse_table
 
-# Unless state otherwise, these files lead to a segmentation fault in IMODMOP
+# These files lead to a segmentation fault in IMODMOP.
 SKIP_FILES = [
     "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/1/manuell/Emb71M1aGridA3sec3pil12_Membrane.mod",
     "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_PD.mod",
@@ -73,12 +73,19 @@ def process_manual_segmentation(table):
             process_folder(folder, have_pd)
 
 
+# TODO
+def export_manual_segmentation_for_training(data_root, output_folder):
+    pass
+
+
 def main():
     table_path = "./Übersicht.xlsx"
     data_root = "/scratch-emmy/usr/nimcpape/data/moser"
     table = parse_table(table_path, data_root)
 
-    process_manual_segmentation(table)
+    # process_manual_segmentation(table)
+    output_folder = "/scratch-emmy/usr/nimcpape/data/moser/new-train-data"
+    export_manual_segmentation(data_root, output_folder)
 
 
 if __name__ == "__main__":
