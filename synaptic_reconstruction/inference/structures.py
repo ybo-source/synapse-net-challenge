@@ -3,6 +3,8 @@ import time
 import bioimageio.core
 import xarray
 
+from skimage.transform import rescale, resize
+
 from .vesicles import DEFAULT_TILING
 
 
@@ -15,8 +17,11 @@ def segment_structures(
 
     t0 = time.time()
 
-    # TODO
-    assert scale is None
+    if scale is not None:
+        original_shape = input_volume.shape
+        input_volume = rescale(input_volume, scale, preserve_range=True).astype(input_volume.dtype)
+        if verbose:
+            print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
     model = bioimageio.core.load_resource_description(model_path)
     with bioimageio.core.create_prediction_pipeline(model) as pp:
@@ -25,8 +30,14 @@ def segment_structures(
             pp, input_, tiling=tiling, verbose=verbose
         )[0].values.squeeze()
     assert len(structure_names) == predictions.shape[0]
-    predictions = {name: predictions[i] for i, name in enumerate(structure_names)}
 
+    if scale is not None:
+        assert predictions.ndim == input_volume.ndim + 1
+        original_shape = (predictions.shape[0],) + original_shape
+        predictions = resize(predictions, original_shape, preserve_range=True,).astype(predictions.dtype)
+        assert predictions.shape == original_shape
+
+    predictions = {name: predictions[i] for i, name in enumerate(structure_names)}
     if threshold is not None:
         for name in structure_names:
             # We can either have a single threshold value or a threshold per structure

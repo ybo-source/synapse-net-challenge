@@ -74,7 +74,10 @@ def run_structure_prediction(table, version, process_new_microscope, force=False
                 model_path, folder, version, is_new=False, force=force
             )
             if process_new_microscope:
-                folder_new = os.path.join("Tomo neues EM")
+                folder_new = os.path.join(folder, "Tomo neues EM")
+                if not os.path.exists(folder_new):
+                    folder_new = os.path.join(folder, "neues EM")
+                assert os.path.exists(folder_new), folder_new
                 segment_folder(
                     model_path, folder_new, version, is_new=True, force=force
                 )
@@ -94,7 +97,7 @@ def main():
     table = parse_table(table_path, data_root)
 
     version = 1
-    process_new_microscope = False
+    process_new_microscope = True
     force = False
 
     run_structure_prediction(table, version, process_new_microscope, force=force)

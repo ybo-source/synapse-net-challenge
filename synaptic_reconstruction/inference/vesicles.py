@@ -116,10 +116,12 @@ def segment_vesicles(
 
     if return_predictions:
         assert scale is None
-    if scale is not None and verbose:
+
+    if scale is not None:
         original_shape = input_volume.shape
         input_volume = rescale(input_volume, scale, preserve_range=True).astype(input_volume.dtype)
-        print("Rescaled volume from", original_shape, "to", input_volume.shape)
+        if verbose:
+            print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
     t0 = time.time()
     # get foreground and boundary predictions from the model

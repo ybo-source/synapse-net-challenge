@@ -59,7 +59,10 @@ def run_vesicle_segmentation(table, version, process_new_microscope):
         if micro == "beides":
             segment_folder(model_path, folder, version, is_new=False)
             if process_new_microscope:
-                folder_new = os.path.join("Tomo neues EM")
+                folder_new = os.path.join(folder, "Tomo neues EM")
+                if not os.path.exists(folder_new):
+                    folder_new = os.path.join(folder, "neues EM")
+                assert os.path.exists(folder_new), folder_new
                 segment_folder(model_path, folder_new, version, is_new=True)
         elif micro == "alt":
             segment_folder(model_path, folder, version, is_new=False)
@@ -73,7 +76,7 @@ def main():
     table = parse_table(table_path, data_root)
 
     version = 1
-    process_new_microscope = False
+    process_new_microscope = True
 
     run_vesicle_segmentation(table, version, process_new_microscope)
 
