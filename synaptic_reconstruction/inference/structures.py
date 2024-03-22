@@ -8,12 +8,15 @@ from .vesicles import DEFAULT_TILING
 
 def segment_structures(
     input_volume, model_path, structure_names,
-    verbose=False, tiling=DEFAULT_TILING, threshold=None
+    verbose=False, tiling=DEFAULT_TILING, threshold=None, scale=None,
 ):
     if verbose:
         print(f"Segmenting synaptic structures: {structure_names} in volume of shape", input_volume.shape)
 
     t0 = time.time()
+
+    # TODO
+    assert scale is None
 
     model = bioimageio.core.load_resource_description(model_path)
     with bioimageio.core.create_prediction_pipeline(model) as pp:

@@ -45,7 +45,7 @@ def segment_presynaptic_density(
         bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 
         presyn_mask = presyn_segmentation[bb] == prop.label
-        dist, idx = ribbon_dist[bb], ribbon_idx[(slice(None),) + bb]
+        dist, idx = ribbon_dist[bb].copy(), ribbon_idx[(slice(None),) + bb]
         dist[~presyn_mask] = np.inf
 
         min_dist_point = np.argmin(dist)

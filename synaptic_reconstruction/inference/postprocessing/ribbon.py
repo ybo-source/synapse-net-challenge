@@ -45,13 +45,15 @@ def segment_ribbon(
         bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 
         vesicle_mask = vesicle_segmentation[bb] == prop.label
-        dist, idx = ribbon_dist[bb], ribbon_idx[(slice(None),) + bb]
+        dist, idx = ribbon_dist[bb].copy(), ribbon_idx[(slice(None),) + bb]
         dist[~vesicle_mask] = np.inf
 
         min_dist_point = np.argmin(dist)
         min_dist_point = np.unravel_index(min_dist_point, vesicle_mask.shape)
+        min_dist = dist[min_dist_point]
+        # print(min_dist)
 
-        if dist[min_dist_point] > max_vesicle_distance:
+        if min_dist > max_vesicle_distance:
             continue
 
         ribbon_coord = tuple(idx_[min_dist_point] for idx_ in idx)

@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-import imageio.v3 as imageio
 from tqdm import tqdm
 from elf.io import open_file
 
@@ -19,7 +18,10 @@ VERSIONS = {
 
 def segment_folder(model_path, folder, version, is_new):
     if is_new:
-        raise NotImplementedError
+        # This is the difference in scale between the new and old tomogram.
+        scale = 1.47
+    else:
+        scale = None
 
     output_folder = os.path.join(folder, "automatisch", f"v{version}")
     os.makedirs(output_folder, exist_ok=True)
@@ -27,7 +29,7 @@ def segment_folder(model_path, folder, version, is_new):
     data_path = get_data_path(folder)
 
     output_path = os.path.join(
-        output_folder, Path(data_path).stem + "_vesicles.tif"
+        output_folder, Path(data_path).stem + "_vesicles.h5"
     )
     if os.path.exists(output_path):
         return
@@ -38,9 +40,11 @@ def segment_folder(model_path, folder, version, is_new):
 
     segmentation = segment_vesicles(
         data, model_path, verbose=False,
-        distance_based_segmentation=VERSIONS[version]["distance_based_segmentation"]
+        distance_based_segmentation=VERSIONS[version]["distance_based_segmentation"],
+        scale=scale,
     )
-    imageio.imwrite(output_path, segmentation, compression="zlib")
+    with open_file(output_path, "a") as f:
+        f.create_dataset("segmentation", data=segmentation, compression="gzip")
 
 
 def run_vesicle_segmentation(table, version, process_new_microscope):

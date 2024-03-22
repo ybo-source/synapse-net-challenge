@@ -6,6 +6,7 @@ import numpy as np
 import xarray
 
 from skimage.measure import label
+from skimage.transform import rescale, resize
 
 DEFAULT_TILING = {
     "tile": {"x": 512, "y": 512, "z": 64},
@@ -108,9 +109,17 @@ def segment_vesicles(
     min_size=500, verbose=True,
     distance_based_segmentation=False,
     return_predictions=False,
+    scale=None,
 ):
     if verbose:
         print("Segmenting vesicles in volume of shape", input_volume.shape)
+
+    if return_predictions:
+        assert scale is None
+    if scale is not None and verbose:
+        original_shape = input_volume.shape
+        input_volume = rescale(input_volume, scale, preserve_range=True).astype(input_volume.dtype)
+        print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
     t0 = time.time()
     # get foreground and boundary predictions from the model
@@ -131,6 +140,12 @@ def segment_vesicles(
         seg = _run_segmentation_parallel(
             foreground, boundaries, verbose=verbose, min_size=min_size
         )
+
+    if scale is not None:
+        assert seg.ndim == input_volume.ndim
+        seg = resize(seg, original_shape, preserve_range=True, order=0, anti_aliasing=False).astype(seg.dtype)
+        assert seg.shape == original_shape
+
     if return_predictions:
         return seg, pred
     return seg
