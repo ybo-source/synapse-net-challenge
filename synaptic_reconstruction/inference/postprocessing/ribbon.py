@@ -9,9 +9,8 @@ def segment_ribbon(
     ribbon_prediction: np.array,
     vesicle_segmentation: np.array,
     n_slices_exclude: int,
-    max_vesicle_distance: int = 10,
-    min_vesicles_per_ribbon: int = 15,
-    require_ribbon=True,
+    n_ribbons: int,
+    max_vesicle_distance: int = 20,
 ):
     """Derive ribbon segmentation from ribbon predictions by
     filtering out ribbons that don't have sufficient associated vesicles.
@@ -21,9 +20,8 @@ def segment_ribbon(
         vesicle_segmentation: The vesicle segmentation.
         n_slices_exclude: The number of slices to exclude on the top / bottom
             in order to avoid segmentation errors due to imaging artifacts in top and bottom.
+        n_ribbons: The number of ribbons in the tomogram.
         max_vesicle_distance: The maximal distance to associate a vesicle with a ribbon.
-        min_vesicles_per_ribbon: The minimal number of vesicles that have to be associated
-            with an object in order to count it as a ribbon.
     """
     assert ribbon_prediction.shape == vesicle_segmentation.shape
 
@@ -68,23 +66,19 @@ def segment_ribbon(
     # Create the output segmentation for the full output shape,
     # keeping only the ribbons with sufficient number of associated vesicles.
     full_ribbon_segmentation = np.zeros(original_shape, dtype="uint8")
-    output_id = 1
 
-    try:
-        max_count = max(vesicle_counts.values())
-    except ValueError:
+    if vesicle_counts:
+        ids = np.array(list(vesicle_counts.keys()))
+        counts = np.array(list(vesicle_counts.values()))
+    else:
         print("No vesicles were matched to a ribbon")
         print("Skipping postprocessing and returning the initial input")
         full_ribbon_segmentation[slice_mask] = ribbon_prediction
         return full_ribbon_segmentation
-    if max_count < min_vesicles_per_ribbon and require_ribbon:
-        print("The max count", max_count, "is smaller than", min_vesicles_per_ribbon)
-        print("Resetting the min count to it")
-        min_vesicles_per_ribbon = max_count
 
-    for ribbon_id, vesicle_count in vesicle_counts.items():
-        if vesicle_count >= min_vesicles_per_ribbon:
-            full_ribbon_segmentation[slice_mask][ribbon_segmentation == ribbon_id] = output_id
-            output_id += 1
+    ids = ids[np.argsort(counts)[::-1]]
+
+    for output_id, ribbon_id in enumerate(ids):
+        full_ribbon_segmentation[slice_mask][ribbon_segmentation == ribbon_id] = output_id
 
     return full_ribbon_segmentation

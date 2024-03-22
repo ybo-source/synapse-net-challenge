@@ -5,6 +5,7 @@ from skimage.measure import label, regionprops
 from tqdm import tqdm
 
 
+# TODO how do we handle multiple ribbons?
 def segment_presynaptic_density(
     presyn_prediction: np.array,
     ribbon_segmentation: np.array,
