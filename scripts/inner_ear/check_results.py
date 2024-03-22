@@ -40,6 +40,10 @@ def visualize_all_data(data_root, segmentation_version=None):
                     seg_name = seg_file.split("_")[-1].rstrip(".h5")
                     with h5py.File(seg_file, "r") as f:
                         seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
+                        # if "prediction" in f:
+                        #     seg = f["prediction"][:]
+                        # else:
+                        #     seg = f["segmentation"][:]
                     segmentations[seg_name] = seg
 
                 v = napari.Viewer()

@@ -60,7 +60,6 @@ def postprocess_folder(folder, version, n_ribbons, is_new, force):
             segmentations[name] = pp(prediction, object_segmentation=ribbon_and_pd)
 
         seg = segmentations[name]
-        print(segmentation_path)
         with open_file(segmentation_path, "a") as f:
             ds = f.require_dataset(name="segmentation", shape=seg.shape, dtype=seg.dtype, compression="gzip")
             ds[:] = seg
@@ -93,6 +92,7 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
 def main():
     table_path = "./Übersicht.xlsx"
     data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    # data_root = "/home/pape/Work/data/moser/em-synapses"
     table = parse_table(table_path, data_root)
 
     version = 1

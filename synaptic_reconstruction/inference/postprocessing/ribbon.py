@@ -33,7 +33,7 @@ def segment_ribbon(
     vesicle_segmentation = vesicle_segmentation[slice_mask]
 
     # Compute the distance to ribbon and the corresponding index.
-    ribbon_dist, ribbon_idx = distance_transform_edt(~ribbon_prediction, return_indices=True)
+    ribbon_dist, ribbon_idx = distance_transform_edt(ribbon_prediction == 0, return_indices=True)
     # Label the ribbon predictions.
     ribbon_segmentation = label(ribbon_prediction)
 
@@ -51,7 +51,6 @@ def segment_ribbon(
         min_dist_point = np.argmin(dist)
         min_dist_point = np.unravel_index(min_dist_point, vesicle_mask.shape)
         min_dist = dist[min_dist_point]
-        # print(min_dist)
 
         if min_dist > max_vesicle_distance:
             continue
