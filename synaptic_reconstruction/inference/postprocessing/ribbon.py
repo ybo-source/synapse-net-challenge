@@ -1,8 +1,9 @@
 import numpy as np
 
 from scipy.ndimage import distance_transform_edt
-from skimage.measure import label, regionprops
-from tqdm import tqdm
+from skimage.measure import regionprops
+
+from elf.parallel import label
 
 
 def segment_ribbon(
@@ -32,15 +33,17 @@ def segment_ribbon(
     ribbon_prediction = ribbon_prediction[slice_mask]
     vesicle_segmentation = vesicle_segmentation[slice_mask]
 
+    # Label the ribbon predictions.
+    ribbon_segmentation = np.zeros(ribbon_prediction.shape, dtype="uint32")
+    ribbon_segmentation = label(ribbon_prediction, ribbon_segmentation, block_shape=(32, 256, 256))
+
     # Compute the distance to ribbon and the corresponding index.
     ribbon_dist, ribbon_idx = distance_transform_edt(ribbon_prediction == 0, return_indices=True)
-    # Label the ribbon predictions.
-    ribbon_segmentation = label(ribbon_prediction)
 
     # Count the number of vesicles associated with each foreground object in the ribbon prediction.
     vesicle_counts = {}
     props = regionprops(vesicle_segmentation)
-    for prop in tqdm(props):
+    for prop in props:
         bb = prop.bbox
         bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 

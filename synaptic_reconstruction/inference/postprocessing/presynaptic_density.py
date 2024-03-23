@@ -1,8 +1,9 @@
 import numpy as np
 
 from scipy.ndimage import distance_transform_edt
-from skimage.measure import label, regionprops
-from tqdm import tqdm
+from skimage.measure import regionprops
+
+from elf.parallel import label
 
 
 # TODO how do we handle multiple ribbons?
@@ -31,16 +32,17 @@ def segment_presynaptic_density(
     presyn_prediction = presyn_prediction[slice_mask]
     ribbon_segmentation = ribbon_segmentation[slice_mask]
 
+    # Label the presyn predictions.
+    presyn_segmentation = np.zeros(presyn_prediction.shape, dtype="uint32")
+    presyn_segmentation = label(presyn_prediction, presyn_segmentation, block_shape=(32, 256, 256))
+
     # Compute the distance to a ribbon.
     ribbon_dist, ribbon_idx = distance_transform_edt(ribbon_segmentation == 0, return_indices=True)
-
-    # Label the presyn predictions.
-    presyn_segmentation = label(presyn_prediction)
 
     # Associate presynaptic densities with ribbons.
     ribbon_matches = {}
     props = regionprops(presyn_segmentation)
-    for prop in tqdm(props):
+    for prop in props:
         bb = prop.bbox
         bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 

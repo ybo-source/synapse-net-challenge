@@ -1,8 +1,9 @@
 import numpy as np
 
 from scipy.ndimage import distance_transform_edt
-from skimage.measure import label, regionprops
-from tqdm import tqdm
+from skimage.measure import regionprops
+
+from elf.parallel import label
 
 
 def segment_membrane_next_to_object(
@@ -30,20 +31,20 @@ def segment_membrane_next_to_object(
     boundary_prediction = boundary_prediction[slice_mask]
     object_segmentation = object_segmentation[slice_mask]
 
+    # Label the boundary predictions.
+    boundary_segmentation = np.zeros(boundary_prediction.shape, dtype="uint32")
+    boundary_segmentation = label(boundary_prediction, boundary_segmentation, block_shape=(32, 256, 256))
+
     # Compute the distance to object and the corresponding index.
     object_dist = distance_transform_edt(object_segmentation == 0)
 
-    # Label the boundary predictions.
-    boundary_segmentation = label(boundary_prediction)
-
     # Find the distances to the object and fragment size.
-
     ids = []
     distances = []
     sizes = []
 
     props = regionprops(boundary_segmentation)
-    for prop in tqdm(props):
+    for prop in props:
         bb = prop.bbox
         bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 
