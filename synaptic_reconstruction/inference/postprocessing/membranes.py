@@ -68,7 +68,6 @@ def segment_membrane_next_to_object(
         ids, sizes = ids[mask], sizes[mask]
 
     keep_ids = ids[np.argsort(sizes)[::-1][:n_fragments]]
-    breakpoint()
 
     # Create the output segmentation for the full output shape,
     # keeping only the boundary fragment closest to the PD.

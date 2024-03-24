@@ -102,7 +102,7 @@ def measure_pairwise_object_distances(
     return distances, endpoints1, endpoints2, seg_ids
 
 
-def compute_seg_object_distances(segmentation, segmented_object, resolution):
+def compute_seg_object_distances(segmentation, segmented_object, resolution, verbose):
     distance_map, indices = distance_transform_edt(segmented_object == 0, return_indices=True, sampling=resolution)
 
     seg_ids = np.unique(segmentation)[1:].tolist()
@@ -114,7 +114,7 @@ def compute_seg_object_distances(segmentation, segmented_object, resolution):
 
     # We use this so often, it should be refactored.
     props = regionprops(segmentation)
-    for prop in tqdm(props):
+    for prop in tqdm(props, disable=not verbose):
         bb = prop.bbox
         offset = np.array(bb[:3])
         bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
@@ -149,10 +149,11 @@ def measure_segmentation_to_object_distances(
     distance_type="boundary",
     resolution=None,
     save_path=None,
+    verbose=False,
 ):
     if distance_type == "boundary":
         distances, endpoints1, endpoints2, seg_ids = compute_seg_object_distances(
-            segmentation, segmented_object, resolution
+            segmentation, segmented_object, resolution, verbose
         )
     else:
         raise NotImplementedError

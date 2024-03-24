@@ -103,7 +103,7 @@ def main():
     table = parse_table(table_path, data_root)
 
     version = 1
-    process_new_microscope = False
+    process_new_microscope = True
     force = False
 
     run_structure_postprocessing(table, version, process_new_microscope, force=force)

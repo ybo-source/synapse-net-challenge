@@ -36,6 +36,9 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
         vesicles = _require_vesicles()
         with open_file(segmentation_paths["ribbon"], "r") as f:
             ribbon = f["segmentation"][:]
+        if ribbon.sum() == 0:
+            print("The ribbon segmentation at", segmentation_paths["ribbon"], "is empty. Skipping analysis.")
+            return None, True
         measure_segmentation_to_object_distances(vesicles, ribbon, save_path=ribbon_save, resolution=resolution)
 
     # Compute the distance of the vesicles to the PD.
@@ -44,6 +47,9 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
         vesicles = _require_vesicles()
         with open_file(segmentation_paths["PD"], "r") as f:
             pd = f["segmentation"][:]
+        if pd.sum() == 0:
+            print("The PD segmentation at", segmentation_paths["PD"], "is empty. Skipping analysis.")
+            return None, True
         measure_segmentation_to_object_distances(vesicles, pd, save_path=pd_save, resolution=resolution)
 
     # Compute the distance of the vesicle to the membrane.
@@ -59,7 +65,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
     distance_paths = {
         "ribbon": ribbon_save, "PD": pd_save, "membrane": membrane_save
     }
-    return distance_paths
+    return distance_paths, False
 
 
 def assign_vesicles_to_pools(vesicles, distance_paths):
@@ -212,7 +218,9 @@ def analyze_folder(folder, version, n_ribbons, force):
     resolution = [res / 10 for res in resolution]
 
     out_distance_folder = os.path.join(output_folder, "distances")
-    distance_paths = compute_distances(segmentation_paths, out_distance_folder, resolution, force)
+    distance_paths, skip = compute_distances(segmentation_paths, out_distance_folder, resolution, force)
+    if skip:
+        return
 
     result_path = os.path.join(output_folder, "measurements.xlsx")
     if force or not os.path.exists(result_path):
@@ -251,8 +259,8 @@ def run_analysis(table, version, force=False):
 
 def main():
     table_path = "./Übersicht.xlsx"
-    # data_root = "/scratch-emmy/usr/nimcpape/data/moser"
-    data_root = "/home/pape/Work/data/moser/em-synapses"
+    data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    # data_root = "/home/pape/Work/data/moser/em-synapses"
     table = parse_table(table_path, data_root)
 
     version = 1
