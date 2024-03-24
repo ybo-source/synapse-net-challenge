@@ -81,10 +81,12 @@ def run_structure_prediction(table, version, process_new_microscope, force=False
                 segment_folder(
                     model_path, folder_new, version, is_new=True, force=force
                 )
+
         elif micro == "alt":
             segment_folder(
                 model_path, folder, version, is_new=False, force=force
             )
+
         elif micro == "neu" and process_new_microscope:
             segment_folder(
                 model_path, folder, version, is_new=True, force=force
