@@ -32,7 +32,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
             return vesicles
 
     # Compute the distance of the vesicles to the ribbon.
-    ribbon_save = os.path.join(save_folder, "ribbon_dist.npz")
+    ribbon_save = os.path.join(save_folder, "ribbon.npz")
     if force or not os.path.exists(ribbon_save):
         vesicles = _require_vesicles()
         with open_file(segmentation_paths["ribbon"], "r") as f:
@@ -40,7 +40,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
         measure_segmentation_to_object_distances(vesicles, ribbon, save_path=ribbon_save, resolution=resolution)
 
     # Compute the distance of the vesicles to the PD.
-    pd_save = os.path.join(save_folder, "pd_dist.npz")
+    pd_save = os.path.join(save_folder, "PD.npz")
     if force or not os.path.exists(pd_save):
         vesicles = _require_vesicles()
         with open_file(segmentation_paths["PD"], "r") as f:
@@ -48,7 +48,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
         measure_segmentation_to_object_distances(vesicles, pd, save_path=pd_save, resolution=resolution)
 
     # Compute the distance of the vesicle to the membrane.
-    membrane_save = os.path.join(save_folder, "membrane_dist.npz")
+    membrane_save = os.path.join(save_folder, "membrane.npz")
     if force or not os.path.exists(membrane_save):
         vesicles = _require_vesicles()
         with open_file(segmentation_paths["membrane"], "r") as f:

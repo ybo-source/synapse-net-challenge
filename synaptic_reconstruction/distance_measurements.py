@@ -319,13 +319,13 @@ def keep_direct_distances(segmentation, measurement_path, line_dilation=0, scale
 
 
 def filter_blocked_segmentation_to_object_distances(
-    segmentation, measurement_path, line_dilation=0, scale=None, seg_ids=None
+    segmentation, measurement_path, line_dilation=0, scale=None, seg_ids=None, verbose=False,
 ):
     distance_lines, properties = create_object_distance_lines(measurement_path, seg_ids=seg_ids, scale=scale)
     all_seg_ids = properties["id"]
 
     filtered_ids = []
-    for seg_id, line in tqdm(zip(all_seg_ids, distance_lines), total=len(distance_lines)):
+    for seg_id, line in tqdm(zip(all_seg_ids, distance_lines), total=len(distance_lines), disable=not verbose):
         if (seg_ids is not None) and (seg_id not in seg_ids):
             continue
 
