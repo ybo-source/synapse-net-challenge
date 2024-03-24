@@ -6,7 +6,6 @@ from skimage.measure import regionprops
 from elf.parallel import label
 
 
-# TODO how do we handle multiple ribbons?
 def segment_presynaptic_density(
     presyn_prediction: np.array,
     ribbon_segmentation: np.array,
@@ -33,8 +32,7 @@ def segment_presynaptic_density(
     ribbon_segmentation = ribbon_segmentation[slice_mask]
 
     # Label the presyn predictions.
-    presyn_segmentation = np.zeros(presyn_prediction.shape, dtype="uint32")
-    presyn_segmentation = label(presyn_prediction, presyn_segmentation, block_shape=(32, 256, 256))
+    presyn_segmentation = label(presyn_prediction, block_shape=(32, 256, 256))
 
     # Compute the distance to a ribbon.
     ribbon_dist, ribbon_idx = distance_transform_edt(ribbon_segmentation == 0, return_indices=True)

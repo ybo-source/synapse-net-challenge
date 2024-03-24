@@ -11,6 +11,7 @@ def segment_membrane_next_to_object(
     object_segmentation: np.array,
     n_slices_exclude: int,
     radius: int = 25,
+    n_fragments: int = 1,
 ):
     """Derive boundary segmentation from boundary predictions by
     selecting large boundary fragment closest to the object.
@@ -21,6 +22,7 @@ def segment_membrane_next_to_object(
         n_slices_exclude: The number of slices to exclude on the top / bottom
             in order to avoid segmentation errors due to imaging artifacts in top and bottom.
         radius: The radius for membrane fragments that are considered.
+        n_fragments: The number of boundary fragments to keep.
     """
     assert boundary_prediction.shape == object_segmentation.shape
 
@@ -32,8 +34,7 @@ def segment_membrane_next_to_object(
     object_segmentation = object_segmentation[slice_mask]
 
     # Label the boundary predictions.
-    boundary_segmentation = np.zeros(boundary_prediction.shape, dtype="uint32")
-    boundary_segmentation = label(boundary_prediction, boundary_segmentation, block_shape=(32, 256, 256))
+    boundary_segmentation = label(boundary_prediction, block_shape=(32, 256, 256))
 
     # Compute the distance to object and the corresponding index.
     object_dist = distance_transform_edt(object_segmentation == 0)
@@ -65,11 +66,13 @@ def segment_membrane_next_to_object(
     mask = distances < radius
     if mask.sum() > 0:
         ids, sizes = ids[mask], sizes[mask]
-    min_boundary_id = ids[np.argmax(sizes)]
+
+    keep_ids = ids[np.argsort(sizes)[::-1][:n_fragments]]
+    breakpoint()
 
     # Create the output segmentation for the full output shape,
     # keeping only the boundary fragment closest to the PD.
     full_boundary_segmentation = np.zeros(original_shape, dtype="uint8")
-    full_boundary_segmentation[slice_mask][boundary_segmentation == min_boundary_id] = 1
+    full_boundary_segmentation[slice_mask][np.isin(boundary_segmentation, keep_ids)] = 1
 
     return full_boundary_segmentation

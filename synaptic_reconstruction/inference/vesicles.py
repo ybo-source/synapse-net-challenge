@@ -29,8 +29,7 @@ def _run_distance_segmentation_parallel(
 
     # get the segmentation via seeded watershed
     t0 = time.time()
-    seeds = np.zeros(bd_dist.shape, dtype="uint64")
-    seeds = parallel.label(bd_dist > distance_threshold, seeds, block_shape=block_shape, verbose=verbose)
+    seeds = parallel.label(bd_dist > distance_threshold, block_shape=block_shape, verbose=verbose)
     if verbose:
         print("Compute connected components in", time.time() - t0, "s")
 
@@ -67,13 +66,7 @@ def _run_segmentation_parallel(
 
     # get the segmentation via seeded watershed
     t0 = time.time()
-    seeds = np.zeros(foreground.shape, dtype="uint64")
-    seeds = parallel.label(
-        (foreground - boundaries) > 0.5,
-        out=seeds,
-        block_shape=block_shape,
-        verbose=verbose,
-    )
+    seeds = parallel.label((foreground - boundaries) > 0.5, block_shape=block_shape, verbose=verbose)
     if verbose:
         print("Compute connected components in", time.time() - t0, "s")
 

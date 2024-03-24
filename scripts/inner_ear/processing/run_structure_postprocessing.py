@@ -57,7 +57,7 @@ def postprocess_folder(folder, version, n_ribbons, is_new, force):
 
         elif name == "membrane":
             ribbon_and_pd = segmentations["ribbon"] + segmentations["PD"]
-            segmentations[name] = pp(prediction, object_segmentation=ribbon_and_pd)
+            segmentations[name] = pp(prediction, object_segmentation=ribbon_and_pd, n_fragments=n_ribbons)
 
         seg = segmentations[name]
         with open_file(segmentation_path, "a") as f:
@@ -75,7 +75,8 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
         if row["PD vorhanden? "] == "nein":
             continue
 
-        n_ribbons = table["Anzahl Ribbons"]
+        n_ribbons = row["Anzahl Ribbons"]
+        assert isinstance(n_ribbons, int)
 
         micro = row["EM alt vs. Neu"]
         if micro == "beides":
