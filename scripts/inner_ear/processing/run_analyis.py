@@ -8,7 +8,6 @@ import pandas
 from synaptic_reconstruction.file_utils import get_data_path
 from synaptic_reconstruction.distance_measurements import (
     measure_segmentation_to_object_distances,
-    # create_object_distance_lines,
     filter_blocked_segmentation_to_object_distances,
 )
 from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
@@ -156,14 +155,8 @@ def to_excel(
 
 
 def compute_morphology(ribbon, pd, resolution):
-    # TODO implement for resolution
-    # ribbon_morph = compute_object_morphology(ribbon, resolution=resolution)
-    ribbon_morph = compute_object_morphology(ribbon, "ribbon", resolution=None)
-
-    # TODO implement for resolution
-    # pd_morph = compute_object_morphology(pd, resolution=resolution)
-    pd_morph = compute_object_morphology(pd, "presynaptic-density", resolution=None)
-
+    ribbon_morph = compute_object_morphology(ribbon, "ribbon", resolution=resolution)
+    pd_morph = compute_object_morphology(pd, "presynaptic-density", resolution=resolution)
     measurements = pandas.concat([ribbon_morph, pd_morph])
     return measurements
 
@@ -268,8 +261,5 @@ def main():
     run_analysis(table, version, force=force)
 
 
-# TODO closed vs. open contours
-# TODO normalize vesicle number by surface -> double check with Sophia
-# TODO exlude vesicles on top / bottom slices -> double check with Sophia
 if __name__ == "__main__":
     main()
