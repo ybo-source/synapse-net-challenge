@@ -1,3 +1,5 @@
+import warnings
+
 import meshplex
 import numpy as np
 import pandas as pd
@@ -23,8 +25,12 @@ def compute_radii(vesicles, resolution, ids=None):
 def compute_object_morphology(object_, structure_name, resolution=None):
     verts, faces, _, _ = marching_cubes(object_, spacing=(1.0, 1.0, 1.0) if resolution is None else resolution)
 
-    mesh = meshplex.MeshTri(np.array(verts), np.array(faces))
-    volume = np.sum(mesh.cell_volumes)
+    try:
+        mesh = meshplex.MeshTri(np.array(verts), np.array(faces))
+        volume = np.sum(mesh.cell_volumes)
+    except Exception as e:
+        warnings.warn(str(e))
+        volume = np.nan
     surface = mesh_surface_area(verts, faces)
 
     morphology = pd.DataFrame({
