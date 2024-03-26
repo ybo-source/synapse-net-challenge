@@ -271,7 +271,7 @@ def create_object_distance_lines(measurement_path, max_distance=None, seg_ids=No
     assert len(distances) == len(seg_ids) == len(start_points) == len(end_points)
     lines = np.array([[start, end] for start, end in zip(start_points, end_points)])
 
-    if scale is not None:
+    if scale is not None and len(lines > 0):
         scale_factor = np.array(3 * [scale])[None, None]
         lines //= scale_factor
 

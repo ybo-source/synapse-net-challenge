@@ -116,13 +116,16 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
 def visualize_all_data(
     data_root, table,
     segmentation_version=None, check_micro=None,
-    visualize_distances=False,
+    visualize_distances=False, skip_iteration=None,
 ):
     assert check_micro in ["new", "old", "both", None]
 
     for i, row in tqdm(table.iterrows(), total=len(table)):
         folder = row["Local Path"]
         if folder == "":
+            continue
+
+        if skip_iteration is not None and i < skip_iteration:
             continue
 
         micro = row["EM alt vs. Neu"]
@@ -144,20 +147,27 @@ def visualize_all_data(
 
 
 def main():
+    import argparse
     from parse_table import parse_table
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--iteration", default=None, type=int)
+    parser.add_argument("-m", "--microscope", default=None)
+    parser.add_argument("-d", "--visualize_distances", action="store_false")
+    args = parser.parse_args()
+    assert args.microscope in (None, "both", "old", "new")
 
     data_root = "/home/pape/Work/data/moser/em-synapses"
 
     table_path = "./processing/Übersicht.xlsx"
     table = parse_table(table_path, data_root)
 
-    visualize_distances = True
     segmentation_version = 1
 
     visualize_all_data(
         data_root, table,
-        segmentation_version=segmentation_version, check_micro="old",
-        visualize_distances=visualize_distances
+        segmentation_version=segmentation_version, check_micro=args.microscope,
+        visualize_distances=args.visualize_distances, skip_iteration=args.iteration,
     )
 
 
