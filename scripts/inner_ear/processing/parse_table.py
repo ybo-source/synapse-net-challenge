@@ -18,11 +18,14 @@ def parse_table(table_path, data_root, require_local_path=True):
         if isinstance(row.Bedingung, float) and np.isnan(row.Bedingung):
             local_paths.append("")
             continue
+        if isinstance(row["OwnCloud-Unterordner"], float) and np.isnan(row["OwnCloud-Unterordner"]):
+            local_paths.append("")
+            continue
 
         try:
             path = os.path.join(
                 data_root, prefix, row.Bedingung, f"Mouse {int(row.Maus)}",
-                row["Ribbon-Orientierung"].lower(), str(int(row["OwnCloud-Unterordner"]))
+                row["Ribbon-Orientierung"].lower().rstrip("?"), str(int(row["OwnCloud-Unterordner"]))
             )
         except ValueError as e:
             print(i, ":", row)
