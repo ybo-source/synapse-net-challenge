@@ -75,3 +75,28 @@ def segment_membrane_next_to_object(
     full_boundary_segmentation[slice_mask][np.isin(boundary_segmentation, keep_ids)] = 1
 
     return full_boundary_segmentation
+
+
+def segment_membrane_distance_based(
+    boundary_prediction: np.array,
+    pd_segmentation: np.array,
+    n_slices_exclude: int,
+    max_pd_dist: float,
+):
+    assert boundary_prediction.shape == pd_segmentation.shape
+
+    original_shape = boundary_prediction.shape
+
+    # Cut away the exclude mask.
+    slice_mask = np.s_[n_slices_exclude:-n_slices_exclude]
+    boundary_prediction = boundary_prediction[slice_mask]
+    pd_segmentation = pd_segmentation[slice_mask]
+
+    # Compute the distance to the pd.
+    pd_dist = distance_transform_edt(pd_segmentation == 0)
+    boundary_segmentation = np.logical_and(boundary_prediction > 0, pd_dist < max_pd_dist)
+
+    full_boundary_segmentation = np.zeros(original_shape, dtype="uint8")
+    full_boundary_segmentation[slice_mask][boundary_segmentation] = 1
+
+    return full_boundary_segmentation

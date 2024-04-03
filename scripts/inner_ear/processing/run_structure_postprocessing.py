@@ -11,26 +11,39 @@ from parse_table import parse_table
 
 
 POSTPROCESSING = {
-    "old": {
-        "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20),
-        "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20),
-        "membrane": partial(postprocessing.segment_membrane_next_to_object, n_slices_exclude=20),
+    1: {
+        "old": {
+            "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20),
+            "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20),
+            "membrane": partial(postprocessing.segment_membrane_next_to_object, n_slices_exclude=20),
+        },
+        "new": {
+            "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20, max_vesicle_distance=30),
+            "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20, max_distance_to_ribbon=22.5),
+            "membrane": partial(postprocessing.segment_membrane_next_to_object, n_slices_exclude=20, radius=37.5),
+        }
     },
-    "new": {
-        "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20, max_vesicle_distance=30),
-        "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20, max_distance_to_ribbon=22.5),
-        "membrane": partial(postprocessing.segment_membrane_next_to_object, n_slices_exclude=20, radius=37.5),
+    2: {
+        "old": {
+            "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20),
+            "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20),
+            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_pd_dist=60),
+        },
+        "new": {
+            "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20, max_vesicle_distance=30),
+            "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20, max_distance_to_ribbon=22.5),
+            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_pd_dist=80),
+        }
     }
 }
 
 
-# TODO adapt to segmentation without PD
-def postprocess_folder(folder, version, n_ribbons, is_new, force):
+def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
     output_folder = os.path.join(folder, "automatisch", f"v{version}")
     data_path = get_data_path(folder)
 
     structure_names = ["ribbon", "PD", "membrane"]
-    pp_dict = POSTPROCESSING["new" if is_new else "old"]
+    pp_dict = POSTPROCESSING[version]["new" if is_new else "old"]
 
     segmentations = {}
 
@@ -57,13 +70,25 @@ def postprocess_folder(folder, version, n_ribbons, is_new, force):
             segmentations[name] = pp(prediction, ribbon_segmentation=segmentations["ribbon"])
 
         elif name == "membrane":
-            ribbon_and_pd = segmentations["ribbon"] + segmentations["PD"]
-            segmentations[name] = pp(prediction, object_segmentation=ribbon_and_pd, n_fragments=n_ribbons)
+            # ribbon_and_pd = segmentations["ribbon"] + segmentations["PD"]
+            # segmentations[name] = pp(prediction, object_segmentation=ribbon_and_pd, n_fragments=n_ribbons)
+            # ribbon_and_pd = segmentations["ribbon"] + segmentations["PD"]
+            segmentations[name] = pp(prediction, pd_segmentation=segmentations["PD"])
+
+        else:
+            assert False, name
 
         seg = segmentations[name]
-        with open_file(segmentation_path, "a") as f:
-            ds = f.require_dataset(name="segmentation", shape=seg.shape, dtype=seg.dtype, compression="gzip")
-            ds[:] = seg
+
+        # with open_file(segmentation_path, "a") as f:
+        #     ds = f.require_dataset(name="segmentation", shape=seg.shape, dtype=seg.dtype, compression="gzip")
+        #     ds[:] = seg
+
+    import napari
+    v = napari.Viewer()
+    for name, seg in segmentations.items():
+        v.add_labels(seg, name=name)
+    napari.run()
 
 
 def run_structure_postprocessing(table, version, process_new_microscope, force=False):
@@ -76,24 +101,28 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
         if row["PD vorhanden? "] == "nein":
             continue
 
-        n_ribbons = row["Anzahl Ribbons"]
-        assert isinstance(n_ribbons, int)
+        n_ribbons = int(row["Anzahl Ribbons"])
+        n_pds = int(row["Anzahl PDs"])
+        if n_pds > 1 or n_ribbons > 1:
+            print("The tomogram {folder} has more than 1 ribbon or PD.")
+            print("The structure post-processing for this case is not yet implemented and will be skipped.")
+            continue
 
         micro = row["EM alt vs. Neu"]
         if micro == "beides":
-            postprocess_folder(folder, version, n_ribbons, is_new=False, force=force)
+            postprocess_folder(folder, version, n_ribbons, n_pds, is_new=False, force=force)
             if process_new_microscope:
                 folder_new = os.path.join(folder, "Tomo neues EM")
                 if not os.path.exists(folder_new):
                     folder_new = os.path.join(folder, "neues EM")
                 assert os.path.exists(folder_new), folder_new
-                postprocess_folder(folder_new, version, n_ribbons, is_new=True, force=force)
+                postprocess_folder(folder_new, version, n_ribbons, n_pds, is_new=True, force=force)
 
         elif micro == "alt":
-            postprocess_folder(folder, version, n_ribbons, is_new=False, force=force)
+            postprocess_folder(folder, version, n_ribbons, n_pds, is_new=False, force=force)
 
         elif micro == "neu" and process_new_microscope:
-            postprocess_folder(folder, version, n_ribbons, is_new=True, force=force)
+            postprocess_folder(folder, version, n_ribbons, n_pds, is_new=True, force=force)
 
 
 def main():

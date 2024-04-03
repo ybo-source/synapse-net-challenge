@@ -62,7 +62,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         napari.run()
 
     else:
-        seg_folder = os.path.join(folder, "automatisch", "v1")
+        seg_folder = os.path.join(folder, "automatisch", f"v{segmentation_version}")
         seg_files = glob(os.path.join(seg_folder, "*.h5"))
         if len(seg_files) == 0:
             print("No segmentations for", folder, "skipping!")
@@ -158,11 +158,10 @@ def main():
     assert args.microscope in (None, "both", "old", "new")
 
     data_root = "/home/pape/Work/data/moser/em-synapses"
-
-    table_path = "./processing/Übersicht.xlsx"
+    table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    segmentation_version = 1
+    segmentation_version = 2
 
     visualize_all_data(
         data_root, table,

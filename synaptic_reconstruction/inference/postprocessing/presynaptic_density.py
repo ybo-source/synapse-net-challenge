@@ -6,10 +6,12 @@ from skimage.measure import regionprops
 from elf.parallel import label
 
 
+# TODO update for multiple ribbons and pds
 def segment_presynaptic_density(
     presyn_prediction: np.array,
     ribbon_segmentation: np.array,
     n_slices_exclude: int,
+    n_pds: int = 1,
     max_distance_to_ribbon: int = 15,
 ):
     """Derive presynaptic density segmentation from predictions by
@@ -74,7 +76,8 @@ def segment_presynaptic_density(
         elif len(matches) == 1:  # exactly one associated PD was found
             presyn_ids = [matches[0][0]]
         else:  # multiple matches were found, assign all of them to the ribbon
-            presyn_ids = [match[0] for match in matches]
+            matched_ids, matched_distances = [match[0] for match in matches], [match[1] for match in matches]
+            presyn_ids = np.array(matched_ids)[np.argsort(matched_distances)[:n_pds]]
 
         full_presyn_segmentation[slice_mask][np.isin(presyn_segmentation, presyn_ids)] = ribbon_id
 
