@@ -11,12 +11,14 @@ from parse_table import parse_table
 
 VERSIONS = {
     1: {
-        "model": "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v4.zip",
+        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v4.zip",
+    },
+    2: {
+        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v5.zip",
     },
 }
 
 
-# TODO adapt to segmentation without PD
 def segment_folder(model_path, folder, version, is_new, force):
     if is_new:
         # This is the difference in scale between the new and old tomogram.
@@ -63,11 +65,6 @@ def run_structure_prediction(table, version, process_new_microscope, force=False
         folder = row["Local Path"]
         if folder == "":
             continue
-
-        # We have to handle the segmentation without ribbon separately.
-        if row["PD vorhanden? "] == "nein":
-            continue
-
         micro = row["EM alt vs. Neu"]
         if micro == "beides":
             segment_folder(
@@ -94,11 +91,11 @@ def run_structure_prediction(table, version, process_new_microscope, force=False
 
 
 def main():
-    table_path = "./Übersicht.xlsx"
     data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    version = 1
+    version = 2
     process_new_microscope = True
     force = False
 

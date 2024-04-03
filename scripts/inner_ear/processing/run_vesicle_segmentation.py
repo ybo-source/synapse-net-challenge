@@ -6,6 +6,7 @@ from elf.io import open_file
 
 from synaptic_reconstruction.file_utils import get_data_path
 from synaptic_reconstruction.inference import segment_vesicles
+from synaptic_reconstruction.inference.postprocessing import close_holes
 from parse_table import parse_table
 
 VERSIONS = {
@@ -13,6 +14,11 @@ VERSIONS = {
         "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/vesicles/mean-teacher-v3.zip",
         "distance_based_segmentation": True,
     },
+    2: {
+        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/vesicles/mean-teacher-v5.zip",
+        "distance_based_segmentation": True,
+        "closing_iterations": 4,
+    }
 }
 
 
@@ -43,6 +49,10 @@ def segment_folder(model_path, folder, version, is_new):
         distance_based_segmentation=VERSIONS[version]["distance_based_segmentation"],
         scale=scale,
     )
+    closing_iterations = VERSIONS[version].get("closing_iterations", None)
+    if closing_iterations is not None:
+        segmentation = close_holes(segmentation, closing_iterations=closing_iterations)
+
     with open_file(output_path, "a") as f:
         f.create_dataset("segmentation", data=segmentation, compression="gzip")
 
@@ -71,11 +81,11 @@ def run_vesicle_segmentation(table, version, process_new_microscope):
 
 
 def main():
-    table_path = "./Übersicht.xlsx"
     data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    version = 1
+    version = 2
     process_new_microscope = True
 
     run_vesicle_segmentation(table, version, process_new_microscope)

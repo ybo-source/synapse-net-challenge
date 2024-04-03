@@ -97,12 +97,12 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
 
 
 def main():
-    table_path = "./Übersicht.xlsx"
     data_root = "/scratch-emmy/usr/nimcpape/data/moser"
     # data_root = "/home/pape/Work/data/moser/em-synapses"
+    table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    version = 1
+    version = 2
     process_new_microscope = True
     force = False
 
