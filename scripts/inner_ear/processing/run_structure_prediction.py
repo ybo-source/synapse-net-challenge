@@ -14,7 +14,9 @@ VERSIONS = {
         "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v4.zip",
     },
     2: {
-        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v5.zip",
+        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v4.zip",
+        # The new model doesn't actually work better. it predicts too much for PD and for Ribbon.
+        # "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v5.zip",
     },
 }
 

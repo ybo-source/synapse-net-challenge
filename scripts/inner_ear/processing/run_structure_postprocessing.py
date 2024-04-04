@@ -80,15 +80,16 @@ def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
 
         seg = segmentations[name]
 
-        # with open_file(segmentation_path, "a") as f:
-        #     ds = f.require_dataset(name="segmentation", shape=seg.shape, dtype=seg.dtype, compression="gzip")
-        #     ds[:] = seg
+        with open_file(segmentation_path, "a") as f:
+            ds = f.require_dataset(name="segmentation", shape=seg.shape, dtype=seg.dtype, compression="gzip")
+            ds[:] = seg
 
-    import napari
-    v = napari.Viewer()
-    for name, seg in segmentations.items():
-        v.add_labels(seg, name=name)
-    napari.run()
+    # FOR DEBUGGING
+    # import napari
+    # v = napari.Viewer()
+    # for name, seg in segmentations.items():
+    #     v.add_labels(seg, name=name)
+    # napari.run()
 
 
 def run_structure_postprocessing(table, version, process_new_microscope, force=False):
@@ -101,10 +102,13 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
         if row["PD vorhanden? "] == "nein":
             continue
 
+        n_pds = row["Anzahl PDs"]
+        if n_pds == "unklar":
+            continue
+        n_pds = int(n_pds)
         n_ribbons = int(row["Anzahl Ribbons"])
-        n_pds = int(row["Anzahl PDs"])
         if n_pds > 1 or n_ribbons > 1:
-            print("The tomogram {folder} has more than 1 ribbon or PD.")
+            print(f"The tomogram {folder} has more than 1 ribbon or PD.")
             print("The structure post-processing for this case is not yet implemented and will be skipped.")
             continue
 
@@ -133,7 +137,7 @@ def main():
 
     version = 2
     process_new_microscope = True
-    force = False
+    force = True
 
     run_structure_postprocessing(table, version, process_new_microscope, force=force)
 
