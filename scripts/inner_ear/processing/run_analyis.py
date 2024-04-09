@@ -11,6 +11,7 @@ from synaptic_reconstruction.distance_measurements import (
     filter_blocked_segmentation_to_object_distances,
 )
 from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
+from synaptic_reconstruction.inference.postprocessing import filter_border_vesicles
 
 from elf.io import open_file
 from tqdm import tqdm
@@ -62,9 +63,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
             vesicles, membrane, save_path=membrane_save, resolution=resolution
         )
 
-    distance_paths = {
-        "ribbon": ribbon_save, "PD": pd_save, "membrane": membrane_save
-    }
+    distance_paths = {"ribbon": ribbon_save, "PD": pd_save, "membrane": membrane_save}
     return distance_paths, False
 
 
@@ -86,11 +85,12 @@ def assign_vesicles_to_pools(vesicles, distance_paths):
     # Criterion: vesicles are closer than 80 nm to ribbon and they are in the first row
     # (i.e. not blocked by another vesicle).
     rav_ribbon_distance = 80  # nm
-    rav_ids_all = seg_ids[ribbon_distances < rav_ribbon_distance]
+    rav_ids = seg_ids[ribbon_distances < rav_ribbon_distance]
     # Filter out the blocked vesicles.
     rav_ids = filter_blocked_segmentation_to_object_distances(
-        vesicles, distance_paths["ribbon"], seg_ids=rav_ids_all
+        vesicles, distance_paths["ribbon"], seg_ids=rav_ids, line_dilation=4, verbose=True,
     )
+    rav_ids = filter_border_vesicles(vesicles, seg_ids=rav_ids)
     # n_blocked = len(rav_ids_all) - len(rav_ids)
     # print(n_blocked, "ribbon associated vesicles were blocked by the ribbon.")
 
@@ -99,12 +99,14 @@ def assign_vesicles_to_pools(vesicles, distance_paths):
     mpv_pd_distance = 100  # nm
     mpv_bd_distance = 50  # nm
     mpv_ids = seg_ids[np.logical_and(pd_distances < mpv_pd_distance, bd_distances < mpv_bd_distance)]
+    mpv_ids = filter_border_vesicles(vesicles, seg_ids=mpv_ids)
 
     # Find the vesicles that are membrane docked (Docked-V).
     # Criterion: vesicles are closer than 2 nm to the membrane and closer than 100 nm to the PD.
     docked_pd_distance = 100  # nm
     docked_bd_distance = 2  # nm
     docked_ids = seg_ids[np.logical_and(pd_distances < docked_pd_distance, bd_distances < docked_bd_distance)]
+    docked_ids = filter_border_vesicles(vesicles, seg_ids=docked_ids)
 
     # Keep only the vesicle ids that are in one of the three categories.
     vesicle_ids = np.unique(np.concatenate([rav_ids, mpv_ids, docked_ids]))
@@ -237,8 +239,15 @@ def run_analysis(table, version, force=False):
         if row["PD vorhanden? "] == "nein":
             continue
 
-        n_ribbons = row["Anzahl Ribbons"]
-        assert isinstance(n_ribbons, int)
+        n_pds = row["Anzahl PDs"]
+        if n_pds == "unklar":
+            continue
+        n_pds = int(n_pds)
+        n_ribbons = int(row["Anzahl Ribbons"])
+        if n_pds > 1 or n_ribbons > 1:
+            print(f"The tomogram {folder} has more than 1 ribbon or PD.")
+            print("The structure post-processing for this case is not yet implemented and will be skipped.")
+            continue
 
         micro = row["EM alt vs. Neu"]
         if micro == "beides":
@@ -258,12 +267,12 @@ def run_analysis(table, version, force=False):
 
 
 def main():
-    table_path = "./Übersicht.xlsx"
-    data_root = "/scratch-emmy/usr/nimcpape/data/moser"
-    # data_root = "/home/pape/Work/data/moser/em-synapses"
+    # data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    data_root = "/home/pape/Work/data/moser/em-synapses"
+    table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    version = 1
+    version = 2
     force = False
 
     run_analysis(table, version, force=force)

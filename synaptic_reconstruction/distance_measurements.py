@@ -10,6 +10,36 @@ from skimage.measure import regionprops
 from skimage.draw import line_nd
 from tqdm import tqdm
 
+try:
+    import skfmm
+except ImportError:
+    skfmm = None
+
+
+def compute_geodesic_distances(segmentation, distance_to, resolution=None, unsigned=True):
+    assert skfmm is not None, "Please install scikit-fmm to use compute_geodesic_distance."
+
+    invalid = segmentation == 0
+    input_ = np.ma.array(segmentation.copy(), mask=invalid)
+    input_[distance_to] = 0
+
+    if resolution is None:
+        dx = 1.0
+    elif isinstance(resolution, (int, float)):
+        dx = float(resolution)
+    else:
+        assert len(resolution) == segmentation.ndim
+        dx = resolution
+
+    distances = skfmm.distance(input_, dx=dx).data
+    distances[distances == 0] = np.inf
+    distances[distance_to] = 0
+
+    if unsigned:
+        distances = np.abs(distances)
+
+    return distances
+
 
 # TODO update this
 def compute_centroid_distances(segmentation, resolution, n_neighbors):

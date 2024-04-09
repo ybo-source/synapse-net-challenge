@@ -1,9 +1,11 @@
+from typing import Optional
 import numpy as np
 
 from scipy.ndimage import distance_transform_edt
 from skimage.measure import regionprops
 
 from elf.parallel import label
+from synaptic_reconstruction.distance_measurements import compute_geodesic_distances
 
 
 def segment_membrane_next_to_object(
@@ -79,24 +81,41 @@ def segment_membrane_next_to_object(
 
 def segment_membrane_distance_based(
     boundary_prediction: np.array,
-    pd_segmentation: np.array,
+    reference_segmentation: np.array,
     n_slices_exclude: int,
-    max_pd_dist: float,
+    max_distance: float,
+    resolution: Optional[float] = None,
 ):
-    assert boundary_prediction.shape == pd_segmentation.shape
+    assert boundary_prediction.shape == reference_segmentation.shape
 
     original_shape = boundary_prediction.shape
 
     # Cut away the exclude mask.
     slice_mask = np.s_[n_slices_exclude:-n_slices_exclude]
     boundary_prediction = boundary_prediction[slice_mask]
-    pd_segmentation = pd_segmentation[slice_mask]
+    reference_segmentation = reference_segmentation[slice_mask]
 
-    # Compute the distance to the pd.
-    pd_dist = distance_transform_edt(pd_segmentation == 0)
-    boundary_segmentation = np.logical_and(boundary_prediction > 0, pd_dist < max_pd_dist)
+    # Get the unique objects in the reference segmentation.
+    reference_ids = np.unique(reference_segmentation)
+    assert reference_ids[0] == 0
+    reference_ids = reference_ids[1:]
 
+    # Compute the boundary fragments close to the unique objects in the reference.
     full_boundary_segmentation = np.zeros(original_shape, dtype="uint8")
-    full_boundary_segmentation[slice_mask][boundary_segmentation] = 1
+    for seg_id in reference_ids:
+
+        # First, we find the closest point on the membrane surface.
+        ref_dist = distance_transform_edt(reference_segmentation != seg_id)
+        ref_dist[boundary_prediction == 0] = np.inf
+        closest_membrane = np.argmin(ref_dist)
+        closest_point = np.unravel_index(closest_membrane, ref_dist.shape)
+
+        # Then we compute the geodesic distance to this point on the distance and threshold it.
+        boundary_segmentation = compute_geodesic_distances(
+            boundary_prediction, closest_point, resolution
+        ) < max_distance
+
+        # boundary_segmentation = np.logical_and(boundary_prediction > 0, pd_dist < max_distance)
+        full_boundary_segmentation[slice_mask][boundary_segmentation] = 1
 
     return full_boundary_segmentation

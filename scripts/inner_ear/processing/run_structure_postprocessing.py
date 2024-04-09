@@ -2,6 +2,7 @@ import os
 from functools import partial
 from pathlib import Path
 
+import mrcfile
 import synaptic_reconstruction.inference.postprocessing as postprocessing
 from synaptic_reconstruction.file_utils import get_data_path
 
@@ -27,12 +28,12 @@ POSTPROCESSING = {
         "old": {
             "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20),
             "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20),
-            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_pd_dist=60),
+            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_distance=500),
         },
         "new": {
             "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20, max_vesicle_distance=30),
             "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20, max_distance_to_ribbon=22.5),
-            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_pd_dist=80),
+            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_distannce=500),
         }
     }
 }
@@ -41,6 +42,10 @@ POSTPROCESSING = {
 def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
     output_folder = os.path.join(folder, "automatisch", f"v{version}")
     data_path = get_data_path(folder)
+
+    with mrcfile.open(data_path, "r") as f:
+        resolution = f.voxel_size.tolist()
+    resolution = list(res / 10 for res in resolution)
 
     structure_names = ["ribbon", "PD", "membrane"]
     pp_dict = POSTPROCESSING[version]["new" if is_new else "old"]
@@ -70,10 +75,13 @@ def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
             segmentations[name] = pp(prediction, ribbon_segmentation=segmentations["ribbon"])
 
         elif name == "membrane":
+            # This was the logic for v1.
             # ribbon_and_pd = segmentations["ribbon"] + segmentations["PD"]
             # segmentations[name] = pp(prediction, object_segmentation=ribbon_and_pd, n_fragments=n_ribbons)
-            # ribbon_and_pd = segmentations["ribbon"] + segmentations["PD"]
-            segmentations[name] = pp(prediction, pd_segmentation=segmentations["PD"])
+
+            # Note: If we don't have a PD we can use the ribbon here.
+            ref_segmentation = segmentations["PD"]
+            segmentations[name] = pp(prediction, reference_segmentation=ref_segmentation, resolution=resolution)
 
         else:
             assert False, name
@@ -84,7 +92,7 @@ def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
             ds = f.require_dataset(name="segmentation", shape=seg.shape, dtype=seg.dtype, compression="gzip")
             ds[:] = seg
 
-    # FOR DEBUGGING
+    # # FOR DEBUGGING
     # import napari
     # v = napari.Viewer()
     # for name, seg in segmentations.items():
