@@ -33,7 +33,7 @@ POSTPROCESSING = {
         "new": {
             "ribbon": partial(postprocessing.segment_ribbon, n_slices_exclude=20, max_vesicle_distance=30),
             "PD": partial(postprocessing.segment_presynaptic_density, n_slices_exclude=20, max_distance_to_ribbon=22.5),
-            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_distannce=500),
+            "membrane": partial(postprocessing.segment_membrane_distance_based, n_slices_exclude=20, max_distance=500),
         }
     }
 }
@@ -115,8 +115,8 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
             continue
         n_pds = int(n_pds)
         n_ribbons = int(row["Anzahl Ribbons"])
-        if n_pds > 1 or n_ribbons > 1:
-            print(f"The tomogram {folder} has more than 1 ribbon or PD.")
+        if (n_ribbons == 2 and n_pds == 1):
+            print(f"The tomogram {folder} has {n_ribbons} ribbons and {n_pds} PDs.")
             print("The structure post-processing for this case is not yet implemented and will be skipped.")
             continue
 
@@ -138,14 +138,14 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
 
 
 def main():
-    data_root = "/scratch-emmy/usr/nimcpape/data/moser"
-    # data_root = "/home/pape/Work/data/moser/em-synapses"
+    # data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    data_root = "/home/pape/Work/data/moser/em-synapses"
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
     version = 2
     process_new_microscope = True
-    force = True
+    force = False
 
     run_structure_postprocessing(table, version, process_new_microscope, force=force)
 

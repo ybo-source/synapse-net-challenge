@@ -72,13 +72,14 @@ def assign_vesicles_to_pools(vesicles, distance_paths):
     def load_dist(measurement_path, seg_ids=None):
         auto_dists = np.load(measurement_path)
         distances, this_seg_ids = auto_dists["distances"], auto_dists["seg_ids"]
+        object_ids = auto_dists.get("object_ids", np.zeros_like(seg_ids))
         if seg_ids is not None:
             assert np.array_equal(seg_ids, this_seg_ids)
-        return distances, this_seg_ids
+        return distances, this_seg_ids, object_ids
 
-    ribbon_distances, seg_ids = load_dist(distance_paths["ribbon"])
-    pd_distances, _ = load_dist(distance_paths["PD"], seg_ids=seg_ids)
-    bd_distances, _ = load_dist(distance_paths["membrane"], seg_ids=seg_ids)
+    ribbon_distances, seg_ids, ribbon_ids = load_dist(distance_paths["ribbon"])
+    pd_distances, _, pd_ids = load_dist(distance_paths["PD"], seg_ids=seg_ids)
+    bd_distances, _, _ = load_dist(distance_paths["membrane"], seg_ids=seg_ids)
     assert len(seg_ids) == len(ribbon_distances) == len(pd_distances) == len(bd_distances)
 
     # Find the vesicles that are ribbon associated (RA-V).
@@ -123,10 +124,12 @@ def assign_vesicles_to_pools(vesicles, distance_paths):
         "ribbon": pandas.DataFrame({
             "id": vesicle_ids,
             "distance": ribbon_distances[id_mask],
+            "ribbon_id": ribbon_ids[id_mask],
         }),
         "PD": pandas.DataFrame({
             "id": vesicle_ids,
             "distance": pd_distances[id_mask],
+            "pd_id": pd_ids[id_mask],
         }),
         "membrane": pandas.DataFrame({
             "id": vesicle_ids,
@@ -198,10 +201,6 @@ def analyze_distances(segmentation_paths, distance_paths, resolution, result_pat
 
 # TODO adapt to segmentation without PD
 def analyze_folder(folder, version, n_ribbons, force):
-    if n_ribbons > 1:
-        print("Segmentation for more than one ribbon not implemented")
-        print("Skipping", folder)
-        return
     data_path = get_data_path(folder)
     output_folder = os.path.join(folder, "automatisch", f"v{version}")
 
@@ -244,8 +243,8 @@ def run_analysis(table, version, force=False):
             continue
         n_pds = int(n_pds)
         n_ribbons = int(row["Anzahl Ribbons"])
-        if n_pds > 1 or n_ribbons > 1:
-            print(f"The tomogram {folder} has more than 1 ribbon or PD.")
+        if (n_ribbons == 2 and n_pds == 1):
+            print(f"The tomogram {folder} has {n_ribbons} ribbons and {n_pds} PDs.")
             print("The structure post-processing for this case is not yet implemented and will be skipped.")
             continue
 

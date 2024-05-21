@@ -142,6 +142,7 @@ def compute_seg_object_distances(segmentation, segmented_object, resolution, ver
     endpoints1 = np.zeros((n, 3), dtype="int")
     endpoints2 = np.zeros((n, 3), dtype="int")
 
+    object_ids = []
     # We use this so often, it should be refactored.
     props = regionprops(segmentation)
     for prop in tqdm(props, disable=not verbose):
@@ -170,7 +171,9 @@ def compute_seg_object_distances(segmentation, segmented_object, resolution, ver
         min_dist_coord = [off + minc for off, minc in zip(offset, min_dist_coord)]
         endpoints2[seg_idx] = min_dist_coord
 
-    return distances, endpoints1, endpoints2, np.array(seg_ids)
+        object_ids.append(object_id)
+
+    return distances, endpoints1, endpoints2, np.array(seg_ids), np.array(object_ids)
 
 
 def measure_segmentation_to_object_distances(
@@ -182,7 +185,7 @@ def measure_segmentation_to_object_distances(
     verbose=False,
 ):
     if distance_type == "boundary":
-        distances, endpoints1, endpoints2, seg_ids = compute_seg_object_distances(
+        distances, endpoints1, endpoints2, seg_ids, object_ids = compute_seg_object_distances(
             segmentation, segmented_object, resolution, verbose
         )
     else:
@@ -195,6 +198,7 @@ def measure_segmentation_to_object_distances(
             endpoints1=endpoints1,
             endpoints2=endpoints2,
             seg_ids=seg_ids,
+            object_ids=object_ids,
         )
     return distances, endpoints1, endpoints2, seg_ids
 
