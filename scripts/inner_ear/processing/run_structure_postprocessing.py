@@ -80,7 +80,13 @@ def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
             # segmentations[name] = pp(prediction, object_segmentation=ribbon_and_pd, n_fragments=n_ribbons)
 
             # Note: If we don't have a PD we can use the ribbon here.
-            ref_segmentation = segmentations["PD"]
+            if "PD" in segmentations:
+            	ref_segmentation = segmentations["PD"]
+            else: 
+                ref_seg_path = os.path.join(output_folder, Path(data_path).stem + "_PD.h5")
+                assert os.path.exists(ref_seg_path)
+                with open_file(ref_seg_path, "r") as f:
+                    ref_segmentation = f["segmentation"][:]
             segmentations[name] = pp(prediction, reference_segmentation=ref_segmentation, resolution=resolution)
 
         else:
@@ -139,7 +145,8 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
 
 def main():
     # data_root = "/scratch-emmy/usr/nimcpape/data/moser"
-    data_root = "/home/pape/Work/data/moser/em-synapses"
+    # data_root = "/home/pape/Work/data/moser/em-synapses"
+    data_root = "/home/sophia/data"
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 

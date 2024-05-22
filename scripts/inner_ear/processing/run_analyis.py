@@ -267,7 +267,8 @@ def run_analysis(table, version, force=False):
 
 def main():
     # data_root = "/scratch-emmy/usr/nimcpape/data/moser"
-    data_root = "/home/pape/Work/data/moser/em-synapses"
+    # data_root = "/home/pape/Work/data/moser/em-synapses"
+    data_root = "/home/sophia/data"
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 

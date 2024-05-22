@@ -2,6 +2,7 @@ import os
 import sys
 from glob import glob
 
+import imageio.v3 as imageio
 import h5py
 import napari
 import numpy as np
@@ -13,6 +14,7 @@ from synaptic_reconstruction.tools.distance_measurement import _downsample
 
 from elf.io import open_file
 from tqdm import tqdm
+from skimage.transform import resize
 
 sys.path.append("processing")
 
@@ -62,6 +64,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         napari.run()
 
     else:
+        correction_folder = os.path.join(folder, "Korrektur")
         seg_folder = os.path.join(folder, "automatisch", f"v{segmentation_version}")
         seg_files = glob(os.path.join(seg_folder, "*.h5"))
         if len(seg_files) == 0:
@@ -73,8 +76,15 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         segmentations = {}
         for seg_file in seg_files:
             seg_name = seg_file.split("_")[-1].rstrip(".h5")
-            with h5py.File(seg_file, "r") as f:
-                seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
+            correction_file = os.path.join(correction_folder, f"{seg_name}.tif")
+            if os.path.exists(correction_file):
+                print("Load", correction_file, "instead of", seg_file)
+                seg = imageio.imread(correction_file)
+                if seg.shape != tomo.shape:
+                    seg = resize(seg, tomo.shape, order=0, anti_aliasing=False, preserve_range=True).astype(seg.dtype)
+            else:
+                with h5py.File(seg_file, "r") as f:
+                   seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
                 # if "prediction" in f:
                 #     seg = f["prediction"][:]
                 # else:
@@ -157,8 +167,10 @@ def main():
     args = parser.parse_args()
     assert args.microscope in (None, "both", "old", "new")
 
-    data_root = "/home/pape/Work/data/moser/em-synapses"
+    # data_root = "/home/pape/Work/data/moser/em-synapses"
+    data_root = "/home/sophia/data"
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
+
     table = parse_table(table_path, data_root)
 
     segmentation_version = 2
