@@ -7,7 +7,7 @@ from elf.io import open_file
 from synaptic_reconstruction.file_utils import get_data_path
 from synaptic_reconstruction.inference import segment_vesicles
 from synaptic_reconstruction.inference.postprocessing import close_holes
-from parse_table import parse_table
+from parse_table import parse_table, get_data_root
 
 VERSIONS = {
     1: {
@@ -81,7 +81,7 @@ def run_vesicle_segmentation(table, version, process_new_microscope):
 
 
 def main():
-    data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    data_root = get_data_root()
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 

@@ -74,6 +74,7 @@ def validate_segmentations(data_root, table, segmentation_version):
     segmentation_val.to_excel(output_path, index=False)
 
 
+# TODO start from existing val table
 def main():
     from parse_table import parse_table
 

@@ -188,6 +188,7 @@ def measure_segmentation_to_object_distances(
         distances, endpoints1, endpoints2, seg_ids, object_ids = compute_seg_object_distances(
             segmentation, segmented_object, resolution, verbose
         )
+        assert len(distances) == len(endpoints1) == len(endpoints2) == len(seg_ids) == len(object_ids)
     else:
         raise NotImplementedError
 

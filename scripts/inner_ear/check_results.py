@@ -19,7 +19,7 @@ from skimage.transform import resize
 sys.path.append("processing")
 
 
-def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale=2):
+def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale=1):
     tomo = _downsample(tomo, scale=scale)
     segmentations = {k: _downsample(v, is_seg=True, scale=scale) for k, v in segmentations.items()}
 
@@ -52,6 +52,8 @@ def create_vesicle_pools(vesicles, result_path):
 
 
 def visualize_folder(folder, segmentation_version, visualize_distances):
+    from parse_table import _match_correction_folder, _match_correction_file
+
     raw_path = get_data_path(folder)
 
     if segmentation_version is None:
@@ -64,7 +66,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         napari.run()
 
     else:
-        correction_folder = os.path.join(folder, "Korrektur")
+        correction_folder = _match_correction_folder(folder)
         seg_folder = os.path.join(folder, "automatisch", f"v{segmentation_version}")
         seg_files = glob(os.path.join(seg_folder, "*.h5"))
         if len(seg_files) == 0:
@@ -76,7 +78,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         segmentations = {}
         for seg_file in seg_files:
             seg_name = seg_file.split("_")[-1].rstrip(".h5")
-            correction_file = os.path.join(correction_folder, f"{seg_name}.tif")
+            correction_file = _match_correction_file(correction_folder, seg_name)
             if os.path.exists(correction_file):
                 print("Load", correction_file, "instead of", seg_file)
                 seg = imageio.imread(correction_file)
@@ -84,14 +86,21 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
                     seg = resize(seg, tomo.shape, order=0, anti_aliasing=False, preserve_range=True).astype(seg.dtype)
             else:
                 with h5py.File(seg_file, "r") as f:
-                   seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
+                    seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
                 # if "prediction" in f:
                 #     seg = f["prediction"][:]
                 # else:
                 #     seg = f["segmentation"][:]
             segmentations[seg_name] = seg
 
-        result_path = os.path.join(seg_folder, "measurements.xlsx")
+        if os.path.exists(os.path.join(correction_folder, "measurements.xlsx")):
+            print("Use measurements for corrected results from", correction_folder)
+            result_path = os.path.join(correction_folder, "measurements.xlsx")
+            distance_folder = os.path.join(correction_folder, "distances")
+        else:
+            result_path = os.path.join(seg_folder, "measurements.xlsx")
+            distance_folder = os.path.join(seg_folder, "distances")
+
         if os.path.exists(result_path):
             segmentations["vesicle_pools"], vesicle_ids = create_vesicle_pools(
                 segmentations["vesicles"], result_path
@@ -99,7 +108,6 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         else:
             vesicle_ids = None
 
-        distance_folder = os.path.join(seg_folder, "distances")
         distance_files = {
             name: os.path.join(distance_folder, f"{name}.npz") for name in ["ribbon", "PD", "membrane"]
         }
@@ -158,7 +166,7 @@ def visualize_all_data(
 
 def main():
     import argparse
-    from parse_table import parse_table
+    from parse_table import parse_table, get_data_root
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--iteration", default=None, type=int)
@@ -167,8 +175,7 @@ def main():
     args = parser.parse_args()
     assert args.microscope in (None, "both", "old", "new")
 
-    # data_root = "/home/pape/Work/data/moser/em-synapses"
-    data_root = "/home/sophia/data"
+    data_root = get_data_root()
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
 
     table = parse_table(table_path, data_root)

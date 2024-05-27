@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
 
+import imageio.v3 as imageio
 import mrcfile
 import numpy as np
 import pandas
+import vigra
 
 from synaptic_reconstruction.file_utils import get_data_path
 from synaptic_reconstruction.distance_measurements import (
@@ -12,13 +14,26 @@ from synaptic_reconstruction.distance_measurements import (
 )
 from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
 from synaptic_reconstruction.inference.postprocessing import filter_border_vesicles
+from skimage.transform import resize
 
 from elf.io import open_file
 from tqdm import tqdm
-from parse_table import parse_table
+from parse_table import parse_table, get_data_root, _match_correction_folder, _match_correction_file
 
 
-def compute_distances(segmentation_paths, save_folder, resolution, force):
+def _load_segmentation(seg_path, tomo_shape):
+    if seg_path.endswith(".tif"):
+        seg = imageio.imread(seg_path)
+    else:
+        with open_file(seg_path, "r") as f:
+            seg = f["segmentation"][:]
+
+    if tomo_shape is not None and seg.shape != tomo_shape:
+        seg = resize(seg, tomo_shape, order=0, anti_aliasing=False, preserve_range=True).astype(seg.dtype)
+    return seg
+
+
+def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_shape):
     os.makedirs(save_folder, exist_ok=True)
 
     vesicle_path = segmentation_paths["vesicles"]
@@ -26,8 +41,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
 
     def _require_vesicles():
         if vesicles is None:
-            with open_file(vesicle_path, "r") as f:
-                return f["segmentation"][:]
+            return _load_segmentation(vesicle_path, tomo_shape)
         else:
             return vesicles
 
@@ -35,8 +49,9 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
     ribbon_save = os.path.join(save_folder, "ribbon.npz")
     if force or not os.path.exists(ribbon_save):
         vesicles = _require_vesicles()
-        with open_file(segmentation_paths["ribbon"], "r") as f:
-            ribbon = f["segmentation"][:]
+        ribbon_path = segmentation_paths["ribbon"]
+        ribbon = _load_segmentation(ribbon_path, tomo_shape)
+
         if ribbon.sum() == 0:
             print("The ribbon segmentation at", segmentation_paths["ribbon"], "is empty. Skipping analysis.")
             return None, True
@@ -46,8 +61,9 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
     pd_save = os.path.join(save_folder, "PD.npz")
     if force or not os.path.exists(pd_save):
         vesicles = _require_vesicles()
-        with open_file(segmentation_paths["PD"], "r") as f:
-            pd = f["segmentation"][:]
+        pd_path = segmentation_paths["PD"]
+        pd = _load_segmentation(pd_path, tomo_shape)
+
         if pd.sum() == 0:
             print("The PD segmentation at", segmentation_paths["PD"], "is empty. Skipping analysis.")
             return None, True
@@ -57,8 +73,9 @@ def compute_distances(segmentation_paths, save_folder, resolution, force):
     membrane_save = os.path.join(save_folder, "membrane.npz")
     if force or not os.path.exists(membrane_save):
         vesicles = _require_vesicles()
-        with open_file(segmentation_paths["membrane"], "r") as f:
-            membrane = f["segmentation"][:]
+        mem_path = segmentation_paths["membrane"]
+        membrane = _load_segmentation(mem_path, tomo_shape)
+
         measure_segmentation_to_object_distances(
             vesicles, membrane, save_path=membrane_save, resolution=resolution
         )
@@ -172,13 +189,10 @@ def compute_morphology(ribbon, pd, resolution):
     return measurements
 
 
-def analyze_distances(segmentation_paths, distance_paths, resolution, result_path):
-    with open_file(segmentation_paths["vesicles"], "r") as f:
-        vesicles = f["segmentation"][:]
-    with open_file(segmentation_paths["ribbon"], "r") as f:
-        ribbon = f["segmentation"][:]
-    with open_file(segmentation_paths["PD"], "r") as f:
-        pd = f["segmentation"][:]
+def analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape):
+    vesicles = _load_segmentation(segmentation_paths["vesicles"], tomo_shape)
+    ribbon = _load_segmentation(segmentation_paths["ribbon"], tomo_shape)
+    pd = _load_segmentation(segmentation_paths["PD"], tomo_shape)
 
     vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(vesicles, distance_paths)
     vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
@@ -199,6 +213,14 @@ def analyze_distances(segmentation_paths, distance_paths, resolution, result_pat
     )
 
 
+def _relabel_vesicles(path):
+    print("Relabel vesicles at", path)
+    seg = _load_segmentation(path, None)
+    seg = vigra.analysis.labelVolumeWithBackground(seg.astype("uint32"))
+    seg, _, _ = vigra.analysis.relabelConsecutive(seg, start_label=1, keep_zeros=True)
+    imageio.imwrite(path, seg, compression="zlib")
+
+
 # TODO adapt to segmentation without PD
 def analyze_folder(folder, version, n_ribbons, force):
     data_path = get_data_path(folder)
@@ -213,19 +235,34 @@ def analyze_folder(folder, version, n_ribbons, force):
         print("Not all required segmentations were found")
         return
 
+    correction_folder = _match_correction_folder(folder)
+    if os.path.exists(correction_folder):
+        print("Analyse the corrected segmentations from", correction_folder)
+        output_folder = correction_folder
+        for seg_name in segmentation_names:
+            seg_path = _match_correction_file(correction_folder, seg_name)
+            if os.path.exists(seg_path):
+                segmentation_paths[seg_name] = seg_path
+                if seg_name == "vesicles":
+                    _relabel_vesicles(seg_path)
+
     # Get the resolution (in Angstrom) and convert it to nanometer
     with mrcfile.open(data_path, "r") as f:
         resolution = f.voxel_size.tolist()
     resolution = [res / 10 for res in resolution]
 
+    # Get the tomogram shape.
+    with open_file(data_path, "r") as f:
+        tomo_shape = f["data"].shape
+
     out_distance_folder = os.path.join(output_folder, "distances")
-    distance_paths, skip = compute_distances(segmentation_paths, out_distance_folder, resolution, force)
+    distance_paths, skip = compute_distances(segmentation_paths, out_distance_folder, resolution, force, tomo_shape)
     if skip:
         return
 
     result_path = os.path.join(output_folder, "measurements.xlsx")
     if force or not os.path.exists(result_path):
-        analyze_distances(segmentation_paths, distance_paths, resolution, result_path)
+        analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape)
 
 
 def run_analysis(table, version, force=False):
@@ -266,9 +303,7 @@ def run_analysis(table, version, force=False):
 
 
 def main():
-    # data_root = "/scratch-emmy/usr/nimcpape/data/moser"
-    # data_root = "/home/pape/Work/data/moser/em-synapses"
-    data_root = "/home/sophia/data"
+    data_root = get_data_root()
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 

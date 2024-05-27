@@ -5,6 +5,14 @@ import numpy as np
 import pandas as pd
 
 
+def get_data_root():
+    root = os.path.join(os.path.expanduser("~"), "data")
+    hostname = os.uname()[1]
+    if hostname == "pc-kreshuk11":
+        root = "/home/pape/Work/data/moser/em-synapses"
+    return root
+
+
 def parse_table(table_path, data_root, require_local_path=True):
     table = pd.read_excel(table_path)
     local_paths = []
@@ -42,6 +50,24 @@ def parse_table(table_path, data_root, require_local_path=True):
     table["Local Path"] = local_paths
     table = table.dropna(how="all")
     return table
+
+
+def _match_correction_folder(folder):
+    possible_names = ["Korrektur", "korrektur", "korektur", "Korektur"]
+    for name in possible_names:
+        correction_folder = os.path.join(folder, name)
+        if os.path.exists(correction_folder):
+            return correction_folder
+    return folder
+
+
+def _match_correction_file(correction_folder, seg_name):
+    possible_names = [seg_name, seg_name.lower()]
+    for name in possible_names:
+        correction_file = os.path.join(correction_folder, f"{name}.tif")
+        if os.path.exists(correction_file):
+            return correction_file
+    return correction_file
 
 
 def main():

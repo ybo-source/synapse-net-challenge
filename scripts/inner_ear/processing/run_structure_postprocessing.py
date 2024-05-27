@@ -4,7 +4,7 @@ from pathlib import Path
 
 import mrcfile
 import synaptic_reconstruction.inference.postprocessing as postprocessing
-from synaptic_reconstruction.file_utils import get_data_path
+from synaptic_reconstruction.file_utils import get_data_path, get_data_root
 
 from elf.io import open_file
 from tqdm import tqdm
@@ -81,8 +81,8 @@ def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
 
             # Note: If we don't have a PD we can use the ribbon here.
             if "PD" in segmentations:
-            	ref_segmentation = segmentations["PD"]
-            else: 
+                ref_segmentation = segmentations["PD"]
+            else:
                 ref_seg_path = os.path.join(output_folder, Path(data_path).stem + "_PD.h5")
                 assert os.path.exists(ref_seg_path)
                 with open_file(ref_seg_path, "r") as f:
@@ -144,9 +144,7 @@ def run_structure_postprocessing(table, version, process_new_microscope, force=F
 
 
 def main():
-    # data_root = "/scratch-emmy/usr/nimcpape/data/moser"
-    # data_root = "/home/pape/Work/data/moser/em-synapses"
-    data_root = "/home/sophia/data"
+    data_root = get_data_root()
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
