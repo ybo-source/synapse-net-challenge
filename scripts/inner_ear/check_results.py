@@ -19,7 +19,7 @@ from skimage.transform import resize
 sys.path.append("processing")
 
 
-def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale=1):
+def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale=2):
     tomo = _downsample(tomo, scale=scale)
     segmentations = {k: _downsample(v, is_seg=True, scale=scale) for k, v in segmentations.items()}
 
@@ -43,12 +43,20 @@ def create_vesicle_pools(vesicles, result_path):
     pool_assignments = assignment_result["pool"].values
     pool_assignments = {vid: pool for vid, pool in zip(vesicle_ids, pool_assignments)}
 
+    color_map = {
+        "RA-V": (0, 0.33, 0),
+        "MP-V": (1, 0.66, 0),
+        "Docked-V": (1, 0.66, 0.5),
+    }
+    colors = {}
     for pool_id, pool_name in enumerate(("RA-V", "MP-V", "Docked-V"), 1):
         ves_ids_pool = [vid for vid, pname in pool_assignments.items() if pname == pool_name]
-        vesicle_pools[np.isin(vesicles, ves_ids_pool)] = pool_id
+        pool_mask = np.isin(vesicles, ves_ids_pool)
+        vesicle_pools[pool_mask] = vesicles[pool_mask]
+        colors.update({vid: color_map[pool_name] for vid in ves_ids_pool})
 
     vesicle_ids = np.sort(vesicle_ids)
-    return vesicle_pools, vesicle_ids
+    return vesicle_pools, vesicle_ids, {"vesicle_pools": colors}
 
 
 def visualize_folder(folder, segmentation_version, visualize_distances):
@@ -75,12 +83,20 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         with open_file(raw_path, "r") as f:
             tomo = f["data"][:]
 
+        if os.path.exists(os.path.join(correction_folder, "measurements.xlsx")):
+            result_path = os.path.join(correction_folder, "measurements.xlsx")
+            distance_folder = os.path.join(correction_folder, "distances")
+            correction = "Displaying corrected vesicle pools for"
+        else:
+            result_path = os.path.join(seg_folder, "measurements.xlsx")
+            distance_folder = os.path.join(seg_folder, "distances")
+            correction = "Displaying UNCORRECTED vesicle pools"
+
         segmentations = {}
         for seg_file in seg_files:
             seg_name = seg_file.split("_")[-1].rstrip(".h5")
             correction_file = _match_correction_file(correction_folder, seg_name)
             if os.path.exists(correction_file):
-                print("Load", correction_file, "instead of", seg_file)
                 seg = imageio.imread(correction_file)
                 if seg.shape != tomo.shape:
                     seg = resize(seg, tomo.shape, order=0, anti_aliasing=False, preserve_range=True).astype(seg.dtype)
@@ -93,16 +109,8 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
                 #     seg = f["segmentation"][:]
             segmentations[seg_name] = seg
 
-        if os.path.exists(os.path.join(correction_folder, "measurements.xlsx")):
-            print("Use measurements for corrected results from", correction_folder)
-            result_path = os.path.join(correction_folder, "measurements.xlsx")
-            distance_folder = os.path.join(correction_folder, "distances")
-        else:
-            result_path = os.path.join(seg_folder, "measurements.xlsx")
-            distance_folder = os.path.join(seg_folder, "distances")
-
         if os.path.exists(result_path):
-            segmentations["vesicle_pools"], vesicle_ids = create_vesicle_pools(
+            segmentations["vesicle_pools"], vesicle_ids, colors = create_vesicle_pools(
                 segmentations["vesicles"], result_path
             )
         else:
@@ -124,10 +132,12 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         v = napari.Viewer()
         v.add_image(tomo)
         for name, seg in segmentations.items():
-            v.add_labels(seg, name=name)
+            v.add_labels(seg, name=name, color=colors.get(name, None))
+
         for name, lines in distance_lines.items():
             v.add_shapes(lines, shape_type="line", name=name, visible=False)
-        v.title = folder
+
+        v.title = f"{correction}: {folder}"
         napari.run()
 
 
