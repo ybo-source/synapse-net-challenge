@@ -10,6 +10,10 @@ def get_data_root():
     hostname = os.uname()[1]
     if hostname == "pc-kreshuk11":
         root = "/home/pape/Work/data/moser/em-synapses"
+    elif hostname == "glogin9":
+        root = "/scratch-emmy/usr/nimcpape/data/moser"
+    elif "ggpu" in hostname:
+        root = "/scratch-emmy/usr/nimcpape/data/moser"
     return root
 
 

@@ -4,11 +4,11 @@ from pathlib import Path
 
 import mrcfile
 import synaptic_reconstruction.inference.postprocessing as postprocessing
-from synaptic_reconstruction.file_utils import get_data_path, get_data_root
+from synaptic_reconstruction.file_utils import get_data_path
 
 from elf.io import open_file
 from tqdm import tqdm
-from parse_table import parse_table
+from parse_table import parse_table, get_data_root
 
 
 POSTPROCESSING = {
