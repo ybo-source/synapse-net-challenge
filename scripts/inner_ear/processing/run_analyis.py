@@ -26,6 +26,8 @@ def _load_segmentation(seg_path, tomo_shape):
         seg = imageio.imread(seg_path)
     else:
         with open_file(seg_path, "r") as f:
+            if "segmentation" not in f:
+                return None
             seg = f["segmentation"][:]
 
     if tomo_shape is not None and seg.shape != tomo_shape:
@@ -52,7 +54,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
         ribbon_path = segmentation_paths["ribbon"]
         ribbon = _load_segmentation(ribbon_path, tomo_shape)
 
-        if ribbon.sum() == 0:
+        if ribbon.sum() == 0 or ribbon is None:
             print("The ribbon segmentation at", segmentation_paths["ribbon"], "is empty. Skipping analysis.")
             return None, True
         measure_segmentation_to_object_distances(vesicles, ribbon, save_path=ribbon_save, resolution=resolution)
@@ -237,14 +239,21 @@ def analyze_folder(folder, version, n_ribbons, force):
 
     correction_folder = _match_correction_folder(folder)
     if os.path.exists(correction_folder):
-        print("Analyse the corrected segmentations from", correction_folder)
         output_folder = correction_folder
+        result_path = os.path.join(output_folder, "measurements.xlsx")
+        if os.path.exists(result_path) and not force:
+            return
+        print("Analyse the corrected segmentations from", correction_folder)
         for seg_name in segmentation_names:
             seg_path = _match_correction_file(correction_folder, seg_name)
             if os.path.exists(seg_path):
                 segmentation_paths[seg_name] = seg_path
                 if seg_name == "vesicles":
                     _relabel_vesicles(seg_path)
+
+    result_path = os.path.join(output_folder, "measurements.xlsx")
+    if os.path.exists(result_path) and not force:
+        return
 
     # Get the resolution (in Angstrom) and convert it to nanometer
     with mrcfile.open(data_path, "r") as f:
@@ -260,7 +269,6 @@ def analyze_folder(folder, version, n_ribbons, force):
     if skip:
         return
 
-    result_path = os.path.join(output_folder, "measurements.xlsx")
     if force or not os.path.exists(result_path):
         analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape)
 
