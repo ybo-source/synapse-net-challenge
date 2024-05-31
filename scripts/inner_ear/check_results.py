@@ -114,6 +114,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
                 segmentations["vesicles"], result_path
             )
         else:
+            colors = {}
             vesicle_ids = None
 
         distance_files = {
