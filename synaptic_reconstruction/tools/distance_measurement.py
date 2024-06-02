@@ -10,7 +10,7 @@ from elf.io import open_file
 from magicgui import magicgui
 from napari_skimage_regionprops import add_table
 
-from skimage.transform import rescale
+from skimage.transform import rescale, resize
 
 from ..distance_measurements import (
     create_distance_lines,
@@ -22,12 +22,25 @@ DISTANCE_MEASUREMENT_PATH = None
 VIEW_SCALE = None
 
 
-def _downsample(data, scale, is_seg=False):
+def _downsample(data, scale, is_seg=False, target_shape=None):
+    if target_shape is not None:
+        if data.shape == target_shape:
+            return data
+
+        if is_seg:
+            data = resize(data, target_shape, order=0, anti_aliasing=False, preserve_range=True).astype(data.dtype)
+        else:
+            data = resize(data, target_shape, preserve_range=True).astype(data.dtype)
+        return data
+
+    if scale is None:
+        return data
     rescale_factor = 1.0 / scale
     if is_seg:
         data = rescale(data, rescale_factor, order=0, anti_aliasing=False, preserve_range=True).astype(data.dtype)
     else:
         data = rescale(data, rescale_factor, preserve_range=True).astype(data.dtype)
+
     return data
 
 

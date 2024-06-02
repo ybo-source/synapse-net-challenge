@@ -14,14 +14,16 @@ from synaptic_reconstruction.tools.distance_measurement import _downsample
 
 from elf.io import open_file
 from tqdm import tqdm
-from skimage.transform import resize
 
 sys.path.append("processing")
 
 
-def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale=2):
+def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale):
     tomo = _downsample(tomo, scale=scale)
-    segmentations = {k: _downsample(v, is_seg=True, scale=scale) for k, v in segmentations.items()}
+    segmentations = {
+        k: _downsample(v, is_seg=True, scale=scale, target_shape=tomo.shape)
+        for k, v in segmentations.items()
+    }
 
     ribbon_lines, _ = create_object_distance_lines(distance_paths["ribbon"], seg_ids=vesicle_ids, scale=scale)
     pd_lines, _ = create_object_distance_lines(distance_paths["PD"], seg_ids=vesicle_ids, scale=scale)
@@ -59,14 +61,25 @@ def create_vesicle_pools(vesicles, result_path):
     return vesicle_pools, vesicle_ids, {"vesicle_pools": colors}
 
 
-def visualize_folder(folder, segmentation_version, visualize_distances):
+def _load_segmentation(correction_file, seg_file):
+    if os.path.exists(correction_file):
+        seg = imageio.imread(correction_file)
+    else:
+        with h5py.File(seg_file, "r") as f:
+            seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
+    if seg.dtype == np.dtype("uint64"):
+        seg = seg.astype("uint32")
+    return seg
+
+
+def visualize_folder(folder, segmentation_version, visualize_distances, binning):
     from parse_table import _match_correction_folder, _match_correction_file
 
     raw_path = get_data_path(folder)
+    with open_file(raw_path, "r") as f:
+        tomo = f["data"][:]
 
     if segmentation_version is None:
-        with open_file(raw_path, "r") as f:
-            tomo = f["data"][:]
 
         v = napari.Viewer()
         v.add_image(tomo)
@@ -79,9 +92,6 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         seg_files = glob(os.path.join(seg_folder, "*.h5"))
         if len(seg_files) == 0:
             print("No segmentations for", folder, "skipping!")
-
-        with open_file(raw_path, "r") as f:
-            tomo = f["data"][:]
 
         if os.path.exists(os.path.join(correction_folder, "measurements.xlsx")):
             result_path = os.path.join(correction_folder, "measurements.xlsx")
@@ -96,17 +106,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         for seg_file in seg_files:
             seg_name = seg_file.split("_")[-1].rstrip(".h5")
             correction_file = _match_correction_file(correction_folder, seg_name)
-            if os.path.exists(correction_file):
-                seg = imageio.imread(correction_file)
-                if seg.shape != tomo.shape:
-                    seg = resize(seg, tomo.shape, order=0, anti_aliasing=False, preserve_range=True).astype(seg.dtype)
-            else:
-                with h5py.File(seg_file, "r") as f:
-                    seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
-                # if "prediction" in f:
-                #     seg = f["prediction"][:]
-                # else:
-                #     seg = f["segmentation"][:]
+            seg = _load_segmentation(correction_file, seg_file)
             segmentations[seg_name] = seg
 
         if os.path.exists(result_path):
@@ -125,7 +125,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         if have_distances and visualize_distances:
             assert vesicle_ids is not None
             tomo, segmentations, distance_lines = get_distance_visualization(
-                tomo, segmentations, distance_files, vesicle_ids,
+                tomo, segmentations, distance_files, vesicle_ids, scale=binning
             )
         else:
             distance_lines = {}
@@ -142,10 +142,29 @@ def visualize_folder(folder, segmentation_version, visualize_distances):
         napari.run()
 
 
+def isint(x):
+    try:
+        int(x)
+        return True
+    except ValueError:
+        return False
+
+
+def _get_bin_factor(is_old, binning):
+    if isint(binning):
+        return int(binning)
+    elif binning == "none":
+        return None
+    else:
+        assert binning == "auto"
+        return 2 if is_old else 3
+
+
 def visualize_all_data(
     data_root, table,
     segmentation_version=None, check_micro=None,
     visualize_distances=False, skip_iteration=None,
+    binning="auto",
 ):
     assert check_micro in ["new", "old", "both", None]
 
@@ -159,20 +178,26 @@ def visualize_all_data(
 
         micro = row["EM alt vs. Neu"]
         if micro == "alt" and check_micro in ("old", "both", None):
-            visualize_folder(folder, segmentation_version, visualize_distances)
+            binning_ = _get_bin_factor(True, binning)
+            visualize_folder(folder, segmentation_version, visualize_distances, binning_)
 
         elif micro == "neu" and ("new", "both", None):
-            visualize_folder(folder, segmentation_version, visualize_distances)
+            binning_ = _get_bin_factor(False, binning)
+            visualize_folder(folder, segmentation_version, visualize_distances, binning_)
 
         elif micro == "beides":
             if check_micro in ("old", "both", None):
-                visualize_folder(folder, segmentation_version, visualize_distances)
+                binning_ = _get_bin_factor(True, binning)
+                visualize_folder(folder, segmentation_version, visualize_distances, binning_)
             if check_micro in ("new", "both", None):
                 folder_new = os.path.join(folder, "Tomo neues EM")
                 if not os.path.exists(folder_new):
                     folder_new = os.path.join(folder, "neues EM")
                 assert os.path.exists(folder_new), folder_new
-                visualize_folder(folder_new, segmentation_version, visualize_distances)
+                binning_ = _get_bin_factor(False, binning)
+                visualize_folder(
+                    folder_new, segmentation_version, visualize_distances, binning_
+                )
 
 
 def main():
@@ -183,8 +208,12 @@ def main():
     parser.add_argument("-i", "--iteration", default=None, type=int)
     parser.add_argument("-m", "--microscope", default=None)
     parser.add_argument("-d", "--visualize_distances", action="store_false")
+    parser.add_argument("-b", "--binning", default="auto")
     args = parser.parse_args()
     assert args.microscope in (None, "both", "old", "new")
+
+    binning = args.binning
+    assert (binning in ("none", "auto") or isint(binning))
 
     data_root = get_data_root()
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
@@ -197,6 +226,7 @@ def main():
         data_root, table,
         segmentation_version=segmentation_version, check_micro=args.microscope,
         visualize_distances=args.visualize_distances, skip_iteration=args.iteration,
+        binning=binning,
     )
 
 
