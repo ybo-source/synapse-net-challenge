@@ -10,14 +10,13 @@ def compute_radii(vesicles, resolution, ids=None):
     """Compute the radii for a vesicle segmentation.
     """
     props = regionprops(vesicles)
-    radii = {
-        prop.label: resolution[0] * (prop.axis_minor_length + prop.axis_major_length) / 2
-        for prop in props
-    }
     if ids is None:
-        radii = list(radii.values())
+        radii = [resolution[0] * (prop.axis_minor_length + prop.axis_major_length) / 2
+                 for prop in props]
     else:
-        radii = [radii[ves_id] for ves_id in ids]
+        radii = [resolution[0] * (prop.axis_minor_length + prop.axis_major_length) / 2
+                 for prop in props if prop.label in ids]
+        assert len(radii) == len(ids)
     return radii
 
 

@@ -11,7 +11,7 @@ def segment_presynaptic_density(
     presyn_prediction: np.array,
     ribbon_segmentation: np.array,
     n_slices_exclude: int,
-    n_pds: int = 1,
+    n_pds_per_ribbon: int = 1,
     max_distance_to_ribbon: int = 15,
 ):
     """Derive presynaptic density segmentation from predictions by
@@ -77,7 +77,7 @@ def segment_presynaptic_density(
             presyn_ids = [matches[0][0]]
         else:  # multiple matches were found, assign all of them to the ribbon
             matched_ids, matched_distances = [match[0] for match in matches], [match[1] for match in matches]
-            presyn_ids = np.array(matched_ids)[np.argsort(matched_distances)[:n_pds]]
+            presyn_ids = np.array(matched_ids)[np.argsort(matched_distances)[:n_pds_per_ribbon]]
 
         full_presyn_segmentation[slice_mask][np.isin(presyn_segmentation, presyn_ids)] = ribbon_id
 

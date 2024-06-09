@@ -6,18 +6,67 @@ from pathlib import Path
 
 import imageio.v3 as imageio
 import numpy as np
+import nifty.tools as nt
 from elf.io import open_file
 from skimage.transform import rescale
 from tqdm import tqdm
 
-from synaptic_reconstruction.imod import export_segmentation
+from synaptic_reconstruction.imod import export_segmentation, export_point_annotations
 from synaptic_reconstruction.file_utils import get_data_path
 
 from parse_table import parse_table
 
 # Files to skip because of issues in IMODMOP.
 # (Currently no issues.)
-SKIP_FILES = []
+SKIP_FILES = [
+    # Drawn outside of the bounds. (PD)
+    "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_PD.mod",
+    # Naming convention / matching
+    "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_2PDs_vesikel.mod",
+    # AssertionError: {1: ' RA-V', 2: ' MP-V', 3: ' '}
+    "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/4/manuell/Emb71M1aGridB2sec1pil_Vesikel.mod"
+]
+# Non-point object
+# /scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/2/manuell
+
+
+def process_labels(labels, label_names):
+    if 4 in label_names and label_names[4] == " MP-V":
+        label_names = {k - 2: v for k, v in label_names.items()}
+        labels = {k: v - 2 for k, v in labels.items()}
+    elif 4 in label_names and label_names[4] == " RA-V":
+        label_names = {k - 3: v for k, v in label_names.items()}
+        labels = {k: v - 3 for k, v in labels.items()}
+    else:
+        pass
+
+    # Check correct mapping of the label names.
+    assert "RA-V" in label_names[1], f"{label_names}"
+    assert "MP-V" in label_names[2], f"{label_names}"
+    if 3 in label_names:
+        assert "Docked" in label_names[3], f"{label_names}"
+    labels[0] = 0
+    return labels, label_names
+
+
+def export_vesicles(input_path, data_path, export_path):
+    with open_file(data_path, "r") as f:
+        shape = f["data"].shape
+    try:
+        segmentation, labels, label_names = export_point_annotations(
+            input_path, shape,
+        )
+    except AssertionError:
+        print("Contains non-point vesicle annotations:")
+        print(input_path)
+        return False
+
+    labels, label_names = process_labels(labels, label_names)
+
+    segmentation = nt.takeDict(labels, segmentation)
+
+    imageio.imwrite(export_path, segmentation, compression="zlib")
+    return True
 
 
 def process_folder(folder, have_pd):
@@ -30,27 +79,31 @@ def process_folder(folder, have_pd):
         if structure_name.lower() in fname.lower():
             export_path = str(Path(file_).with_suffix(".tif"))
 
-            if os.path.exists(export_path):
-                return True
-
             if file_ in SKIP_FILES:
                 print("Skipping", file_)
                 return True
 
+            if os.path.exists(export_path):
+                return True
+
             print("Exporting", file_)
+            if structure_name == "Vesikel":
+                return export_vesicles(file_, data_path, export_path)
+
             export_segmentation(
-                imod_path=file_,
-                mrc_path=data_path,
-                output_path=export_path,
+                imod_path=file_, mrc_path=data_path, output_path=export_path,
             )
             return True
         else:
             return False
 
-    structure_names = ("PD", "Ribbon", "Membrane") if have_pd else ("Ribbon", "Membrane")
+    structure_names = ("PD", "Ribbon", "Membrane", "Vesikel") if have_pd else\
+        ("Ribbon", "Membrane", "Vesikel")
 
     for annotation_folder in annotation_folders:
-        have_structures = {structure_name: False for structure_name in structure_names}
+        have_structures = {
+            structure_name: False for structure_name in structure_names
+        }
         annotation_files = glob(os.path.join(annotation_folder, "*.mod")) +\
             glob(os.path.join(annotation_folder, "*.3dmod"))
 
@@ -189,10 +242,10 @@ def main():
 
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
-    # process_manual_segmentation(table)
+    process_manual_segmentation(table)
 
-    output_folder = "/scratch-emmy/usr/nimcpape/data/moser/new-train-data"
-    export_manual_segmentation_for_training(table, output_folder, data_root)
+    # output_folder = "/scratch-emmy/usr/nimcpape/data/moser/new-train-data"
+    # export_manual_segmentation_for_training(table, output_folder, data_root)
 
 
 if __name__ == "__main__":

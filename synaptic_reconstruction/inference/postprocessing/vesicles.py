@@ -41,5 +41,5 @@ def filter_border_vesicles(vesicle_segmentation, seg_ids=None, border_slices=4):
         if (max_slice >= border_slices) and (max_slice < mask.shape[0] - border_slices):
             filtered_ids.append(seg_id)
 
-    print(len(filtered_ids), "/", len(seg_ids))
+    # print(len(filtered_ids), "/", len(seg_ids))
     return filtered_ids
