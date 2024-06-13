@@ -78,9 +78,13 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
         mem_path = segmentation_paths["membrane"]
         membrane = _load_segmentation(mem_path, tomo_shape)
 
-        measure_segmentation_to_object_distances(
-            vesicles, membrane, save_path=membrane_save, resolution=resolution
-        )
+        try:
+            measure_segmentation_to_object_distances(
+                vesicles, membrane, save_path=membrane_save, resolution=resolution
+            )
+        except AssertionError:
+            return None, True
+       
 
     distance_paths = {"ribbon": ribbon_save, "PD": pd_save, "membrane": membrane_save}
     return distance_paths, False
