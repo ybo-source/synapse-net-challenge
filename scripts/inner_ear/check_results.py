@@ -106,6 +106,12 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
         for seg_file in seg_files:
             seg_name = seg_file.split("_")[-1].rstrip(".h5")
             correction_file = _match_correction_file(correction_folder, seg_name)
+
+            if seg_name == "vesicles":
+                vesicle_pool_path = os.path.join(correction_folder, "vesicle_pools.tif")
+                if os.path.exists(vesicle_pool_path):
+                    correction_file = vesicle_pool_path
+
             seg = _load_segmentation(correction_file, seg_file)
             segmentations[seg_name] = seg
 
@@ -181,7 +187,7 @@ def visualize_all_data(
             binning_ = _get_bin_factor(True, binning)
             visualize_folder(folder, segmentation_version, visualize_distances, binning_)
 
-        elif micro == "neu" and ("new", "both", None):
+        elif micro == "neu" and check_micro in ("new", "both", None):
             binning_ = _get_bin_factor(False, binning)
             visualize_folder(folder, segmentation_version, visualize_distances, binning_)
 

@@ -84,7 +84,6 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
             )
         except AssertionError:
             return None, True
-       
 
     distance_paths = {"ribbon": ribbon_save, "PD": pd_save, "membrane": membrane_save}
     return distance_paths, False
@@ -247,13 +246,19 @@ def analyze_folder(folder, version, n_ribbons, force):
         result_path = os.path.join(output_folder, "measurements.xlsx")
         if os.path.exists(result_path) and not force:
             return
+
         print("Analyse the corrected segmentations from", correction_folder)
         for seg_name in segmentation_names:
             seg_path = _match_correction_file(correction_folder, seg_name)
             if os.path.exists(seg_path):
-                segmentation_paths[seg_name] = seg_path
+
                 if seg_name == "vesicles":
+                    vesicle_pool_path = os.path.join(correction_folder, "vesicle_pools.tif")
+                    if os.path.exists(vesicle_pool_path):
+                        seg_path = vesicle_pool_path
                     _relabel_vesicles(seg_path)
+
+                segmentation_paths[seg_name] = seg_path
 
     result_path = os.path.join(output_folder, "measurements.xlsx")
     if os.path.exists(result_path) and not force:
