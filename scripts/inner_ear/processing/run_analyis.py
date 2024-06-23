@@ -282,7 +282,7 @@ def analyze_folder(folder, version, n_ribbons, force):
         analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape)
 
 
-def run_analysis(table, version, force=False):
+def run_analysis(table, version, force=False, val_table=None):
     for i, row in tqdm(table.iterrows(), total=len(table)):
         folder = row["Local Path"]
         if folder == "":
@@ -301,6 +301,16 @@ def run_analysis(table, version, force=False):
             print(f"The tomogram {folder} has {n_ribbons} ribbons and {n_pds} PDs.")
             print("The structure post-processing for this case is not yet implemented and will be skipped.")
             continue
+
+        if val_table is not None:
+            row_selection = (val_table.Bedingung == row.Bedingung) &\
+                    (val_table.Maus == row.Maus) &\
+                    (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
+                    (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
+            complete_vals = val_table[row_selection]["Fertig!"].values
+            is_complete = (complete_vals == "ja").all()
+            if is_complete:
+                continue
 
         micro = row["EM alt vs. Neu"]
         if micro == "beides":
@@ -325,9 +335,13 @@ def main():
     table = parse_table(table_path, data_root)
 
     version = 2
-    force = False
+    force = True
 
-    run_analysis(table, version, force=force)
+    val_table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
+    val_table = pandas.read_excel(val_table_path)
+    # val_table = None
+
+    run_analysis(table, version, force=force, val_table=val_table)
 
 
 if __name__ == "__main__":
