@@ -170,7 +170,7 @@ def visualize_all_data(
     data_root, table,
     segmentation_version=None, check_micro=None,
     visualize_distances=False, skip_iteration=None,
-    binning="auto",
+    binning="auto", val_table=None,
 ):
     assert check_micro in ["new", "old", "both", None]
 
@@ -181,6 +181,16 @@ def visualize_all_data(
 
         if skip_iteration is not None and i < skip_iteration:
             continue
+
+        if val_table is not None:
+            row_selection = (val_table.Bedingung == row.Bedingung) &\
+                    (val_table.Maus == row.Maus) &\
+                    (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
+                    (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
+            complete_vals = val_table[row_selection]["Fertig!"].values
+            is_complete = (complete_vals == "ja").all()
+            if is_complete:
+                continue
 
         micro = row["EM alt vs. Neu"]
         if micro == "alt" and check_micro in ("old", "both", None):
@@ -215,6 +225,7 @@ def main():
     parser.add_argument("-m", "--microscope", default=None)
     parser.add_argument("-d", "--visualize_distances", action="store_false")
     parser.add_argument("-b", "--binning", default="auto")
+    parser.add_argument("-s", "--show_finished", action="store_true")
     args = parser.parse_args()
     assert args.microscope in (None, "both", "old", "new")
 
@@ -228,11 +239,19 @@ def main():
 
     segmentation_version = 2
 
+    if args.show_finished:
+        print("Showing finished tomograms")
+        val_table = None
+    else:
+        print("NOT showing finished tomograms")
+        val_table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
+        val_table = pandas.read_excel(val_table_path)
+
     visualize_all_data(
         data_root, table,
         segmentation_version=segmentation_version, check_micro=args.microscope,
         visualize_distances=args.visualize_distances, skip_iteration=args.iteration,
-        binning=binning,
+        binning=binning, val_table=val_table
     )
 
 
