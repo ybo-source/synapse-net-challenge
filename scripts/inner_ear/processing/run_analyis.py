@@ -54,7 +54,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
         ribbon_path = segmentation_paths["ribbon"]
         ribbon = _load_segmentation(ribbon_path, tomo_shape)
 
-        if ribbon.sum() == 0 or ribbon is None:
+        if ribbon is None or ribbon.sum() == 0:
             print("The ribbon segmentation at", segmentation_paths["ribbon"], "is empty. Skipping analysis.")
             return None, True
         measure_segmentation_to_object_distances(vesicles, ribbon, save_path=ribbon_save, resolution=resolution)
@@ -294,7 +294,8 @@ def run_analysis(table, version, force=False, val_table=None):
 
         n_pds = row["Anzahl PDs"]
         if n_pds == "unklar":
-            continue
+            n_pds = 1
+            # continue
         n_pds = int(n_pds)
         n_ribbons = int(row["Anzahl Ribbons"])
         if (n_ribbons == 2 and n_pds == 1):
@@ -335,7 +336,7 @@ def main():
     table = parse_table(table_path, data_root)
 
     version = 2
-    force = True
+    force = False
 
     val_table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
     val_table = pandas.read_excel(val_table_path)
