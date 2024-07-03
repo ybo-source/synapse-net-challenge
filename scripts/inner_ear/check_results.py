@@ -187,8 +187,8 @@ def visualize_all_data(
                     (val_table.Maus == row.Maus) &\
                     (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
                     (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
-            complete_vals = val_table[row_selection]["Fertig!"].values
-            is_complete = (complete_vals == "ja").all()
+            complete_vals = val_table[row_selection]["Fertig 2.0!"].values
+            is_complete = (complete_vals == "ja" & complete_vals == "skip").all()
             if is_complete:
                 continue
 

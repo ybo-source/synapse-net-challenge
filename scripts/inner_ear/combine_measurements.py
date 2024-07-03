@@ -76,7 +76,7 @@ def main():
     from parse_table import parse_table, get_data_root
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--manual", "-m", action="store_false")
+    parser.add_argument("--manual", "-m", action="store_true")
 
     args = parser.parse_args()
     data_root = get_data_root()
@@ -85,8 +85,10 @@ def main():
     table = parse_table(table_path, data_root)
 
     if args.manual:
+        print("Combining manual analysis results")
         combine_manual_results(table, data_root)
     else:
+        print("Combining automatic analysis results")
         combine_automatic_results(table, data_root)
 
 
