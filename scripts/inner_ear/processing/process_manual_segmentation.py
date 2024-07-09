@@ -14,20 +14,20 @@ from tqdm import tqdm
 from synaptic_reconstruction.imod import export_segmentation, export_point_annotations
 from synaptic_reconstruction.file_utils import get_data_path
 
-from parse_table import parse_table
+from parse_table import parse_table, get_data_root
 
 # Files to skip because of issues in IMODMOP.
 # (Currently no issues.)
 SKIP_FILES = [
     # Drawn outside of the bounds. (PD)
-    "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_PD.mod",
+    "Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_PD.mod",  # noqa
     # Naming convention / matching
-    "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_2PDs_vesikel.mod",
+    "Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_2PDs_vesikel.mod",  # noqa
     # AssertionError: {1: ' RA-V', 2: ' MP-V', 3: ' '}
-    "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/4/manuell/Emb71M1aGridB2sec1pil_Vesikel.mod"
+    "Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/4/manuell/Emb71M1aGridB2sec1pil_Vesikel.mod"  # noqa
 ]
 # Non-point object
-# /scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/2/manuell
+# data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/2/manuell
 
 
 def process_labels(labels, label_names):
@@ -62,24 +62,28 @@ def export_vesicles(input_path, data_path, export_path):
         return False
 
     labels, label_names = process_labels(labels, label_names)
+    imageio.imwrite(export_path, segmentation, compression="zlib")
 
     segmentation = nt.takeDict(labels, segmentation)
+    export_pool_path = "_".join(export_path.split("_")[:-1]) + "_manual_pools.tif"
+    imageio.imwrite(export_pool_path, segmentation, compression="zlib")
 
-    imageio.imwrite(export_path, segmentation, compression="zlib")
     return True
 
 
-def process_folder(folder, have_pd, force):
+def process_folder(data_root, folder, have_pd, force):
     data_path = get_data_path(folder)
     annotation_folders = glob(os.path.join(folder, "manuell*"))
     assert len(annotation_folders) > 0, folder
+
+    skip_files = [os.path.join(data_root, skip) for skip in SKIP_FILES]
 
     def process_annotations(file_, structure_name):
         fname = os.path.basename(file_)
         if structure_name.lower() in fname.lower():
             export_path = str(Path(file_).with_suffix(".tif"))
 
-            if file_ in SKIP_FILES:
+            if file_ in skip_files:
                 print("Skipping", file_)
                 return True
 
@@ -119,7 +123,7 @@ def process_folder(folder, have_pd, force):
                 warnings.warn(f"{structure_name} is missing in {annotation_folder}")
 
 
-def process_manual_segmentation(table, force):
+def process_manual_segmentation(data_root, table, force):
     for i, row in tqdm(table.iterrows(), total=len(table)):
         folder = row["Local Path"]
         if folder == "":
@@ -132,10 +136,13 @@ def process_manual_segmentation(table, force):
         have_pd = row["PD vorhanden? "] == "ja"
 
         if have_manual:
-            process_folder(folder, have_pd, force)
+            process_folder(data_root, folder, have_pd, force)
 
-    extra_folder = "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/modiolar/1/Tomo neues EM"
-    process_folder(extra_folder, True, force)
+    extra_folder = os.path.join(
+        data_root,
+        "Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/modiolar/1/Tomo neues EM"
+    )
+    process_folder(data_root, extra_folder, True, force)
 
 
 def _rescale(data, scale, is_seg=True):
@@ -232,12 +239,12 @@ def export_manual_segmentation_for_training(table, output_folder, root):
 
 
 def main():
-    data_root = "/home/sophia/data"
-    force = False
+    data_root = get_data_root()
+    force = True
 
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
-    process_manual_segmentation(table, force=force)
+    process_manual_segmentation(data_root, table, force=force)
 
     # output_folder = "/scratch-emmy/usr/nimcpape/data/moser/new-train-data"
     # export_manual_segmentation_for_training(table, output_folder, data_root)
