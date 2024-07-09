@@ -20,11 +20,11 @@ from parse_table import parse_table
 # (Currently no issues.)
 SKIP_FILES = [
     # Drawn outside of the bounds. (PD)
-    "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_PD.mod",
+    "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_PD.mod",
     # Naming convention / matching
-    "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_2PDs_vesikel.mod",
+    "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_2PDs_vesikel.mod",
     # AssertionError: {1: ' RA-V', 2: ' MP-V', 3: ' '}
-    "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/4/manuell/Emb71M1aGridB2sec1pil_Vesikel.mod"
+    "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/4/manuell/Emb71M1aGridB2sec1pil_Vesikel.mod"
 ]
 # Non-point object
 # /scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/2/manuell
@@ -69,7 +69,7 @@ def export_vesicles(input_path, data_path, export_path):
     return True
 
 
-def process_folder(folder, have_pd):
+def process_folder(folder, have_pd, force):
     data_path = get_data_path(folder)
     annotation_folders = glob(os.path.join(folder, "manuell*"))
     assert len(annotation_folders) > 0, folder
@@ -83,7 +83,7 @@ def process_folder(folder, have_pd):
                 print("Skipping", file_)
                 return True
 
-            if os.path.exists(export_path):
+            if os.path.exists(export_path) and not force:
                 return True
 
             print("Exporting", file_)
@@ -119,7 +119,7 @@ def process_folder(folder, have_pd):
                 warnings.warn(f"{structure_name} is missing in {annotation_folder}")
 
 
-def process_manual_segmentation(table):
+def process_manual_segmentation(table, force):
     for i, row in tqdm(table.iterrows(), total=len(table)):
         folder = row["Local Path"]
         if folder == "":
@@ -132,13 +132,10 @@ def process_manual_segmentation(table):
         have_pd = row["PD vorhanden? "] == "ja"
 
         if have_manual:
-            process_folder(folder, have_pd)
+            process_folder(folder, have_pd, force)
 
-    extra_folder = os.path.join(
-        "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse",
-        "WT strong stim/Mouse 1/modiolar/1/Tomo neues EM"
-    )
-    process_folder(extra_folder, True)
+    extra_folder = "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/modiolar/1/Tomo neues EM"
+    process_folder(extra_folder, True, force)
 
 
 def _rescale(data, scale, is_seg=True):
@@ -229,20 +226,18 @@ def export_manual_segmentation_for_training(table, output_folder, root):
             i_export = export_segmentation(folder, i_export, is_new, name)
 
     # export the extra annotation
-    extra_folder = os.path.join(
-        "/scratch-emmy/usr/nimcpape/data/moser/Electron-Microscopy-Susi/Analyse",
-        "WT strong stim/Mouse 1/modiolar/1/Tomo neues EM"
-    )
+    extra_folder = "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/modiolar/1/Tomo neues EM"
     name = os.path.relpath(extra_folder, root)
     export_segmentation(extra_folder, i_export, is_new=True, name=name)
 
 
 def main():
-    data_root = "/scratch-emmy/usr/nimcpape/data/moser"
+    data_root = "/home/sophia/data"
+    force = False
 
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
-    process_manual_segmentation(table)
+    process_manual_segmentation(table, force=force)
 
     # output_folder = "/scratch-emmy/usr/nimcpape/data/moser/new-train-data"
     # export_manual_segmentation_for_training(table, output_folder, data_root)
