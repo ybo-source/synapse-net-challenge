@@ -240,7 +240,7 @@ def export_manual_segmentation_for_training(table, output_folder, root):
 
 def main():
     data_root = get_data_root()
-    force = True
+    force = False
 
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)

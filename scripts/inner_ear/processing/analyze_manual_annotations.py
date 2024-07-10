@@ -14,14 +14,18 @@ def analyze_folder(folder, n_ribbons, force):
     data_path = get_data_path(folder)
     output_folder = os.path.join(folder, "manuell")
 
-    fname = Path(data_path).stem
+    fname = Path(data_path).stem.rstrip("_rec")
 
     segmentation_names = {"vesicles": "vesikel", "ribbon": "Ribbon", "PD": "PD", "membrane": "Membrane"}
     segmentation_paths = {name: os.path.join(output_folder, f"{fname}_{nname}.tif")
                           for name, nname in segmentation_names.items()}
+    
+    # if folder != "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT control/Mouse 2/modiolar/1":
+    #     return
 
-    if not all(os.path.exists(path) for path in segmentation_paths.values()):
-        print(f"Not all required segmentations were found in {folder}")
+    missing_segmentations = [name for name, path in segmentation_paths.items() if not os.path.exists(path)]
+    if missing_segmentations:
+        print(f"Not all required segmentations were found in {folder}, missing {missing_segmentations}")
         return
 
     result_path = os.path.join(output_folder, "measurements.xlsx")
@@ -88,7 +92,7 @@ def main():
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    force = True
+    force = False
     run_analysis(table, force=force)
 
 
