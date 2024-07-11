@@ -19,7 +19,11 @@ The functionality of the napari label layer (that we use for painting etc.) is e
 
 1. Removing false positives with fill tool:
 
+https://github.com/user-attachments/assets/7202e4d5-d8b4-4128-ae65-47eb4fc11cc6
+
 2. Correct vesicle with segmentation error with brush tool:
+
+https://github.com/user-attachments/assets/e71141e1-07c6-421c-96a7-3d01cf69bc14
 
 3. Paint new vesicle for object covering multiple vesicles:
 
