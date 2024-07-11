@@ -60,6 +60,31 @@ def run_correction(input_path, output_path, fname):
 
         next_id = next_id + 1
 
+    @magicgui(call_button="Last Vesicle")
+    def last_vesicle(v: napari.Viewer):
+        nonlocal next_id
+
+        # Check if we are at the end.
+        if next_id == 1:
+            show_info("Cannot go further back.")
+            return
+
+        next_id = next_id - 2
+
+        layer = v.layers["segmentation"]
+        mask = layer.data == next_id
+
+        if mask.sum() == 0:
+            return
+
+        layer.selected_label = next_id
+        plane = int(np.round(np.mean(np.where(mask)[0]), 0))
+
+        # Set the viewer to the plane.
+        v.dims.current_step = [plane, 0, 0]
+
+        next_id = next_id + 1
+
     @magicgui(call_button="Save Correction")
     def save_correction(v: napari.Viewer):
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
@@ -97,6 +122,7 @@ def run_correction(input_path, output_path, fname):
         continue_correction = False
 
     v.window.add_dock_widget(next_vesicle)
+    v.window.add_dock_widget(last_vesicle)
     v.window.add_dock_widget(toggle)
     v.window.add_dock_widget(paint_new_vesicle)
     v.window.add_dock_widget(save_correction)
