@@ -89,7 +89,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
     return distance_paths, False
 
 
-def assign_vesicles_to_pools(vesicles, distance_paths):
+def assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=False):
 
     def load_dist(measurement_path, seg_ids=None):
         auto_dists = np.load(measurement_path)
@@ -139,6 +139,10 @@ def assign_vesicles_to_pools(vesicles, distance_paths):
     pool_assignments = {vid: "RA-V" for vid in rav_ids}
     pool_assignments.update({vid: "MP-V" for vid in mpv_ids})
     pool_assignments.update({vid: "Docked-V" for vid in docked_ids})
+    if keep_unassigned:
+        unassigned_vesicles = np.setdiff1d(seg_ids, vesicle_ids)
+        pool_assignments.update({vid: "unassigned" for vid in unassigned_vesicles})
+        vesicle_ids = seg_ids
 
     id_mask = np.isin(seg_ids, vesicle_ids)
     assert id_mask.sum() == len(vesicle_ids)
@@ -194,12 +198,12 @@ def compute_morphology(ribbon, pd, resolution):
     return measurements
 
 
-def analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape):
+def analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=False):
     vesicles = _load_segmentation(segmentation_paths["vesicles"], tomo_shape)
     ribbon = _load_segmentation(segmentation_paths["ribbon"], tomo_shape)
     pd = _load_segmentation(segmentation_paths["PD"], tomo_shape)
 
-    vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(vesicles, distance_paths)
+    vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=keep_unassigned)
     vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
     morphology_measurements = compute_morphology(ribbon, pd, resolution)
 
@@ -336,7 +340,7 @@ def main():
     table = parse_table(table_path, data_root)
 
     version = 2
-    force = False
+    force = True
 
     val_table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
     val_table = pandas.read_excel(val_table_path)

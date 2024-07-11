@@ -16,8 +16,8 @@ def analyze_folder(folder, n_ribbons, force):
 
     fname = Path(data_path).stem.rstrip("_rec")
 
-    segmentation_names = {"vesicles": "vesikel", "ribbon": "Ribbon", "PD": "PD", "membrane": "Membrane"}
-    segmentation_paths = {name: os.path.join(output_folder, f"{fname}_{nname}.tif")
+    segmentation_names = {"vesicles": "Vesikel", "ribbon": "Ribbon", "PD": "PD", "membrane": "Membrane"}
+    segmentation_paths = {name: os.path.join(output_folder, f"{nname}.tif")
                           for name, nname in segmentation_names.items()}
     
     # if folder != "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT control/Mouse 2/modiolar/1":
@@ -47,7 +47,7 @@ def analyze_folder(folder, n_ribbons, force):
         return
 
     if force or not os.path.exists(result_path):
-        analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape)
+        analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=True)
 
 
 def run_analysis(table, force=False):
@@ -92,7 +92,7 @@ def main():
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    force = False
+    force = True
     run_analysis(table, force=force)
 
 

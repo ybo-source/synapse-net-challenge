@@ -65,7 +65,7 @@ def export_vesicles(input_path, data_path, export_path):
     imageio.imwrite(export_path, segmentation, compression="zlib")
 
     segmentation = nt.takeDict(labels, segmentation)
-    export_pool_path = "_".join(export_path.split("_")[:-1]) + "_manual_pools.tif"
+    export_pool_path = os.path.join(os.path.split(export_path)[0], "manual_pools.tif")
     imageio.imwrite(export_pool_path, segmentation, compression="zlib")
 
     return True
@@ -79,9 +79,8 @@ def process_folder(data_root, folder, have_pd, force):
     skip_files = [os.path.join(data_root, skip) for skip in SKIP_FILES]
 
     def process_annotations(file_, structure_name):
-        fname = os.path.basename(file_)
-        if structure_name.lower() in fname.lower():
-            export_path = str(Path(file_).with_suffix(".tif"))
+        if structure_name.lower() in file_.lower():
+            export_path = os.path.join(os.path.split(file_)[0], f"{structure_name}.tif")
 
             if file_ in skip_files:
                 print("Skipping", file_)
@@ -238,8 +237,19 @@ def export_manual_segmentation_for_training(table, output_folder, root):
     export_segmentation(extra_folder, i_export, is_new=True, name=name)
 
 
+def clear_manual_exports(data_root):
+    for root, dirs, files in os.walk(data_root):
+        if "manuell" in root:
+            for ff in files:
+                if ff.endswith(".tif"):
+                    os.remove(os.path.join(root, ff))
+
+
 def main():
     data_root = get_data_root()
+    # clear_manual_exports(data_root)
+    # return
+
     force = False
 
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
