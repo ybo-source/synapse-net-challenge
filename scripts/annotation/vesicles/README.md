@@ -1,3 +1,5 @@
+
+https://github.com/user-attachments/assets/dccf17a3-c1d3-4834-b26c-51c073c349e4
 # Vesicle Correction
 
 Correct vesicles in small cutouts based on napari.
@@ -31,4 +33,4 @@ https://github.com/user-attachments/assets/5bcc5f8a-b348-4fe0-84c7-288bd671c69a
 
 4. Paint new vesicle that is missing from the prediction:
 
-https://github.com/user-attachments/assets/c0b45d04-771f-4c8d-9cfa-181ed9ba7280
+https://github.com/user-attachments/assets/6060f894-4d60-467f-897b-53cec7066429
