@@ -1,5 +1,3 @@
-
-https://github.com/user-attachments/assets/dccf17a3-c1d3-4834-b26c-51c073c349e4
 # Vesicle Correction
 
 Correct vesicles in small cutouts based on napari.
