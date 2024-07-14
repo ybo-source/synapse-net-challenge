@@ -203,7 +203,9 @@ def analyze_distances(segmentation_paths, distance_paths, resolution, result_pat
     ribbon = _load_segmentation(segmentation_paths["ribbon"], tomo_shape)
     pd = _load_segmentation(segmentation_paths["PD"], tomo_shape)
 
-    vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=keep_unassigned)
+    vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(
+        vesicles, distance_paths, keep_unassigned=keep_unassigned
+    )
     vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
     morphology_measurements = compute_morphology(ribbon, pd, resolution)
 
@@ -313,7 +315,7 @@ def run_analysis(table, version, force=False, val_table=None):
                     (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
                     (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
             complete_vals = val_table[row_selection]["Fertig!"].values
-            is_complete = (complete_vals == "ja").all()
+            is_complete = ((complete_vals == "ja") | (complete_vals == "skip")).all()
             if is_complete:
                 continue
 

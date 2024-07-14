@@ -188,7 +188,7 @@ def visualize_all_data(
                     (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
                     (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
             complete_vals = val_table[row_selection]["Fertig 2.0!"].values
-            is_complete = (complete_vals == "ja" & complete_vals == "skip").all()
+            is_complete = ((complete_vals == "ja") | (complete_vals == "skip")).all()
             if is_complete:
                 continue
 
@@ -240,10 +240,10 @@ def main():
     segmentation_version = 2
 
     if args.show_finished:
-        print("Showing finished tomograms")
+        print("Showing all tomograms")
         val_table = None
     else:
-        print("NOT showing finished tomograms")
+        print("NOT showing tomograms for which the corrections are completed or which are skipped due to known issues.")
         val_table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
         val_table = pandas.read_excel(val_table_path)
 
