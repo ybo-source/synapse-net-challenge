@@ -19,6 +19,7 @@ def rescale_tomogram(folder, factor=2):
     tomo = rescale(tomo, scale_factor, order=3, preserve_range=True).astype(tomo.dtype)
     voxel_size = [vx * factor for vx in voxel_size]
     mrcfile.write(tomo_path, tomo, voxel_size=voxel_size, overwrite=True)
+    print("Rescaled to", tomo.shape, voxel_size)
 
     # rescale the segmentations
     segmentation_files = glob(os.path.join(folder, "automatisch", "v2", "*.h5"))
@@ -28,17 +29,17 @@ def rescale_tomogram(folder, factor=2):
 
             if seg.shape[0] <= tomo.shape[0]:
                 continue
-            print("Rescaling", seg_file)
+            print("Rescaling", seg_file, "starting from", seg.shape)
 
             if "prediction" in f:
                 pred = f["prediction"][:]
             else:
                 pred = None
 
-        seg = rescale(tomo, scale_factor, order=0, anti_aliasing=False, preserve_range=True).astype(seg.dtype)
-        assert seg.shape == tomo.shape
+        seg = rescale(seg, scale_factor, order=0, anti_aliasing=False, preserve_range=True).astype(seg.dtype)
+        assert seg.shape == tomo.shape, f"{seg.shape}, {tomo.shape}"
         if pred is not None:
-            pred = rescale(tomo, scale_factor, order=0, anti_aliasing=False, preserve_range=True).astype(pred.dtype)
+            pred = rescale(pred, scale_factor, order=0, anti_aliasing=False, preserve_range=True).astype(pred.dtype)
             assert pred.shape == tomo.shape
 
         with h5py.File(seg_file, "w") as f:
@@ -47,7 +48,22 @@ def rescale_tomogram(folder, factor=2):
                 f.create_dataset("prediction", data=pred, compression="gzip")
 
 
-def main():
+def check_rescaling(folder):
+    tomo_path = get_data_path(folder)
+    with mrcfile.open(tomo_path) as f:
+        tomo_shape = f.data.shape
+    print("Tomo shape:", tomo_shape)
+
+    # rescale the segmentations
+    segmentation_files = glob(os.path.join(folder, "automatisch", "v2", "*.h5"))
+    for seg_file in segmentation_files:
+        with h5py.File(seg_file, "r") as f:
+            seg_shape = f["segmentation"].shape
+        print(seg_file)
+        print(seg_shape)
+
+
+def rescale_all():
     root = get_data_root()
 
     folder1 = os.path.join(root, "Electron-Microscopy-Susi/Analyse/WT control/Mouse 1/pillar/3")
@@ -55,6 +71,22 @@ def main():
 
     folder2 = os.path.join(root, "Electron-Microscopy-Susi/Analyse/WT control/Mouse 1/pillar/4")
     rescale_tomogram(folder2)
+
+
+def check_all():
+    root = get_data_root()
+
+    folder1 = os.path.join(root, "Electron-Microscopy-Susi/Analyse/WT control/Mouse 1/pillar/3")
+    check_rescaling(folder1)
+
+    folder2 = os.path.join(root, "Electron-Microscopy-Susi/Analyse/WT control/Mouse 1/pillar/4")
+    check_rescaling(folder2)
+
+
+
+def main():
+    # rescale_all()
+    check_all()
 
 
 if __name__ == "__main__":

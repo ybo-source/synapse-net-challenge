@@ -92,7 +92,7 @@ def main():
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    force = True
+    force = False
     run_analysis(table, force=force)
 
 

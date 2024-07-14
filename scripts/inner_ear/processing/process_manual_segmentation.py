@@ -17,15 +17,7 @@ from synaptic_reconstruction.file_utils import get_data_path
 from parse_table import parse_table, get_data_root
 
 # Files to skip because of issues in IMODMOP.
-# (Currently no issues.)
-SKIP_FILES = [
-    # Drawn outside of the bounds. (PD)
-    "Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_PD.mod",  # noqa
-    # Naming convention / matching
-    "Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/3/manuell/Emb71M1aGridB1sec1.5pil1_2PDs_vesikel.mod",  # noqa
-    # AssertionError: {1: ' RA-V', 2: ' MP-V', 3: ' '}
-    "Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/4/manuell/Emb71M1aGridB2sec1pil_Vesikel.mod"  # noqa
-]
+SKIP_FILES = []
 # Non-point object
 # data/moser/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/2/manuell
 
@@ -119,7 +111,8 @@ def process_folder(data_root, folder, have_pd, force):
         for structure_name, have_structure in have_structures.items():
             # assert have_structure, f"{structure_name} is missing in {annotation_folder}"
             if not have_structure:
-                warnings.warn(f"{structure_name} is missing in {annotation_folder}")
+                print(f"{structure_name} is missing in {annotation_folder} !!!")
+                # warnings.warn(f"{structure_name} is missing in {annotation_folder}")
 
 
 def process_manual_segmentation(data_root, table, force):
@@ -132,7 +125,7 @@ def process_manual_segmentation(data_root, table, force):
         annotation = row["Manuelle Annotierung"].strip().lower()
         assert annotation in ("ja", "teilweise", "nein"), annotation
         have_manual = annotation in ("ja", "teilweise")
-        have_pd = row["PD vorhanden? "] == "ja"
+        have_pd = row["PD vorhanden? "] != "nein"
 
         if have_manual:
             process_folder(data_root, folder, have_pd, force)
