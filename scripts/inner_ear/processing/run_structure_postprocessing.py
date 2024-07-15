@@ -3,6 +3,7 @@ from functools import partial
 from pathlib import Path
 
 import mrcfile
+import imageio.v2 as imageio
 import synaptic_reconstruction.inference.postprocessing as postprocessing
 from synaptic_reconstruction.file_utils import get_data_path
 
@@ -39,7 +40,7 @@ POSTPROCESSING = {
 }
 
 
-def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
+def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force, use_corrected_pd=False):
     output_folder = os.path.join(folder, "automatisch", f"v{version}")
     data_path = get_data_path(folder)
 
@@ -72,7 +73,12 @@ def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
             segmentations[name] = pp(prediction, vesicle_segmentation=vesicle_segmentation, n_ribbons=n_ribbons)
 
         elif name == "PD":
-            segmentations[name] = pp(prediction, ribbon_segmentation=segmentations["ribbon"])
+            if use_corrected_pd:
+                pd_path = os.path.join(folder, "korrektur", "PD.tif")
+                pd_seg = imageio.imread(pd_path)
+                segmentations[name] = pd_seg
+            else:
+                segmentations[name] = pp(prediction, ribbon_segmentation=segmentations["ribbon"])
 
         elif name == "membrane":
             # This was the logic for v1.
@@ -83,10 +89,15 @@ def postprocess_folder(folder, version, n_ribbons, n_pds, is_new, force):
             if "PD" in segmentations:
                 ref_segmentation = segmentations["PD"]
             else:
-                ref_seg_path = os.path.join(output_folder, Path(data_path).stem + "_PD.h5")
-                assert os.path.exists(ref_seg_path)
-                with open_file(ref_seg_path, "r") as f:
-                    ref_segmentation = f["segmentation"][:]
+                if use_corrected_pd:
+                    pd_path = os.path.join(folder, "korrektur", "PD.tif")
+                    ref_segmentation = imageio.imread(pd_path)
+                else:
+                    ref_seg_path = os.path.join(output_folder, Path(data_path).stem + "_PD.h5")
+                    assert os.path.exists(ref_seg_path)
+                    with open_file(ref_seg_path, "r") as f:
+                        ref_segmentation = f["segmentation"][:]
+
             segmentations[name] = pp(prediction, reference_segmentation=ref_segmentation, resolution=resolution)
 
         else:
