@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import mrcfile
 from elf.io import open_file
@@ -14,14 +13,9 @@ def analyze_folder(folder, n_ribbons, force):
     data_path = get_data_path(folder)
     output_folder = os.path.join(folder, "manuell")
 
-    fname = Path(data_path).stem.rstrip("_rec")
-
     segmentation_names = {"vesicles": "Vesikel", "ribbon": "Ribbon", "PD": "PD", "membrane": "Membrane"}
     segmentation_paths = {name: os.path.join(output_folder, f"{nname}.tif")
                           for name, nname in segmentation_names.items()}
-    
-    # if folder != "/home/sophia/data/Electron-Microscopy-Susi/Analyse/WT control/Mouse 2/modiolar/1":
-    #     return
 
     missing_segmentations = [name for name, path in segmentation_paths.items() if not os.path.exists(path)]
     if missing_segmentations:

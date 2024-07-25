@@ -49,9 +49,10 @@ def create_vesicle_pools(vesicles, result_path):
         "RA-V": (0, 0.33, 0),
         "MP-V": (1, 0.66, 0),
         "Docked-V": (1, 0.66, 0.5),
+        "unassigned": (1, 1, 1),
     }
     colors = {}
-    for pool_id, pool_name in enumerate(("RA-V", "MP-V", "Docked-V"), 1):
+    for pool_name in ("RA-V", "MP-V", "Docked-V"):
         ves_ids_pool = [vid for vid, pname in pool_assignments.items() if pname == pool_name]
         pool_mask = np.isin(vesicles, ves_ids_pool)
         vesicle_pools[pool_mask] = vesicles[pool_mask]

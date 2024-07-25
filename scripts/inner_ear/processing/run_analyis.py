@@ -12,6 +12,7 @@ from synaptic_reconstruction.distance_measurements import (
     measure_segmentation_to_object_distances,
     filter_blocked_segmentation_to_object_distances,
 )
+
 from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
 from synaptic_reconstruction.inference.postprocessing import filter_border_vesicles
 from skimage.transform import resize
@@ -192,8 +193,10 @@ def to_excel(
 
 
 def compute_morphology(ribbon, pd, resolution):
+    # Compute ribbon and PD morphology.
     ribbon_morph = compute_object_morphology(ribbon, "ribbon", resolution=resolution)
     pd_morph = compute_object_morphology(pd, "presynaptic-density", resolution=resolution)
+
     measurements = pandas.concat([ribbon_morph, pd_morph])
     return measurements
 
@@ -206,14 +209,14 @@ def analyze_distances(segmentation_paths, distance_paths, resolution, result_pat
     vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(
         vesicles, distance_paths, keep_unassigned=keep_unassigned
     )
-    vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
-    morphology_measurements = compute_morphology(ribbon, pd, resolution)
+    vesicle_ids, vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
+    morphology_measurements = compute_morphology(ribbon, pd, resolution=resolution)
 
     ves_assignments = pandas.DataFrame.from_dict(
         {
-            "id": list(pool_assignments.keys()),
-            "pool": list(pool_assignments.values()),
-            "radius [nm]": vesicle_radii,
+            "id": vesicle_ids,
+            "pool": [pool_assignments[vid] for vid in vesicle_ids],
+            "radius [nm]": [vesicle_radii[vid] for vid in vesicle_ids],
         }
     )
 

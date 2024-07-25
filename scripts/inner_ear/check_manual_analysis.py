@@ -23,6 +23,15 @@ def _load_segmentation(seg_file):
     return seg
 
 
+def _get_pool_colors(seg):
+    colors = {
+        1: (0, 0.33, 0),
+        2: (1, 0.66, 0),
+        3: (1, 0.66, 0.5),
+    }
+    return colors
+
+
 def visualize_folder(folder, binning):
     result_folder = os.path.join(folder, "manuell")
     result_path = os.path.join(result_folder, "measurements.xlsx")
@@ -36,7 +45,7 @@ def visualize_folder(folder, binning):
     seg_files = glob(os.path.join(result_folder, "*.tif"))
     segmentations = {}
     for seg_file in seg_files:
-        seg_name = seg_file.split("_")[-1].rstrip(".tif")
+        seg_name = os.path.basename(seg_file).split("_")[-1].rstrip(".tif").lower()
         seg = _load_segmentation(seg_file)
         if seg_name == "vesikel":
             segmentations["vesicles"] = seg
@@ -48,6 +57,7 @@ def visualize_folder(folder, binning):
     segmentations["vesicle_pools"], vesicle_ids, colors = create_vesicle_pools(
         segmentations["vesicles"], result_path
     )
+    colors["pools"] = _get_pool_colors(segmentations["pools"])
 
     distance_folder = os.path.join(result_folder, "distances")
     distance_files = {
