@@ -39,12 +39,17 @@ def _load_segmentation(seg_path, tomo_shape):
 def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_shape):
     os.makedirs(save_folder, exist_ok=True)
 
-    vesicle_path = segmentation_paths["vesicles"]
     vesicles = None
 
     def _require_vesicles():
+        vesicle_path = segmentation_paths["vesicles"]
+
         if vesicles is None:
+            vesicle_pool_path = os.path.join(os.path.split(save_folder)[0], "vesicle_pools.tif")
+            if os.path.exists(vesicle_pool_path):
+                vesicle_path = vesicle_pool_path
             return _load_segmentation(vesicle_path, tomo_shape)
+
         else:
             return vesicles
 
@@ -317,7 +322,7 @@ def run_analysis(table, version, force=False, val_table=None):
                     (val_table.Maus == row.Maus) &\
                     (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
                     (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
-            complete_vals = val_table[row_selection]["Fertig!"].values
+            complete_vals = val_table[row_selection]["Fertig 2.0!"].values
             is_complete = ((complete_vals == "ja") | (complete_vals == "skip")).all()
             if is_complete:
                 continue
