@@ -48,12 +48,24 @@ def update_excel(result_path, vesicle_ids, vesicle_radii, morphology_measurement
     )
 
 
+# Comparison to IMOD:
+# Q: With or without resolution?
+# IMOD
+# Ribbon:
+# Total contour volume = 4.34442e+06
+# Total volume inside mesh = 4.33772e+06
+# Total mesh surface area = 208628 (165707.923282)
+# PD:
+# Total contour volume = 289599
+# Total volume inside mesh = 284837
+# Total mesh surface area = 39144.5 (40779.301005)
 def compute_tomo_morphology(segmentation_paths, resolution, result_path, tomo_shape, keep_unassigned=False):
     vesicles = _load_segmentation(segmentation_paths["vesicles"], tomo_shape)
     ribbon = _load_segmentation(segmentation_paths["ribbon"], tomo_shape)
     pd = _load_segmentation(segmentation_paths["PD"], tomo_shape)
 
-    morphology_measurements = compute_morphology(ribbon, pd, resolution=resolution)
+    # morphology_measurements = compute_morphology(ribbon, pd, resolution=resolution)
+    morphology_measurements = compute_morphology(ribbon, pd, resolution=None)
     vesicle_ids = pandas.read_excel(result_path)["id"].values
     vesicle_ids, vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
 
@@ -164,7 +176,6 @@ def run_morphology_computation(table, version, force, analyze_manual_annotations
             )
 
 
-# TODO also support updates for manual tomograms
 def main():
     data_root = get_data_root()
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
