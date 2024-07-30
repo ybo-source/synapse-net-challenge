@@ -98,7 +98,7 @@ def _get_bin_factor(is_old, binning):
         return 2 if is_old else 3
 
 
-def visualize_all_data(data_root, table, binning="auto"):
+def visualize_all_data(data_root, table, binning="auto", show_micro=None):
     for i, row in tqdm(table.iterrows(), total=len(table)):
         folder = row["Local Path"]
         if folder == "":
@@ -108,24 +108,26 @@ def visualize_all_data(data_root, table, binning="auto"):
         #     continue
 
         micro = row["EM alt vs. Neu"]
-        if micro == "alt":
+        if micro == "alt" and show_micro in (None, "both", "alt", "old"):
             binning_ = _get_bin_factor(True, binning)
             visualize_folder(folder, binning_)
 
-        elif micro == "neu":
+        elif micro == "neu" and show_micro in (None, "both", "neu", "new"):
             binning_ = _get_bin_factor(False, binning)
             visualize_folder(folder, binning_)
 
         elif micro == "beides":
-            binning_ = _get_bin_factor(True, binning)
-            visualize_folder(folder, binning_)
+            if show_micro in (None, "both", "alt", "old"):
+                binning_ = _get_bin_factor(True, binning)
+                visualize_folder(folder, binning_)
 
-            folder_new = os.path.join(folder, "Tomo neues EM")
-            if not os.path.exists(folder_new):
-                folder_new = os.path.join(folder, "neues EM")
-            assert os.path.exists(folder_new), folder_new
-            binning_ = _get_bin_factor(False, binning)
-            visualize_folder(folder_new, binning_)
+            if show_micro in (None, "both", "neu", "new"):
+                folder_new = os.path.join(folder, "Tomo neues EM")
+                if not os.path.exists(folder_new):
+                    folder_new = os.path.join(folder, "neues EM")
+                assert os.path.exists(folder_new), folder_new
+                binning_ = _get_bin_factor(False, binning)
+                visualize_folder(folder_new, binning_)
 
 
 def main():
@@ -134,6 +136,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--binning", default="auto")
+    parser.add_argument("-m", "--micro")
     args = parser.parse_args()
 
     binning = args.binning
@@ -144,7 +147,7 @@ def main():
 
     table = parse_table(table_path, data_root)
 
-    visualize_all_data(data_root, table, binning=binning)
+    visualize_all_data(data_root, table, binning=binning, show_micro=args.micro)
 
 
 if __name__ == "__main__":

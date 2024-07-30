@@ -53,7 +53,9 @@ def _compute_radii_distances(vesicles, resolution, ids, min_size, derive_distanc
     return ids, radii
 
 
-def compute_radii(vesicles, resolution, ids=None, derive_radius_from_distances=True, derive_distances_2d=True, min_size=500):
+def compute_radii(
+    vesicles, resolution, ids=None, derive_radius_from_distances=True, derive_distances_2d=True, min_size=500
+):
     """Compute the radii for a vesicle segmentation.
     """
     if derive_radius_from_distances:

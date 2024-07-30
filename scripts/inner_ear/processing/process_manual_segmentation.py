@@ -2,9 +2,9 @@ import os
 import warnings
 
 from glob import glob
-from pathlib import Path
 
 import imageio.v3 as imageio
+import mrcfile
 import numpy as np
 import nifty.tools as nt
 from elf.io import open_file
@@ -44,9 +44,13 @@ def process_labels(labels, label_names):
 def export_vesicles(input_path, data_path, export_path):
     with open_file(data_path, "r") as f:
         shape = f["data"].shape
+    with mrcfile.open(data_path, "r") as f:
+        resolution = f.voxel_size.tolist()
+    resolution = [res / 10 for res in resolution]
+
     try:
         segmentation, labels, label_names = export_point_annotations(
-            input_path, shape,
+            input_path, shape, resolution=resolution[0],
         )
     except AssertionError:
         print("Contains non-point vesicle annotations:")

@@ -62,6 +62,7 @@ def draw_spheres(coordinates, radii, shape, verbose=True):
 def load_points_from_imodinfo(
     imod_path, full_shape, bb=None,
     exclude_labels=None, exclude_label_patterns=None,
+    resolution=None,
 ):
     coordinates, sizes, labels = [], [], []
     label_names = {}
@@ -154,6 +155,9 @@ def load_points_from_imodinfo(
 
     coordinates, sizes, labels = coordinates[in_bounds], sizes[in_bounds], labels[in_bounds]
 
+    if resolution is not None:
+        sizes /= resolution
+
     if len(coordinates) == 0:
         raise RuntimeError(f"Empty annotations: {imod_path}")
     return coordinates, sizes, labels, label_names
@@ -165,12 +169,14 @@ def export_point_annotations(
     bb=None,
     exclude_labels=None,
     exclude_label_patterns=None,
-    return_coords_and_radii=False
+    return_coords_and_radii=False,
+    resolution=None,
 ):
     coordinates, radii, labels, label_names = load_points_from_imodinfo(
         imod_path, shape, bb=bb,
         exclude_labels=exclude_labels,
-        exclude_label_patterns=exclude_label_patterns
+        exclude_label_patterns=exclude_label_patterns,
+        resolution=resolution,
     )
     labels = {seg_id: int(label_id) for seg_id, label_id in enumerate(labels, 1)}
     segmentation = draw_spheres(coordinates, radii, shape)
