@@ -33,7 +33,7 @@ def add_summary_stats(table_path):
         "N_RA-V": n_ravs,
         "N_MP-V": n_mpvs,
         "N_Docked-V": n_dockeds,
-        "Vesicles / Surface [1 / nm^2]": ves_per_surfs,
+        "Vesicles / Surface [1 / pixel^2]": ves_per_surfs,
     })
 
     with pd.ExcelWriter(table_path, engine="openpyxl", mode="a") as writer:

@@ -67,6 +67,8 @@ def _match_correction_folder(folder):
 
 def _match_correction_file(correction_folder, seg_name):
     possible_names = [seg_name, seg_name.lower()]
+    if seg_name == "vesicles":
+        possible_names = ["vesicle_pools"] + possible_names
     for name in possible_names:
         correction_file = os.path.join(correction_folder, f"{name}.tif")
         if os.path.exists(correction_file):

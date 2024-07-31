@@ -244,11 +244,11 @@ def clear_manual_exports(data_root):
 
 def main():
     data_root = get_data_root()
+
     # clear_manual_exports(data_root)
     # return
 
     force = False
-
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
     process_manual_segmentation(data_root, table, force=force)

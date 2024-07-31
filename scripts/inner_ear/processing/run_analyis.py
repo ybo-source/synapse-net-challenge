@@ -267,9 +267,6 @@ def analyze_folder(folder, version, n_ribbons, force):
             if os.path.exists(seg_path):
 
                 if seg_name == "vesicles":
-                    vesicle_pool_path = os.path.join(correction_folder, "vesicle_pools.tif")
-                    if os.path.exists(vesicle_pool_path):
-                        seg_path = vesicle_pool_path
                     _relabel_vesicles(seg_path)
 
                 segmentation_paths[seg_name] = seg_path
