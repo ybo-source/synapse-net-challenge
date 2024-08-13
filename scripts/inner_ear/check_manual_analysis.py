@@ -11,23 +11,25 @@ from synaptic_reconstruction.file_utils import get_data_path
 from elf.io import open_file
 from tqdm import tqdm
 
-from check_results import get_distance_visualization, create_vesicle_pools
+from synaptic_reconstruction.tools.distance_measurement import _downsample
+from check_results import get_distance_visualization, create_vesicle_pools, _update_colors
 
 sys.path.append("processing")
 
 
-def _load_segmentation(seg_file):
+def _load_segmentation(seg_file, binning, tomo):
     seg = imageio.imread(seg_file)
     if seg.dtype == np.dtype("uint64"):
         seg = seg.astype("uint32")
+    seg = _downsample(seg, is_seg=True, scale=binning, target_shape=tomo.shape)
     return seg
 
 
 def _get_pool_colors(seg):
     colors = {
         1: (0, 0.33, 0),
-        2: (1, 0.66, 0),
-        3: (1, 0.66, 0.5),
+        2: (1, 0.549, 0),
+        3: (1, 1, 0),
     }
     return colors
 
@@ -41,12 +43,13 @@ def visualize_folder(folder, binning):
     raw_path = get_data_path(folder)
     with open_file(raw_path, "r") as f:
         tomo = f["data"][:]
+    tomo = _downsample(tomo, scale=binning)
 
     seg_files = glob(os.path.join(result_folder, "*.tif"))
     segmentations = {}
     for seg_file in seg_files:
         seg_name = os.path.basename(seg_file).split("_")[-1].rstrip(".tif").lower()
-        seg = _load_segmentation(seg_file)
+        seg = _load_segmentation(seg_file, binning, tomo)
         if seg_name == "vesikel":
             segmentations["vesicles"] = seg
         elif "ribbon" in seg_name:
@@ -58,6 +61,7 @@ def visualize_folder(folder, binning):
         segmentations["vesicles"], result_path
     )
     colors["pools"] = _get_pool_colors(segmentations["pools"])
+    colors = _update_colors(colors)
 
     distance_folder = os.path.join(result_folder, "distances")
     distance_files = {

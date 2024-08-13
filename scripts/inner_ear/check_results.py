@@ -41,8 +41,8 @@ def create_vesicle_pools(vesicles, result_path):
 
     color_map = {
         "RA-V": (0, 0.33, 0),
-        "MP-V": (1, 0.66, 0),
-        "Docked-V": (1, 0.66, 0.5),
+        "MP-V": (1.0, 0.549, 0.0),
+        "Docked-V": (1, 1, 0),
         "unassigned": (1, 1, 1),
     }
     colors = {}
@@ -66,6 +66,14 @@ def _load_segmentation(correction_file, seg_file, binning, tomo):
         seg = seg.astype("uint32")
     seg = _downsample(seg, is_seg=True, scale=binning, target_shape=tomo.shape)
     return seg
+
+
+def _update_colors(colors):
+    colors["ribbon"] = {1: (1, 0, 0), 2: (1, 0, 0)}
+    colors["PD"] = {1: (0.784, 0.635, 0.784), 2: (0.784, 0.635, 0.784)}
+    colors["pd"] = {1: (0.784, 0.635, 0.784), 2: (0.784, 0.635, 0.784)}
+    colors["membrane"] = {1: (1.0, 0.753, 0.796), 2: (1.0, 0.753, 0.796)}
+    return colors
 
 
 def visualize_folder(folder, segmentation_version, visualize_distances, binning):
@@ -119,6 +127,8 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
         else:
             colors = {}
             vesicle_ids = None
+
+        colors = _update_colors(colors)
 
         distance_files = {
             name: os.path.join(distance_folder, f"{name}.npz") for name in ["ribbon", "PD", "membrane"]
