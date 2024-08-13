@@ -19,12 +19,6 @@ sys.path.append("processing")
 
 
 def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale):
-    tomo = _downsample(tomo, scale=scale)
-    segmentations = {
-        k: _downsample(v, is_seg=True, scale=scale, target_shape=tomo.shape)
-        for k, v in segmentations.items()
-    }
-
     ribbon_lines, _ = create_object_distance_lines(distance_paths["ribbon"], seg_ids=vesicle_ids, scale=scale)
     pd_lines, _ = create_object_distance_lines(distance_paths["PD"], seg_ids=vesicle_ids, scale=scale)
     membrane_lines, _ = create_object_distance_lines(distance_paths["membrane"], seg_ids=vesicle_ids, scale=scale)
@@ -62,7 +56,7 @@ def create_vesicle_pools(vesicles, result_path):
     return vesicle_pools, vesicle_ids, {"vesicle_pools": colors}
 
 
-def _load_segmentation(correction_file, seg_file):
+def _load_segmentation(correction_file, seg_file, binning, tomo):
     if os.path.exists(correction_file):
         seg = imageio.imread(correction_file)
     else:
@@ -70,6 +64,7 @@ def _load_segmentation(correction_file, seg_file):
             seg = f["segmentation"][:] if "segmentation" in f else f["prediction"][:]
     if seg.dtype == np.dtype("uint64"):
         seg = seg.astype("uint32")
+    seg = _downsample(seg, is_seg=True, scale=binning, target_shape=tomo.shape)
     return seg
 
 
@@ -79,6 +74,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
     raw_path = get_data_path(folder)
     with open_file(raw_path, "r") as f:
         tomo = f["data"][:]
+    tomo = _downsample(tomo, scale=binning)
 
     if segmentation_version is None:
 
@@ -113,7 +109,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
                 if os.path.exists(vesicle_pool_path):
                     correction_file = vesicle_pool_path
 
-            seg = _load_segmentation(correction_file, seg_file)
+            seg = _load_segmentation(correction_file, seg_file, binning=binning, tomo=tomo)
             segmentations[seg_name] = seg
 
         if os.path.exists(result_path):
