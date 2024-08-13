@@ -188,8 +188,15 @@ def visualize_all_data(
                     (val_table.Maus == row.Maus) &\
                     (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
                     (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
-            complete_vals = val_table[row_selection]["Fertig 2.0!"].values
-            is_complete = ((complete_vals == "ja") | (complete_vals == "skip")).all()
+            complete_vals = val_table[row_selection]["Fertig 3.0?"].values
+            # skip_markers = ("ja", "skip", "Anzeigefehler", "Ausschluss", "Keine PD")
+            is_complete = (
+                (complete_vals == "ja") |
+                (complete_vals == "skip") |
+                (complete_vals == "Anzeigefehler") |
+                (complete_vals == "Ausschluss") |
+                (complete_vals == "Keine PD")
+            ).all()
             if is_complete:
                 continue
 
