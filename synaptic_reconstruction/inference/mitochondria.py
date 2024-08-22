@@ -4,8 +4,11 @@ import torch_em
 import elf.parallel as parallel
 import numpy as np
 import xarray
+from tqdm import tqdm
 
 from skimage.transform import rescale, resize
+from skimage.measure import label, regionprops
+from skimage.morphology import binary_closing, remove_small_holes
 
 DEFAULT_TILING = {
     "tile": {"x": 512, "y": 512, "z": 64},
@@ -40,6 +43,23 @@ def _run_segmentation(
     )
     if verbose:
         print("Compute watershed in", time.time() - t0, "s")
+    
+    labeled_seg = label(seg > 0)
+    props = regionprops(labeled_seg)
+
+    refined_seg = np.zeros_like(seg)
+    for prop in tqdm(props):
+        # Only keep regions above a certain area
+        if prop.area >= min_size:
+            # Create a mask for the current region
+            region_mask = (labeled_seg == prop.label) #(prop.area_filled > 0)
+            # Fill small holes within this region
+            filled_region = remove_small_holes(region_mask, area_threshold=5000)
+            # Apply binary closing to smooth region boundaries
+            closed_region = binary_closing(filled_region)
+            refined_seg[closed_region] = prop.label
+            seg = refined_seg
+
 
     t0 = time.time()
     ids, sizes = parallel.unique(seg, return_counts=True, block_shape=block_shape, verbose=verbose)
