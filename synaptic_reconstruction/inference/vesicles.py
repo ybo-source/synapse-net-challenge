@@ -1,4 +1,5 @@
 import time
+from typing import Dict, List, Optional, Tuple, Union
 
 import bioimageio.core
 import elf.parallel as parallel
@@ -95,13 +96,31 @@ def _run_segmentation_parallel(
 
 
 def segment_vesicles(
-    input_volume, model_path,
-    tiling=DEFAULT_TILING,
-    min_size=500, verbose=True,
-    distance_based_segmentation=False,
-    return_predictions=False,
-    scale=None,
-):
+    input_volume: np.ndarray,
+    model_path: str,
+    tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
+    min_size: int = 500,
+    verbose: bool = True,
+    distance_based_segmentation: bool = False,
+    return_predictions: bool = False,
+    scale: Optional[List[float]] = None
+) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+    """
+    Segment vesicles in an input volume.
+
+    Args:
+        input_volume: The input volume to segment.
+        model_path: The path to the model checkpoint.
+        tiling: The tiling configuration for the prediction.
+        min_size: The minimum size of a vesicle to be considered.
+        verbose: Whether to print timing information.
+        distance_based_segmentation: Whether to use distance-based segmentation.
+        return_predictions: Whether to return the predictions (foreground, boundaries) alongside the segmentation.
+        scale: The scale factor to use for rescaling the input volume before prediction.
+
+    Returns:
+        The segmentation mask as a numpy array, or a tuple containing the segmentation mask and the predictions if return_predictions is True.
+    """
     if verbose:
         print("Segmenting vesicles in volume of shape", input_volume.shape)
 

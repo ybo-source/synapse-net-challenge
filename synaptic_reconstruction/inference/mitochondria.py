@@ -1,4 +1,5 @@
 import time
+from typing import Dict, List, Optional, Tuple, Union
 import torch
 import torch_em
 import elf.parallel as parallel
@@ -43,23 +44,6 @@ def _run_segmentation(
     )
     if verbose:
         print("Compute watershed in", time.time() - t0, "s")
-    
-    labeled_seg = label(seg > 0)
-    props = regionprops(labeled_seg)
-
-    refined_seg = np.zeros_like(seg)
-    for prop in tqdm(props):
-        # Only keep regions above a certain area
-        if prop.area >= min_size:
-            # Create a mask for the current region
-            region_mask = (labeled_seg == prop.label) #(prop.area_filled > 0)
-            # Fill small holes within this region
-            filled_region = remove_small_holes(region_mask, area_threshold=5000)
-            # Apply binary closing to smooth region boundaries
-            closed_region = binary_closing(filled_region)
-            refined_seg[closed_region] = prop.label
-            seg = refined_seg
-
 
     t0 = time.time()
     ids, sizes = parallel.unique(seg, return_counts=True, block_shape=block_shape, verbose=verbose)
@@ -70,14 +54,53 @@ def _run_segmentation(
     return seg
 
 
-def segment_mitochondria(
+def _get_prediction_torch_em(
     input_volume, model_path,
-    tiling=DEFAULT_TILING,
-    min_size=500, verbose=True,
-    distance_based_segmentation=False,
-    return_predictions=False,
-    scale=None,
+    block_shape=(128, 256, 256),
+    halo=(48, 48, 48),
+    verbose=True
 ):
+    t0 = time.time()
+    # get foreground and boundary predictions from the model
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = torch_em.util.load_model(checkpoint=model_path, device=device)
+    with torch.no_grad():
+        pred = torch_em.util.prediction.predict_with_halo(
+            input_volume, model, gpu_ids=device,
+            block_shape=block_shape, halo=halo,
+            preprocess=None,
+        )
+    if verbose:
+        print("Prediction time in", time.time() - t0, "s")
+    return pred
+
+
+def segment_mitochondria(
+    input_volume: np.ndarray,
+    model_path: str,
+    tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
+    min_size: int = 10000,
+    verbose: bool = True,
+    distance_based_segmentation: bool = False,
+    return_predictions: bool = False,
+    scale: Optional[List[float]] = None,
+) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+    """
+    Segment mitochondria in an input volume.
+
+    Args:
+        input_volume: The input volume to segment.
+        model_path: The path to the model checkpoint.
+        tiling: The tiling configuration for the prediction.
+        min_size: The minimum size of a mitochondria to be considered.
+        verbose: Whether to print timing information.
+        distance_based_segmentation: Whether to use distance-based segmentation.
+        return_predictions: Whether to return the predictions (foreground, boundaries) alongside the segmentation.
+        scale: The scale factor to use for rescaling the input volume before prediction.
+
+    Returns:
+        The segmentation mask as a numpy array, or a tuple containing the segmentation mask and the predictions if return_predictions is True.
+    """
     if verbose:
         print("Segmenting mitochondria in volume of shape", input_volume.shape)
 
@@ -95,15 +118,8 @@ def segment_mitochondria(
     halo = [tiling["halo"]["z"], tiling["halo"]["x"], tiling["halo"]["y"]]
 
     t0 = time.time()
-    # get foreground and boundary predictions from the model
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = torch_em.util.load_model(checkpoint=model_path, device=device)
-    with torch.no_grad():
-        pred = torch_em.util.prediction.predict_with_halo(
-            input_volume, model, gpu_ids=device,
-            block_shape=block_shape, halo=halo,
-            preprocess=None,
-        )
+    
+    pred = _get_prediction_torch_em(input_volume, model_path, block_shape=block_shape, halo=halo)
 
     foreground, boundaries = pred[:2]
     if verbose:
