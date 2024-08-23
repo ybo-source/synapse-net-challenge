@@ -1,7 +1,5 @@
 import time
 from typing import Dict, List, Optional, Tuple, Union
-import torch
-import torch_em
 import elf.parallel as parallel
 import numpy as np
 
@@ -52,27 +50,6 @@ def _run_segmentation(
     return seg
 
 
-def _get_prediction_torch_em(
-    input_volume, model_path,
-    block_shape=(128, 256, 256),
-    halo=(48, 48, 48),
-    verbose=True
-):
-    t0 = time.time()
-    # get foreground and boundary predictions from the model
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = torch_em.util.load_model(checkpoint=model_path, device=device)
-    with torch.no_grad():
-        pred = torch_em.util.prediction.predict_with_halo(
-            input_volume, model, gpu_ids=device,
-            block_shape=block_shape, halo=halo,
-            preprocess=None,
-        )
-    if verbose:
-        print("Prediction time in", time.time() - t0, "s")
-    return pred
-
-
 def segment_cristae(
     input_volume: np.ndarray,
     model_path: str,
@@ -84,6 +61,22 @@ def segment_cristae(
     scale: Optional[List[float]] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     
+    """
+    Segment cristae in an input volume.
+
+    Args:
+        input_volume: The input volume to segment.
+        model_path: The path to the model checkpoint.
+        tiling: The tiling configuration for the prediction.
+        min_size: The minimum size of a cristae to be considered.
+        verbose: Whether to print timing information.
+        distance_based_segmentation: Whether to use distance-based segmentation.
+        return_predictions: Whether to return the predictions (foreground, boundaries) alongside the segmentation.
+        scale: The scale factor to use for rescaling the input volume before prediction.
+
+    Returns:
+        The segmentation mask as a numpy array, or a tuple containing the segmentation mask and the predictions if return_predictions is True.
+    """
     if verbose:
         print("Segmenting cristae in volume of shape", input_volume.shape)
 
