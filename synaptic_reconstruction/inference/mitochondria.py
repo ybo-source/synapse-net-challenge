@@ -1,17 +1,9 @@
 import time
 from typing import Dict, List, Optional, Tuple, Union
-import torch
-import torch_em
-
 
 import elf.parallel as parallel
 import numpy as np
-import xarray
-from tqdm import tqdm
-
 from skimage.transform import rescale, resize
-from skimage.measure import label, regionprops
-from skimage.morphology import binary_closing, remove_small_holes
 
 from util import get_prediction_torch_em
 
