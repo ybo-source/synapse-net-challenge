@@ -5,3 +5,6 @@ logs/
 models/*/
 *.out
 *.egg-info/
+
+
+synaptic_reconstruction/inference/test.py
