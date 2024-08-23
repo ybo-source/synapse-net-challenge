@@ -4,8 +4,6 @@ import torch
 import torch_em
 import elf.parallel as parallel
 import numpy as np
-import xarray
-from tqdm import tqdm
 
 from skimage.transform import rescale, resize
 from skimage.measure import label, regionprops
@@ -47,11 +45,11 @@ def _run_segmentation(
 
     t0 = time.time()
     ids, sizes = parallel.unique(seg, return_counts=True, block_shape=block_shape, verbose=verbose)
-    print("ids", ids, "sizes", sizes)
     filter_ids = ids[sizes < min_size]
     seg[np.isin(seg, filter_ids)] = 0
     if verbose:
         print("Size filter in", time.time() - t0, "s")
+    seg = np.where(seg > 0, 1, 0)
     return seg
 
 
