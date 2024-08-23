@@ -2,6 +2,8 @@ import time
 from typing import Dict, List, Optional, Tuple, Union
 import torch
 import torch_em
+
+
 import elf.parallel as parallel
 import numpy as np
 import xarray
@@ -10,6 +12,8 @@ from tqdm import tqdm
 from skimage.transform import rescale, resize
 from skimage.measure import label, regionprops
 from skimage.morphology import binary_closing, remove_small_holes
+
+from util import get_prediction_torch_em
 
 DEFAULT_TILING = {
     "tile": {"x": 512, "y": 512, "z": 64},
@@ -54,27 +58,6 @@ def _run_segmentation(
     return seg
 
 
-def _get_prediction_torch_em(
-    input_volume, model_path,
-    block_shape=(128, 256, 256),
-    halo=(48, 48, 48),
-    verbose=True
-):
-    t0 = time.time()
-    # get foreground and boundary predictions from the model
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = torch_em.util.load_model(checkpoint=model_path, device=device)
-    with torch.no_grad():
-        pred = torch_em.util.prediction.predict_with_halo(
-            input_volume, model, gpu_ids=device,
-            block_shape=block_shape, halo=halo,
-            preprocess=None,
-        )
-    if verbose:
-        print("Prediction time in", time.time() - t0, "s")
-    return pred
-
-
 def segment_mitochondria(
     input_volume: np.ndarray,
     model_path: str,
@@ -112,14 +95,10 @@ def segment_mitochondria(
         input_volume = rescale(input_volume, scale, preserve_range=True).astype(input_volume.dtype)
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
-    
-    # get block_shape and halo
-    block_shape = [tiling["tile"]["z"], tiling["tile"]["x"], tiling["tile"]["y"]]
-    halo = [tiling["halo"]["z"], tiling["halo"]["x"], tiling["halo"]["y"]]
 
     t0 = time.time()
-    
-    pred = _get_prediction_torch_em(input_volume, model_path, block_shape=block_shape, halo=halo)
+
+    pred = get_prediction_torch_em(input_volume, model_path, tiling)
 
     foreground, boundaries = pred[:2]
     if verbose:
