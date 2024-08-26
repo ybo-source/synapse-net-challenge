@@ -11,6 +11,7 @@ def get_prediction_torch_em(
     model_path: str,
     tiling: Dict[str, Dict[str, int]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
     verbose: bool = True,
+    with_channels: bool = False,
 ) -> np.ndarray:
     """
     Run prediction using torch-em on a given volume.
@@ -20,6 +21,7 @@ def get_prediction_torch_em(
         model_path: The path to the model checkpoint.
         tiling: The tiling configuration for the prediction.
         verbose: Whether to print timing information.
+        with_channels: Whether to predict with channels.
 
     Returns:
         The prediction volume.
@@ -37,6 +39,7 @@ def get_prediction_torch_em(
             input_volume, model, gpu_ids=[device],
             block_shape=block_shape, halo=halo,
             preprocess=None,
+            with_channels=with_channels
         )
     if verbose:
         print("Prediction time in", time.time() - t0, "s")

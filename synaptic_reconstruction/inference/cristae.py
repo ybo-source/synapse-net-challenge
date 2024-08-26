@@ -13,33 +13,18 @@ DEFAULT_TILING = {
 
 
 def _run_segmentation(
-    foreground, boundaries, verbose, min_size,
+    foreground, verbose, min_size,
     # blocking shapes for parallel computation
     block_shape=(128, 256, 256),
-    halo=(48, 48, 48)
 ):
 
     # get the segmentation via seeded watershed
     t0 = time.time()
-    seeds = parallel.label((foreground - boundaries) > 0.5, block_shape=block_shape, verbose=verbose)
+    seg = parallel.label(foreground > 0.5, block_shape=block_shape, verbose=verbose)
     if verbose:
         print("Compute connected components in", time.time() - t0, "s")
 
-    t0 = time.time()
-    dist = parallel.distance_transform(seeds == 0, halo=halo, verbose=verbose, block_shape=block_shape)
-    if verbose:
-        print("Compute distance transform in", time.time() - t0, "s")
-
-    t0 = time.time()
-    mask = (foreground + boundaries) > 0.5
-    seg = np.zeros_like(seeds)
-    seg = parallel.seeded_watershed(
-        dist, seeds, block_shape=block_shape,
-        out=seg, mask=mask, verbose=verbose, halo=halo,
-    )
-    if verbose:
-        print("Compute watershed in", time.time() - t0, "s")
-
+    # size filter
     t0 = time.time()
     ids, sizes = parallel.unique(seg, return_counts=True, block_shape=block_shape, verbose=verbose)
     filter_ids = ids[sizes < min_size]
@@ -54,7 +39,7 @@ def segment_cristae(
     input_volume: np.ndarray,
     model_path: str,
     tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
-    min_size: int = 10000,
+    min_size: int = 500,
     verbose: bool = True,
     distance_based_segmentation: bool = False,
     return_predictions: bool = False,
@@ -65,7 +50,7 @@ def segment_cristae(
     Segment cristae in an input volume.
 
     Args:
-        input_volume: The input volume to segment.
+        input_volume: The input volume to segment. Expects 2 3D volumes: raw and mitochondria
         model_path: The path to the model checkpoint.
         tiling: The tiling configuration for the prediction.
         min_size: The minimum size of a cristae to be considered.
@@ -91,14 +76,14 @@ def segment_cristae(
 
     t0 = time.time()
     
-    pred = get_prediction_torch_em(input_volume, model_path, tiling=tiling)
+    pred = get_prediction_torch_em(input_volume, model_path, tiling=tiling, with_channels=True)
 
     foreground, boundaries = pred[:2]
     if verbose:
         print("Run prediction in", time.time() - t0, "s")
 
     seg = _run_segmentation(
-        foreground, boundaries, verbose=verbose, min_size=min_size
+        foreground, verbose=verbose, min_size=min_size
     )
 
     if scale is not None:
