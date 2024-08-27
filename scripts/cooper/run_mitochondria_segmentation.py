@@ -36,14 +36,14 @@ def run_mitochondria_segmentation(args):
         os.makedirs(output_path, exist_ok=True)
 
     for img_path in tqdm(img_paths):
-        output_path = os.path.join(output_path, os.path.splitext(os.path.basename(img_path))[0] + "prediction.tif")
+        output_path = os.path.join(output_path, os.path.splitext(os.path.basename(img_path))[0] + "_prediction.tif")
         # load img volume
         with mrcfile.open(img_path, "r") as f:
             img = f.data
         img = standardize(img)
         seg = segment_mitochondria(img, model_path)
         # save tif with imageio
-        iio.imwrite(output_path, seg)
+        iio.imwrite(output_path, seg, compression="zlib")
         print(f"Saved segmentation to {output_path}.")
 
 

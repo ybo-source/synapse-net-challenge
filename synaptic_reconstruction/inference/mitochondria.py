@@ -54,7 +54,7 @@ def segment_mitochondria(
     input_volume: np.ndarray,
     model_path: str,
     tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
-    min_size: int = 10000,
+    min_size: int = 50000,
     verbose: bool = True,
     distance_based_segmentation: bool = False,
     return_predictions: bool = False,
