@@ -5,7 +5,7 @@ import elf.parallel as parallel
 import numpy as np
 from skimage.transform import rescale, resize
 
-from util import get_prediction_torch_em
+from synaptic_reconstruction.inference.util import get_prediction_torch_em
 
 DEFAULT_TILING = {
     "tile": {"x": 512, "y": 512, "z": 64},
@@ -54,7 +54,7 @@ def segment_mitochondria(
     input_volume: np.ndarray,
     model_path: str,
     tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
-    min_size: int = 10000,
+    min_size: int = 50000,
     verbose: bool = True,
     distance_based_segmentation: bool = False,
     return_predictions: bool = False,
