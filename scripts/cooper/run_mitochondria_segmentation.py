@@ -3,7 +3,6 @@ from pathlib import Path
 import argparse
 from glob import glob
 from tqdm import tqdm
-import h5py
 from torch_em.transform.raw import standardize
 from synaptic_reconstruction.inference.mitochondria import segment_mitochondria
 import imageio.v3 as iio
@@ -12,7 +11,7 @@ import mrcfile
 
 def run_mitochondria_segmentation(args):
     if os.path.exists(args.input_path) and args.input_path != "":
-        img_paths = sorted(glob(os.path.join(args.input_path, "**", "*_raw.mrc"), recursive=True))
+        img_paths = sorted(glob(os.path.join(args.input_path, "**", "*.mrc"), recursive=True))
     elif os.path.exists(args.single_image_path) and args.single_image_path != "":
         img_paths = [args.single_image_path]
     else:
@@ -37,7 +36,7 @@ def run_mitochondria_segmentation(args):
         os.makedirs(output_path, exist_ok=True)
 
     for img_path in tqdm(img_paths):
-        output_path = os.path.join(output_path, "prediction_" + Path(img_path).name)
+        output_path = os.path.join(output_path, os.path.splitext(os.path.basename(img_path))[0] + "prediction.tif")
         # load img volume
         with mrcfile.open(img_path, "r") as f:
             img = f.data
