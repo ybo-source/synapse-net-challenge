@@ -164,7 +164,8 @@ def inference_helper(
     output_root: str,
     segmentation_function: callable,
     extra_input_path: Optional[str] = None,
-    extra_input_ext: str = ".tif"
+    extra_input_ext: str = ".tif",
+    force: bool = False,
 ):
     """
     Helper function to run segmentation for mrc files.
@@ -180,6 +181,7 @@ def inference_helper(
         extra_input_path: Filepath to extra inputs that need to be concatenated to the raw data loaded from mrc.
             This enables cristae segmentation with an extra mito channel.
         extra_input_ext: File extension for the extra inputs (by default .tif).
+        force: Whether to rerun segmentation for output files that are already present.
     """
     # Get the input files. If input_path is a folder then this will load all
     # the mrc files beneath it. Otherwise we assume this is an mrc file already
@@ -194,21 +196,26 @@ def inference_helper(
         assert len(input_files) == len(extra_files)
 
     for i, img_path in tqdm(enumerate(input_files), total=len(input_files)):
-        # Load the input volume. If we have extra_files then this concatenates the
-        # data across a new first axis (= channel axis).
-        input_volume = _load_input(img_path, extra_files, i)
-        segmentation = segmentation_function(input_volume)
-
         # Determine the output file name.
         input_folder, input_name = os.path.split(img_path)
-        fname = os.path.splitext(input_name[0]) + "_prediction.tif"
+        fname = os.path.splitext(input_name)[0] + "_prediction.tif"
         if input_root is None:
             output_path = os.path.join(output_root, fname)
         else:  # If we have nested input folders then we preserve the folder structure in the output.
             rel_folder = os.path.relpath(input_folder, input_root)
             output_path = os.path.join(output_root, rel_folder, fname)
-        os.makedirs(os.path.split(output_path)[0], exist_ok=True)
+
+        # Check if the output path is already present.
+        # If it is we skip the prediction, unless force was set to true.
+        if os.path.exists(output_path) and not force:
+            continue
+
+        # Load the input volume. If we have extra_files then this concatenates the
+        # data across a new first axis (= channel axis).
+        input_volume = _load_input(img_path, extra_files, i)
+        segmentation = segmentation_function(input_volume)
 
         # Write the result to tif.
+        os.makedirs(os.path.split(output_path)[0], exist_ok=True)
         imageio.imwrite(output_path, segmentation, compression="zlib")
         print(f"Saved segmentation to {output_path}.")
