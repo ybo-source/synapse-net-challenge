@@ -74,17 +74,10 @@ def segment_cristae(
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
-    t0 = time.time()
-
     pred = get_prediction(input_volume, model_path, tiling=tiling, with_channels=True)
-
     foreground, boundaries = pred[:2]
-    if verbose:
-        print("Run prediction in", time.time() - t0, "s")
 
-    seg = _run_segmentation(
-        foreground, verbose=verbose, min_size=min_size
-    )
+    seg = _run_segmentation(foreground, verbose=verbose, min_size=min_size)
 
     if scale is not None:
         assert seg.ndim == input_volume.ndim

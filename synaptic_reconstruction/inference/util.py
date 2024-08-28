@@ -1,13 +1,18 @@
+import os
 import time
-from typing import Dict
+from glob import glob
+from typing import Dict, Optional
 
 import bioimageio.core
+import imageio.v3 as imageio
 import numpy as np
 import torch
 import torch_em
 import xarray
 
+from elf.io import open_file
 from torch_em.util.prediction import predict_with_halo
+from tqdm import tqdm
 
 
 def get_prediction(
@@ -16,7 +21,6 @@ def get_prediction(
     tiling: Dict[str, Dict[str, int]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
     verbose: bool = True,
     with_channels: bool = False,
-
 ):
     """
     Run prediction on a given volume.
@@ -48,7 +52,11 @@ def get_prediction(
         # TODO determine if we use the old or new API and select the corresponding function
         pred = get_prediction_bioimageio_old(input_volume, model_path, tiling, verbose)
     else:
+        # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.
+        if model_path.endswith("best.pt"):
+            model_path = os.path.split(model_path)[0]
         pred = get_prediction_torch_em(input_volume, model_path, tiling, verbose, with_channels)
+
     return pred
 
 
@@ -119,3 +127,88 @@ def get_prediction_torch_em(
     if verbose:
         print("Prediction time in", time.time() - t0, "s")
     return pred
+
+
+# TODO we also need to support .rec files ...
+def _get_file_paths(input_path, ext=".mrc"):
+    if not os.path.exists(input_path):
+        raise Exception(f"Input path not found {input_path}")
+
+    if os.path.isfile(input_path):
+        input_files = [input_path]
+        input_root = None
+    else:
+        input_files = sorted(glob(os.path.join(input_path, "**", f"*{ext}"), recursive=True))
+        input_root = None
+
+    return input_files, input_root
+
+
+def _load_input(img_path, extra_files, i):
+    # Load the mrc data
+    with open_file(img_path, "r") as f:
+        input_volume = f["data"][:]
+    assert input_volume.ndim == 3
+
+    # For now we assume this is always tif.
+    if extra_files is not None:
+        extra_input = imageio.imread(extra_files[i])
+        assert extra_input.shape == input_volume.shape
+        input_volume = np.stack(input_volume, extra_input)
+
+    return input_volume
+
+
+def inference_helper(
+    input_path: str,
+    output_root: str,
+    segmentation_function: callable,
+    extra_input_path: Optional[str] = None,
+    extra_input_ext: str = ".tif"
+):
+    """
+    Helper function to run segmentation for mrc files.
+
+    Args:
+        input_path: The path to the input data.
+            Can either be a folder. In this case all mrc files below the folder will be segmented.
+            Or can be a single mrc file. In this case only this mrc file will be segmented.
+        output_root: The path to the output directory where the segmentation results will be saved.
+        segmentation_function: The function performing the segmentation.
+            This function must take the input_volume as the only argument and must return only the segmentation.
+            If you want to pass additional arguments to this function the use 'funtools.partial'
+        extra_input_path: Filepath to extra inputs that need to be concatenated to the raw data loaded from mrc.
+            This enables cristae segmentation with an extra mito channel.
+        extra_input_ext: File extension for the extra inputs (by default .tif).
+    """
+    # Get the input files. If input_path is a folder then this will load all
+    # the mrc files beneath it. Otherwise we assume this is an mrc file already
+    # and just return the path to this mrc file.
+    input_files, input_root = _get_file_paths(input_path)
+
+    # Load extra inputs if the extra_input_path was specified.
+    if extra_input_path is None:
+        extra_files = None
+    else:
+        extra_files, _ = _get_file_paths(extra_input_path, extra_input_ext)
+        assert len(input_files) == len(extra_files)
+
+    for i, img_path in tqdm(enumerate(input_files), total=len(input_files)):
+        # Load the input volume. If we have extra_files then this concatenates the
+        # data across a new first axis (= channel axis).
+        input_volume = _load_input(img_path, extra_files, i)
+        segmentation = segmentation_function(input_volume)
+
+        # Determine the output file name.
+        input_folder, input_name = os.path.split(img_path)
+        fname = os.path.splitext(input_name[0]) + "_prediction.tif"
+        if input_root is None:
+            output_path = os.path.join(output_root, fname)
+        else:  # If we have nested input folders then we preserve the folder structure in the output.
+            rel_folder = os.path.relpath(input_folder, input_root)
+            output_path = os.path.join(output_root, rel_folder, fname)
+        os.makedirs(os.path.split(output_path)[0], exist_ok=True)
+
+        # Write the result to tif.
+        imageio.imwrite(output_path, segmentation, compression="zlib")
+        print(f"Saved segmentation to {output_path}.")
