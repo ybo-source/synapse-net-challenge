@@ -15,6 +15,12 @@ from torch_em.util.prediction import predict_with_halo
 from tqdm import tqdm
 
 
+DEFAULT_TILING = {
+    "tile": {"x": 512, "y": 512, "z": 64},
+    "halo": {"x": 64, "y": 64, "z": 8},
+}
+
+
 def get_prediction(
     input_volume: np.ndarray,  # [z, y, x]
     model_path: str,
@@ -224,3 +230,30 @@ def inference_helper(
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
         imageio.imwrite(output_path, segmentation, compression="zlib")
         print(f"Saved segmentation to {output_path}.")
+
+
+def parse_tiling(tile_shape, halo):
+    """
+    Helper function to parse tiling parameter input from the command line.
+
+    Args:
+        tile_shape: The tile shape. If None the default tile shape is used.
+        halo: The halo. If None the default halo is used.
+
+    Returns:
+        dict: the tiling specification
+    """
+    if tile_shape is None:
+        tile_shape = DEFAULT_TILING["tile"]
+    else:
+        assert len(tile_shape) == 3
+        tile_shape = dict(zip("zyx", tile_shape))
+
+    if halo is None:
+        halo = DEFAULT_TILING["halo"]
+    else:
+        assert len(halo) == 3
+        halo = dict(zip("zyx", halo))
+
+    tiling = {"tile": tile_shape, "halo": halo}
+    return tiling

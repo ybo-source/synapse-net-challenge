@@ -2,11 +2,12 @@ import argparse
 from functools import partial
 
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
-from synaptic_reconstruction.inference.util import inference_helper
+from synaptic_reconstruction.inference.util import inference_helper, parse_tiling
 
 
 def run_vesicle_segmentation(args):
-    segmentation_function = partial(segment_vesicles, model_path=args.model_path, verbose=False)
+    tiling = parse_tiling(args.tile_shape, args.halo)
+    segmentation_function = partial(segment_vesicles, model_path=args.model_path, verbose=False, tiling=tiling)
     inference_helper(args.input_path, args.output_path, segmentation_function, force=args.force)
 
 

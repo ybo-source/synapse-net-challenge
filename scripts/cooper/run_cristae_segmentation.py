@@ -2,28 +2,29 @@ import argparse
 from functools import partial
 
 from synaptic_reconstruction.inference.cristae import segment_cristae
-from synaptic_reconstruction.inference.util import inference_helper
+from synaptic_reconstruction.inference.util import inference_helper, parse_tiling
 
 
 def run_cristae_segmentation(args):
-    segmentation_function = partial(segment_cristae, model_path=args.model_path)
+    tiling = parse_tiling(args.tile_shape, args.halo)
+    segmentation_function = partial(segment_cristae, model_path=args.model_path, verbose=False, tiling=tiling)
     inference_helper(
         args.input_path,
         args.output_path,
         segmentation_function,
-        extra_input_path=args.second_input_path
-        )
+        extra_input_path=args.mito_segmentation_path
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Segment mitochodria")
+    parser = argparse.ArgumentParser(description="Segment cristae")
     parser.add_argument(
         "--input_path", "-i", required=True,
-        help="The filepath to mrc file or directory containing the mitochodria data."
+        help="The filepath to mrc file or directory containing the tomogram data."
     )
     parser.add_argument(
-        "--second_input_path", "-s", required=True,
-        help=""
+        "--mito_segmentation_path", "-s", required=True,
+        help="The filepath to the tif file or directory containing the mito segmentation."
     )
     parser.add_argument(
         "--output_path", "-o", required=True,
@@ -31,7 +32,15 @@ def main():
     )
     parser.add_argument(
         "--model_path", "-m", required=True,
-        help="The filepath to the mitochondria model."
+        help="The filepath to the cristae model."
+    )
+    parser.add_argument(
+        "--tile_shape", type=int, nargs=3,
+        help="The tile shape for prediction. Lower the tile shape if GPU memory is insufficient."
+    )
+    parser.add_argument(
+        "--halo", type=int, nargs=3,
+        help="The halo for prediction. Increase the halo to minimize boundary artifacts."
     )
 
     args = parser.parse_args()
