@@ -1,10 +1,57 @@
-import os
 import argparse
-import imageio.v3 as iio
-import napari
-from elf.io import open_file
+import os
 from glob import glob
+
+import tifffile
+import napari
+import numpy as np
+
+from elf.io import open_file
 from tqdm import tqdm
+
+
+def _load_volume(path, key=None, crop_shape=None):
+
+    if key is None:  # Load from tiff.
+
+        # If we don't have a crop then just load the whole tif.
+        if crop_shape is None:
+            return tifffile.imread(path)
+
+        # Otherwise only load the respective slices to avoid running out of memory.
+        with tifffile.TiffFile(path) as f:
+            n_slices = len(f.pages)
+            z_start = max(n_slices // 2 - crop_shape[0] // 2, 0)
+            z_stop = min(n_slices // 2 + crop_shape[0] // 2, n_slices)
+
+            data = []
+            for z, page in enumerate(f.pages):
+                if z < z_start or z >= z_stop:
+                    continue
+
+                page_data = page.asarray()
+                crop = tuple(
+                    slice(max(sh // 2 - csh // 2, 0), min(sh // 2 + csh // 2, sh))
+                    for sh, csh in zip(page_data.shape, crop_shape[1:])
+                )
+                data.append(page_data[crop])
+
+            data = np.stack(data)
+
+    else:  # Load from mrc
+
+        with open_file(path, "r") as f:
+            data = f[key]
+            if crop_shape is not None:
+                crop = tuple(
+                    slice(max(sh // 2 - csh // 2, 0), min(sh // 2 + csh // 2, sh))
+                    for sh, csh in zip(data.shape, crop_shape)
+                )
+            else:
+                crop = np.s_[:]
+            data = data[crop]
+
+    return data
 
 
 def _get_file_paths(input_path, ext=".mrc"):
@@ -20,67 +67,62 @@ def _get_file_paths(input_path, ext=".mrc"):
     return input_files
 
 
-def _visualize(img, seg, seg2=None):
-    v = napari.Viewer()
-    if img is not None:
-        v.add_image(img)
-    if seg is not None:
-        v.add_labels(seg)
-    if seg2 is not None:
-        v.add_labels(seg2)
-    napari.run()
-
-
 def visualize_segmentation(args):
-    img = None
-    seg = None
-    seg2 = None
-    
-    image_paths = _get_file_paths(args.image_path)
-    seg1_paths = _get_file_paths(args.segmentation_path)
-    if not args.second_segmentation_path == "":
-        seg2_paths = _get_file_paths(args.second_segmentation_path)
-        if len(image_paths) != len(seg1_paths) or len(image_paths) != len(seg2_paths):
-            raise Exception(f"Lengths of the paths do not match: img_path: {len(image_paths)} seg_path: {len(seg1_paths)} seg2_path: {len(seg2_paths)}")
-    else:
-        assert len(image_paths) == len(seg1_paths)
-        seg2_paths = None
 
-    if seg2_paths is None:
-        for img_path, seg1_path in tqdm(zip(image_paths, seg1_paths)):
-            with open_file(img_path, "r") as f:
-                img = f["data"][:]
-            with iio.imopen(seg1_path, "r") as f:
-                seg = f.read()
-            _visualize(img, seg)
+    input_paths = _get_file_paths(args.input_path)
+    seg_paths = args.segmentation_path
+    assert len(seg_paths) > 0
+
+    if args.segmentation_names is None:
+        segmentation_names = [f"seg-{i}" for i in range(len(seg_paths))]
     else:
-        for img_path, seg1_path, seg2_path in tqdm(zip(image_paths, seg1_paths, seg2_paths)):
-            with open_file(img_path, "r") as f:
-                img = f["data"][:]
-            with iio.imopen(seg1_path, "r") as f:
-                seg = f.read()
-            with iio.imopen(seg2_path, "r") as f:
-                seg2 = f.read()
-            _visualize(img, seg, seg2)
+        segmentation_names = args.segmentation_names
+        assert len(segmentation_names) == len(seg_paths)
+
+    segmentation_paths = {}
+    for name, path in zip(segmentation_names, seg_paths):
+        this_seg_paths = _get_file_paths(path, ext=".tif")
+        assert len(this_seg_paths) == len(input_paths)
+        segmentation_paths[name] = this_seg_paths
+
+    for i, img_path in tqdm(enumerate(input_paths), total=len(input_paths), desc="Visualize segmentation"):
+        tomogram = _load_volume(img_path, key="data", crop_shape=args.crop_shape)
+
+        segmentations = {}
+        for name, paths in segmentation_paths.items():
+            seg = _load_volume(paths[i], key=None, crop_shape=args.crop_shape)
+            segmentations[name] = seg
+
+        v = napari.Viewer()
+        v.add_image(tomogram)
+        for name, seg in segmentations.items():
+            v.add_labels(seg, name=name)
+        v.title = img_path
+        napari.run()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Segment mitochodria")
+    parser = argparse.ArgumentParser(description="Visualize segmentation results in napari.")
     parser.add_argument(
-        "--image_path", "-i", default="", required=True,
-        help="The path to the .mrc file containing the image/raw data."
+        "--input_path", "-i", required=True,
+        help="The path to the .mrc file or a folder structure with .mrc files containing the image data."
     )
     parser.add_argument(
-        "--segmentation_path", "-s", default="", required=True,
-        help="The path to the .tif file containing the segmentation data. e.g. mitochondria"
+        "--segmentation_path", "-s", required=True, nargs="+",
+        help="The path(s) to the .tif file with the segmentation or a folder structure with the segmentation data."
+        "You can pass multiple paths to visualize different segmentations (e.g. mito and vesicles) together."
+
     )
     parser.add_argument(
-        "--second_segmentation_path", "-ss", default="",
-        help="A second path to the .tif file containing the segmentation data. e.g. cristae"
+        "--segmentation_names", "-n", nargs="+",
+        help="Display names for the segmentation layers."
+    )
+    parser.add_argument(
+        "--crop_shape", type=int, nargs=3,
+        help="Shape for extracting a central crop from the tomogram. This is necassary for laptops with limited RAM."
     )
 
     args = parser.parse_args()
-
     visualize_segmentation(args)
 
 
