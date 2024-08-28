@@ -3,7 +3,6 @@ from pathlib import Path
 import argparse
 from glob import glob
 from tqdm import tqdm
-from torch_em.transform.raw import standardize
 from synaptic_reconstruction.inference.mitochondria import segment_mitochondria
 import imageio.v3 as iio
 import mrcfile
@@ -40,7 +39,6 @@ def run_mitochondria_segmentation(args):
         # load img volume
         with mrcfile.open(img_path, "r") as f:
             img = f.data
-        img = standardize(img)
         seg = segment_mitochondria(img, model_path)
         # save tif with imageio
         iio.imwrite(output_path, seg, compression="zlib")

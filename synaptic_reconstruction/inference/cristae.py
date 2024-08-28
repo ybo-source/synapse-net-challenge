@@ -4,7 +4,7 @@ import elf.parallel as parallel
 import numpy as np
 
 from skimage.transform import rescale, resize
-from util import get_prediction_torch_em
+from synaptic_reconstruction.util import get_prediction
 
 DEFAULT_TILING = {
     "tile": {"x": 512, "y": 512, "z": 64},
@@ -45,7 +45,6 @@ def segment_cristae(
     return_predictions: bool = False,
     scale: Optional[List[float]] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
-    
     """
     Segment cristae in an input volume.
 
@@ -60,7 +59,8 @@ def segment_cristae(
         scale: The scale factor to use for rescaling the input volume before prediction.
 
     Returns:
-        The segmentation mask as a numpy array, or a tuple containing the segmentation mask and the predictions if return_predictions is True.
+        The segmentation mask as a numpy array, or a tuple containing the segmentation mask
+        and the predictions if return_predictions is True.
     """
     if verbose:
         print("Segmenting cristae in volume of shape", input_volume.shape)
@@ -75,8 +75,8 @@ def segment_cristae(
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
     t0 = time.time()
-    
-    pred = get_prediction_torch_em(input_volume, model_path, tiling=tiling, with_channels=True)
+
+    pred = get_prediction(input_volume, model_path, tiling=tiling, with_channels=True)
 
     foreground, boundaries = pred[:2]
     if verbose:
