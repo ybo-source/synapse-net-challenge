@@ -114,9 +114,14 @@ def get_prediction_torch_em(
     halo = [tiling["halo"]["z"], tiling["halo"]["x"], tiling["halo"]["y"]]
 
     t0 = time.time()
-    # get foreground and boundary predictions from the model
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = torch_em.util.load_model(checkpoint=model_path, device=device)
+
+    if os.path.isdir(model_path):  # Load the model from a torch_em checkpoint.
+        model = torch_em.util.load_model(checkpoint=model_path, device=device)
+    else:  # Load the model directly from a serialized pytorch model.
+        model = torch.load(model_path)
+
+    # Run prediction with the model.
     with torch.no_grad():
         pred = predict_with_halo(
             input_volume, model, gpu_ids=[device],
