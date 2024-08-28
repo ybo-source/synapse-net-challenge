@@ -1,9 +1,13 @@
 import os
 import time
+import warnings
 from glob import glob
 from typing import Dict, Optional
 
-import bioimageio.core
+# Suppress annoying import warnings.
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import bioimageio.core
 import imageio.v3 as imageio
 import numpy as np
 import torch
@@ -13,6 +17,12 @@ import xarray
 from elf.io import open_file
 from torch_em.util.prediction import predict_with_halo
 from tqdm import tqdm
+
+
+DEFAULT_TILING = {
+    "tile": {"x": 512, "y": 512, "z": 64},
+    "halo": {"x": 64, "y": 64, "z": 8},
+}
 
 
 def get_prediction(
@@ -224,3 +234,30 @@ def inference_helper(
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
         imageio.imwrite(output_path, segmentation, compression="zlib")
         print(f"Saved segmentation to {output_path}.")
+
+
+def parse_tiling(tile_shape, halo):
+    """
+    Helper function to parse tiling parameter input from the command line.
+
+    Args:
+        tile_shape: The tile shape. If None the default tile shape is used.
+        halo: The halo. If None the default halo is used.
+
+    Returns:
+        dict: the tiling specification
+    """
+    if tile_shape is None:
+        tile_shape = DEFAULT_TILING["tile"]
+    else:
+        assert len(tile_shape) == 3
+        tile_shape = dict(zip("zyx", tile_shape))
+
+    if halo is None:
+        halo = DEFAULT_TILING["halo"]
+    else:
+        assert len(halo) == 3
+        halo = dict(zip("zyx", halo))
+
+    tiling = {"tile": tile_shape, "halo": halo}
+    return tiling

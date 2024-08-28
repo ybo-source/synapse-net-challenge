@@ -5,12 +5,7 @@ import elf.parallel as parallel
 import numpy as np
 from skimage.transform import rescale, resize
 
-from synaptic_reconstruction.inference.util import get_prediction
-
-DEFAULT_TILING = {
-    "tile": {"x": 512, "y": 512, "z": 64},
-    "halo": {"x": 64, "y": 64, "z": 8},
-}
+from synaptic_reconstruction.inference.util import get_prediction, DEFAULT_TILING
 
 
 def _run_segmentation(

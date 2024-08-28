@@ -1,17 +1,21 @@
 import time
 
-import bioimageio.core
-import xarray
-
 from skimage.transform import rescale, resize
+from synaptic_reconstruction.inference.util import get_prediction, DEFAULT_TILING
 
-from .vesicles import DEFAULT_TILING
 
-
+# TODO rename to inner_ear, add type annotations and doc string
 def segment_structures(
-    input_volume, model_path, structure_names,
-    verbose=False, tiling=DEFAULT_TILING, threshold=None, scale=None,
+    input_volume,
+    model_path,
+    structure_names,
+    verbose=False,
+    tiling=DEFAULT_TILING,
+    threshold=None,
+    scale=None,
 ):
+    """Segment synaptic structures in the inner ear.
+    """
     if verbose:
         print(f"Segmenting synaptic structures: {structure_names} in volume of shape", input_volume.shape)
 
@@ -23,12 +27,7 @@ def segment_structures(
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
-    model = bioimageio.core.load_resource_description(model_path)
-    with bioimageio.core.create_prediction_pipeline(model) as pp:
-        input_ = xarray.DataArray(input_volume[None, None], dims=tuple("bczyx"))
-        predictions = bioimageio.core.predict_with_tiling(
-            pp, input_, tiling=tiling, verbose=verbose
-        )[0].values.squeeze()
+    predictions = get_prediction(input_volume, model_path, tiling, verbose)
     assert len(structure_names) == predictions.shape[0]
 
     if scale is not None:
