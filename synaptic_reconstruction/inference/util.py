@@ -1,9 +1,13 @@
 import os
 import time
+import warnings
 from glob import glob
 from typing import Dict, Optional
 
-import bioimageio.core
+# Suppress annoying import warnings.
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import bioimageio.core
 import imageio.v3 as imageio
 import numpy as np
 import torch
