@@ -24,7 +24,10 @@ def main():
         "--model_path", "-m", required=True,
         help="The filepath to the vesicle model."
     )
-    parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Whether to over-write already present segmentation results."
+    )
 
     args = parser.parse_args()
     run_vesicle_segmentation(args)
