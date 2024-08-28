@@ -154,7 +154,7 @@ def _load_input(img_path, extra_files, i):
     if extra_files is not None:
         extra_input = imageio.imread(extra_files[i])
         assert extra_input.shape == input_volume.shape
-        input_volume = np.stack(input_volume, extra_input)
+        input_volume = np.stack([input_volume, extra_input], axis=0)
 
     return input_volume
 
