@@ -1,12 +1,11 @@
 import time
 from typing import Dict, List, Optional, Tuple, Union
 
-import bioimageio.core
 import elf.parallel as parallel
 import numpy as np
-import xarray
 
 from skimage.transform import rescale, resize
+from synaptic_reconstruction.inference.util import get_prediction
 
 DEFAULT_TILING = {
     "tile": {"x": 512, "y": 512, "z": 64},
@@ -119,7 +118,8 @@ def segment_vesicles(
         scale: The scale factor to use for rescaling the input volume before prediction.
 
     Returns:
-        The segmentation mask as a numpy array, or a tuple containing the segmentation mask and the predictions if return_predictions is True.
+        The segmentation mask as a numpy array, or a tuple containing the segmentation mask
+        and the predictions if return_predictions is True.
     """
     if verbose:
         print("Segmenting vesicles in volume of shape", input_volume.shape)
@@ -133,16 +133,8 @@ def segment_vesicles(
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
-    t0 = time.time()
-    # get foreground and boundary predictions from the model
-    model = bioimageio.core.load_resource_description(model_path)
-    with bioimageio.core.create_prediction_pipeline(model) as pp:
-        input_ = xarray.DataArray(input_volume[None, None], dims=tuple("bczyx"))
-        pred = bioimageio.core.predict_with_tiling(pp, input_, tiling=tiling, verbose=verbose)[0].squeeze()
-
+    pred = get_prediction(input_volume, model_path, tiling, verbose)
     foreground, boundaries = pred[:2]
-    if verbose:
-        print("Run prediction in", time.time() - t0, "s")
 
     if distance_based_segmentation:
         seg = _run_distance_segmentation_parallel(

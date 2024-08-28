@@ -5,7 +5,7 @@ import elf.parallel as parallel
 import numpy as np
 from skimage.transform import rescale, resize
 
-from synaptic_reconstruction.inference.util import get_prediction_torch_em
+from synaptic_reconstruction.inference.util import get_prediction
 
 DEFAULT_TILING = {
     "tile": {"x": 512, "y": 512, "z": 64},
@@ -74,7 +74,8 @@ def segment_mitochondria(
         scale: The scale factor to use for rescaling the input volume before prediction.
 
     Returns:
-        The segmentation mask as a numpy array, or a tuple containing the segmentation mask and the predictions if return_predictions is True.
+        The segmentation mask as a numpy array, or a tuple containing the segmentation mask
+        and the predictions if return_predictions is True.
     """
     if verbose:
         print("Segmenting mitochondria in volume of shape", input_volume.shape)
@@ -90,7 +91,7 @@ def segment_mitochondria(
 
     t0 = time.time()
 
-    pred = get_prediction_torch_em(input_volume, model_path, tiling)
+    pred = get_prediction(input_volume, model_path, tiling)
 
     foreground, boundaries = pred[:2]
     if verbose:
