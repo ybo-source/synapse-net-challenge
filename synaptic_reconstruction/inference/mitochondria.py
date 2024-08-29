@@ -5,7 +5,7 @@ import elf.parallel as parallel
 import numpy as np
 from skimage.transform import rescale, resize
 
-from synaptic_reconstruction.inference.util import get_prediction, DEFAULT_TILING
+from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
 
 
 def _run_segmentation(
@@ -48,7 +48,7 @@ def _run_segmentation(
 def segment_mitochondria(
     input_volume: np.ndarray,
     model_path: str,
-    tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
+    tiling: Optional[Dict[str, Dict[str, int]]] = None,
     min_size: int = 50000,
     verbose: bool = True,
     distance_based_segmentation: bool = False,
@@ -84,13 +84,11 @@ def segment_mitochondria(
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
-    t0 = time.time()
+    if tiling is None:
+        tiling = get_default_tiling()
 
     pred = get_prediction(input_volume, model_path, tiling)
-
     foreground, boundaries = pred[:2]
-    if verbose:
-        print("Run prediction in", time.time() - t0, "s")
 
     seg = _run_segmentation(
         foreground, boundaries, verbose=verbose, min_size=min_size

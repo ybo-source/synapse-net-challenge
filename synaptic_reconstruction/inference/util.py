@@ -19,12 +19,6 @@ from torch_em.util.prediction import predict_with_halo
 from tqdm import tqdm
 
 
-DEFAULT_TILING = {
-    "tile": {"x": 512, "y": 512, "z": 64},
-    "halo": {"x": 64, "y": 64, "z": 8},
-}
-
-
 def get_prediction(
     input_volume: np.ndarray,  # [z, y, x]
     model_path: str,
@@ -247,6 +241,36 @@ def inference_helper(
         print(f"Saved segmentation to {output_path}.")
 
 
+def get_default_tiling():
+    """Determine the tile shape and halo depending on the available VRAM.
+    """
+    if torch.cuda.is_available():
+        # We always use the same default halo.
+        halo = {"x": 64, "y": 64, "z": 8}
+
+        # Determine the GPU RAM and derive a suitable tiling.
+        vram = torch.cuda.get_device_properties(0).total_memory / 1e9
+        if vram >= 40:
+            tile = {"x": 512, "y": 512, "z": 64}
+        elif vram >= 20:
+            tile = {"x": 352, "y": 352, "z": 48}
+        else:
+            # TODO determine tilings for smaller VRAM
+            raise NotImplementedError
+
+        tiling = {"tile": tile, "halo": halo}
+
+    # I am not sure what is reasonable on a cpu. For now choosing very small tiling.
+    # (This will not work well on a CPU in any case.)
+    else:
+        tiling = {
+            "tile": {"x": 96, "y": 96, "z": 16},
+            "halo": {"x": 16, "y": 16, "z": 4},
+        }
+
+    return tiling
+
+
 def parse_tiling(tile_shape, halo):
     """
     Helper function to parse tiling parameter input from the command line.
@@ -258,14 +282,16 @@ def parse_tiling(tile_shape, halo):
     Returns:
         dict: the tiling specification
     """
+    default_tiling = get_default_tiling()
+
     if tile_shape is None:
-        tile_shape = DEFAULT_TILING["tile"]
+        tile_shape = default_tiling["tile"]
     else:
         assert len(tile_shape) == 3
         tile_shape = dict(zip("zyx", tile_shape))
 
     if halo is None:
-        halo = DEFAULT_TILING["halo"]
+        halo = default_tiling["halo"]
     else:
         assert len(halo) == 3
         halo = dict(zip("zyx", halo))

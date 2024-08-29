@@ -7,7 +7,10 @@ from synaptic_reconstruction.inference.util import inference_helper, parse_tilin
 
 def run_vesicle_segmentation(args):
     tiling = parse_tiling(args.tile_shape, args.halo)
-    segmentation_function = partial(segment_vesicles, model_path=args.model_path, verbose=False, tiling=tiling)
+    segmentation_function = partial(
+        segment_vesicles, model_path=args.model_path, verbose=False, tiling=tiling,
+        exclude_boundary=not args.include_boundary
+    )
     inference_helper(args.input_path, args.output_path, segmentation_function, force=args.force, data_ext=args.data_ext)
 
 
@@ -39,10 +42,9 @@ def main():
     parser.add_argument(
         "--data_ext", default=".mrc", help="The extension of the tomogram data. By default .mrc."
     )
-    # TODO
     parser.add_argument(
-        "--exclude_boundary", action="store_false",
-        help=""
+        "--include_boundary", action="store_true",
+        help="Include vesicles that touch the top / bottom of the tomogram. By default these are excluded."
     )
 
     args = parser.parse_args()
