@@ -1,7 +1,5 @@
-import time
-
 from skimage.transform import rescale, resize
-from synaptic_reconstruction.inference.util import get_prediction, DEFAULT_TILING
+from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
 
 
 # TODO rename to inner_ear, add type annotations and doc string
@@ -10,7 +8,7 @@ def segment_structures(
     model_path,
     structure_names,
     verbose=False,
-    tiling=DEFAULT_TILING,
+    tiling=None,
     threshold=None,
     scale=None,
 ):
@@ -19,14 +17,14 @@ def segment_structures(
     if verbose:
         print(f"Segmenting synaptic structures: {structure_names} in volume of shape", input_volume.shape)
 
-    t0 = time.time()
-
     if scale is not None:
         original_shape = input_volume.shape
         input_volume = rescale(input_volume, scale, preserve_range=True).astype(input_volume.dtype)
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
+    if tiling is None:
+        tiling = get_default_tiling()
     predictions = get_prediction(input_volume, model_path, tiling, verbose)
     assert len(structure_names) == predictions.shape[0]
 
@@ -43,8 +41,5 @@ def segment_structures(
             # that is given as a dictionary.
             this_threshold = threshold if isinstance(threshold, float) else threshold[name]
             predictions[name] = predictions[name] > this_threshold
-
-    if verbose:
-        print("Run prediction in", time.time() - t0, "s")
 
     return predictions

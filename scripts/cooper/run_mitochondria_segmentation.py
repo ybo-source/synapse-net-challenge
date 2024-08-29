@@ -8,7 +8,7 @@ from synaptic_reconstruction.inference.util import inference_helper, parse_tilin
 def run_mitochondria_segmentation(args):
     tiling = parse_tiling(args.tile_shape, args.halo)
     segmentation_function = partial(segment_mitochondria, model_path=args.model_path, verbose=False, tiling=tiling)
-    inference_helper(args.input_path, args.output_path, segmentation_function, force=args.force)
+    inference_helper(args.input_path, args.output_path, segmentation_function, force=args.force, data_ext=args.data_ext)
 
 
 def main():
@@ -35,6 +35,9 @@ def main():
     parser.add_argument(
         "--halo", type=int, nargs=3,
         help="The halo for prediction. Increase the halo to minimize boundary artifacts."
+    )
+    parser.add_argument(
+        "--data_ext", default=".mrc", help="The extension of the tomogram data. By default .mrc."
     )
 
     args = parser.parse_args()

@@ -14,6 +14,7 @@ def run_cristae_segmentation(args):
         segmentation_function,
         extra_input_path=args.mito_segmentation_path,
         force=args.force,
+        data_ext=args.data_ext,
     )
 
 
@@ -45,6 +46,9 @@ def main():
     parser.add_argument(
         "--halo", type=int, nargs=3,
         help="The halo for prediction. Increase the halo to minimize boundary artifacts."
+    )
+    parser.add_argument(
+        "--data_ext", default=".mrc", help="The extension of the tomogram data. By default .mrc."
     )
 
     args = parser.parse_args()

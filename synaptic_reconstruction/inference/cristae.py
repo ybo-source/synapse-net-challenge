@@ -4,7 +4,7 @@ import elf.parallel as parallel
 import numpy as np
 
 from skimage.transform import rescale, resize
-from synaptic_reconstruction.inference.util import get_prediction, DEFAULT_TILING
+from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
 
 
 def _run_segmentation(
@@ -33,7 +33,7 @@ def _run_segmentation(
 def segment_cristae(
     input_volume: np.ndarray,
     model_path: str,
-    tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
+    tiling: Optional[Dict[str, Dict[str, int]]] = None,
     min_size: int = 500,
     verbose: bool = True,
     distance_based_segmentation: bool = False,
@@ -68,6 +68,9 @@ def segment_cristae(
         input_volume = rescale(input_volume, scale, preserve_range=True).astype(input_volume.dtype)
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
+
+    if tiling is None:
+        tiling = get_default_tiling()
 
     pred = get_prediction(input_volume, model_path, tiling=tiling, with_channels=True)
     foreground, boundaries = pred[:2]

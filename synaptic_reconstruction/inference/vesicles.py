@@ -5,7 +5,8 @@ import elf.parallel as parallel
 import numpy as np
 
 from skimage.transform import rescale, resize
-from synaptic_reconstruction.inference.util import get_prediction, DEFAULT_TILING
+from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
+from synaptic_reconstruction.inference.postprocessing.vesicles import filter_zborder_objects
 
 
 def _run_distance_segmentation_parallel(
@@ -92,12 +93,13 @@ def _run_segmentation_parallel(
 def segment_vesicles(
     input_volume: np.ndarray,
     model_path: str,
-    tiling: Dict[str, Dict[str, int]] = DEFAULT_TILING,
+    tiling: Optional[Dict[str, Dict[str, int]]] = None,
     min_size: int = 500,
     verbose: bool = True,
     distance_based_segmentation: bool = False,
     return_predictions: bool = False,
-    scale: Optional[List[float]] = None
+    scale: Optional[List[float]] = None,
+    exclude_boundary: bool = False,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Segment vesicles in an input volume.
@@ -111,6 +113,7 @@ def segment_vesicles(
         distance_based_segmentation: Whether to use distance-based segmentation.
         return_predictions: Whether to return the predictions (foreground, boundaries) alongside the segmentation.
         scale: The scale factor to use for rescaling the input volume before prediction.
+        exclude_boundary: Whether to exclude vesicles that touch the upper / lower border in z.
 
     Returns:
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
@@ -128,6 +131,9 @@ def segment_vesicles(
         if verbose:
             print("Rescaled volume from", original_shape, "to", input_volume.shape)
 
+    if tiling is None:
+        tiling = get_default_tiling()
+
     pred = get_prediction(input_volume, model_path, tiling, verbose)
     foreground, boundaries = pred[:2]
 
@@ -139,6 +145,9 @@ def segment_vesicles(
         seg = _run_segmentation_parallel(
             foreground, boundaries, verbose=verbose, min_size=min_size
         )
+
+    if exclude_boundary:
+        seg = filter_zborder_objects(seg)
 
     if scale is not None:
         assert seg.ndim == input_volume.ndim

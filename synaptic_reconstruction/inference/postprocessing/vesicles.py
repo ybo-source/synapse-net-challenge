@@ -22,6 +22,22 @@ def close_holes(vesicle_segmentation, closing_iterations=4, min_size=0, verbose=
     return closed_segmentation
 
 
+def filter_zborder_objects(segmentation):
+    """Filter any object that touches the upper or lower z-border.
+    """
+    props = regionprops(segmentation)
+
+    filter_ids = []
+    for prop in props:
+        bbox = prop.bbox
+        z_start, z_stop = bbox[0], bbox[3]
+        if z_start == 0 or z_stop == segmentation.shape[0]:
+            filter_ids.append(prop.label)
+
+    segmentation[np.isin(segmentation, filter_ids)] = 0
+    return segmentation
+
+
 def filter_border_vesicles(vesicle_segmentation, seg_ids=None, border_slices=4):
     props = regionprops(vesicle_segmentation)
 
