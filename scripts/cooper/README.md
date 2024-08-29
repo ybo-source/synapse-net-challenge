@@ -12,7 +12,7 @@ It currently holds the following scripts:
 
 Before running any of the scripts you need to activate the python environment by running
 ```
-$ micromamba activate synaptic-reconstruction
+$ micromamba activate sam
 ```
 
 The segmentation scripts (`run_..._segmentation.py`) all work similarly and can either run segmentation for a single mrc file or for all mrcs in a folder structure.
@@ -40,6 +40,7 @@ You can run it like this:
 $ python -i /path/to/input_folder -s /path/to/vesicles -o /path/to/imod_export --min_radius 10
 ```
 The parameters have a similar meaning to the other scripts (`-i`: folder with mrc files, `-s`: folder with vesicle segmentation results, `-o`: folder for saving the imod export results); `--min_radius` controls the minimal vesicle radius in nanometer.
+In order to run this command, you need to install IMOD on the workstation.
 Note: export to imod is not yet implemented for other structures than vesicles.
 
 
@@ -51,7 +52,7 @@ You can copy data over there with the following command:
 $ rsync -avz --delete -e ssh /path/to/tomogram_folder constantin@sfb1286.ims.bio:/data/share/<NAME>
 ```
 Here, `/path/to/tomogram_folder` is the folder with the tomograms (or any other data) you want to copy over.
-Replace `<NAME>` with the name for storing the data on the server. This name can also be a nested folder.
-E.g. use `all_tomograms/new` to store the data you copy in a nested folder on the server.
+Replace `<NAME>` with the name for storing the data on the server. This name should not contain any additional `/`s,
+otherwise it will lead to problems in the transfer.
 
 You will be prompted to enter a password after running the `rsync` command. You can find the password in the file `pwd.txt` in this folder.

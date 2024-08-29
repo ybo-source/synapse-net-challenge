@@ -144,7 +144,6 @@ def get_prediction_torch_em(
     return pred
 
 
-# TODO we also need to support .rec files ...
 def _get_file_paths(input_path, ext=".mrc"):
     if not os.path.exists(input_path):
         raise Exception(f"Input path not found {input_path}")
@@ -160,9 +159,19 @@ def _get_file_paths(input_path, ext=".mrc"):
 
 
 def _load_input(img_path, extra_files, i):
-    # Load the mrc data
+    # Load the input data data
     with open_file(img_path, "r") as f:
-        input_volume = f["data"][:]
+
+        # Try to automatically derive the key with the raw data.
+        keys = list(f.keys())
+        if len(keys) == 1:
+            key = keys[0]
+        elif "data" in keys:
+            key = "data"
+        elif "raw" in keys:
+            key = "raw"
+
+        input_volume = f[key][:]
     assert input_volume.ndim == 3
 
     # For now we assume this is always tif.
@@ -178,6 +187,7 @@ def inference_helper(
     input_path: str,
     output_root: str,
     segmentation_function: callable,
+    data_ext: str = ".mrc",
     extra_input_path: Optional[str] = None,
     extra_input_ext: str = ".tif",
     force: bool = False,
@@ -193,6 +203,7 @@ def inference_helper(
         segmentation_function: The function performing the segmentation.
             This function must take the input_volume as the only argument and must return only the segmentation.
             If you want to pass additional arguments to this function the use 'funtools.partial'
+        data_ext: File extension for the image data. By default '.mrc' is used.
         extra_input_path: Filepath to extra inputs that need to be concatenated to the raw data loaded from mrc.
             This enables cristae segmentation with an extra mito channel.
         extra_input_ext: File extension for the extra inputs (by default .tif).
@@ -201,7 +212,7 @@ def inference_helper(
     # Get the input files. If input_path is a folder then this will load all
     # the mrc files beneath it. Otherwise we assume this is an mrc file already
     # and just return the path to this mrc file.
-    input_files, input_root = _get_file_paths(input_path)
+    input_files, input_root = _get_file_paths(input_path, data_ext)
 
     # Load extra inputs if the extra_input_path was specified.
     if extra_input_path is None:
