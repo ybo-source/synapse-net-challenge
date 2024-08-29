@@ -153,7 +153,7 @@ def _get_file_paths(input_path, ext=".mrc"):
         input_root = None
     else:
         input_files = sorted(glob(os.path.join(input_path, "**", f"*{ext}"), recursive=True))
-        input_root = None
+        input_root = input_path
 
     return input_files, input_root
 
