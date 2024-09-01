@@ -95,6 +95,7 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
     return distance_paths, False
 
 
+# TODO: take into account corrections from the new pool correction layer!
 def assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=False):
 
     def load_dist(measurement_path, seg_ids=None):

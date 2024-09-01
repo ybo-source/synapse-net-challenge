@@ -146,10 +146,17 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
         v = napari.Viewer()
         v.add_image(tomo)
         for name, seg in segmentations.items():
-            v.add_labels(seg, name=name, color=colors.get(name, None))
+            # The function signature of the label layer has recently changed,
+            # and we still need to support both versions.
+            try:
+                v.add_labels(seg, name=name, color=colors.get(name, None))
+            except TypeError:
+                v.add_labels(seg, name=name, colormap=colors.get(name, None))
 
         for name, lines in distance_lines.items():
             v.add_shapes(lines, shape_type="line", name=name, visible=False)
+
+        v.add_labels(name="pool_correction", data=np.zeros(tomo.shape, dtype="uint8"))
 
         v.title = f"{correction}: {folder}"
         napari.run()
