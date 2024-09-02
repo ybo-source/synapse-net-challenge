@@ -1,4 +1,5 @@
 import os
+import warnings
 from pathlib import Path
 
 import imageio.v3 as imageio
@@ -16,6 +17,7 @@ from synaptic_reconstruction.distance_measurements import (
 from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
 from synaptic_reconstruction.inference.postprocessing import filter_border_vesicles
 from skimage.transform import resize
+from skimage.measure import regionprops
 
 from elf.io import open_file
 from tqdm import tqdm
@@ -95,8 +97,44 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
     return distance_paths, False
 
 
-# TODO: take into account corrections from the new pool correction layer!
-def assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=False):
+def _overwrite_pool_assignments(vesicles, vesicle_ids, pool_assignments, pool_correction_path):
+
+    correction = _load_segmentation(pool_correction_path, vesicles.shape)
+    assert correction.shape == vesicles.shape
+
+    def uniques(ves, corr):
+        un = np.unique(corr[ves])
+        return un
+
+    # Map the correction volume to vesicle ids.
+    props = regionprops(vesicles, correction, extra_properties=[uniques])
+    for prop in props:
+        vals = prop.uniques
+        if 0 in vals:
+            vals = vals[1:]
+        if len(vals) == 1:
+            label_id = prop.label
+            correction_val = vals[0]
+            if correction_val == 1:
+                pool_name = "RA-V"
+            elif correction_val == 2:
+                pool_name = "MP-V"
+            elif correction_val == 3:
+                pool_name = "Docked-V"
+            else:
+                raise ValueError
+            pool_assignments[label_id] = pool_name
+            if label_id not in vesicle_ids:
+                vesicle_ids = np.concatenate([vesicle_ids, [label_id]])
+
+        elif len(vals) == 2:
+            warnings.warn("Multiple correction values found for a vesicle!")
+
+    vesicle_ids = np.sort(vesicle_ids)
+    return vesicle_ids, pool_assignments
+
+
+def assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=False, pool_correction_path=None):
 
     def load_dist(measurement_path, seg_ids=None):
         auto_dists = np.load(measurement_path)
@@ -150,6 +188,11 @@ def assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=False):
         unassigned_vesicles = np.setdiff1d(seg_ids, vesicle_ids)
         pool_assignments.update({vid: "unassigned" for vid in unassigned_vesicles})
         vesicle_ids = seg_ids
+
+    if pool_correction_path is not None:
+        vesicle_ids, pool_assignments = _overwrite_pool_assignments(
+            vesicles, vesicle_ids, pool_assignments, pool_correction_path,
+        )
 
     id_mask = np.isin(seg_ids, vesicle_ids)
     assert id_mask.sum() == len(vesicle_ids)
@@ -207,13 +250,22 @@ def compute_morphology(ribbon, pd, resolution):
     return measurements
 
 
-def analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=False):
+def analyze_distances(
+    segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=False
+):
     vesicles = _load_segmentation(segmentation_paths["vesicles"], tomo_shape)
     ribbon = _load_segmentation(segmentation_paths["ribbon"], tomo_shape)
     pd = _load_segmentation(segmentation_paths["PD"], tomo_shape)
 
+    pool_correction_path = os.path.join(
+        os.path.split(segmentation_paths["vesicles"])[0], "pool_correction.tif"
+    )
+    if not os.path.exists(pool_correction_path):
+        pool_correction_path = None
+
     vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(
-        vesicles, distance_paths, keep_unassigned=keep_unassigned
+        vesicles, distance_paths, keep_unassigned=keep_unassigned,
+        pool_correction_path=pool_correction_path,
     )
     vesicle_ids, vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
     morphology_measurements = compute_morphology(ribbon, pd, resolution=resolution)
@@ -286,7 +338,9 @@ def analyze_folder(folder, version, n_ribbons, force):
         tomo_shape = f["data"].shape
 
     out_distance_folder = os.path.join(output_folder, "distances")
-    distance_paths, skip = compute_distances(segmentation_paths, out_distance_folder, resolution, force, tomo_shape)
+    distance_paths, skip = compute_distances(
+        segmentation_paths, out_distance_folder, resolution, force=force, tomo_shape=tomo_shape,
+    )
     if skip:
         return
 
