@@ -8,7 +8,10 @@ import napari
 
 from elf.io import open_file
 from magicgui import magicgui
-from napari_skimage_regionprops import add_table
+try:
+    from napari_skimage_regionprops import add_table
+except ImportError:
+    add_table = None
 
 from skimage.transform import rescale, resize
 
@@ -50,6 +53,9 @@ def measurement_widget(
     compute_direct_distances: bool = True,
     compute_neighbor_distances: int = 0,
 ) -> None:
+    if add_table is None:
+        raise Exception("Please install 'napari_skimage_regionprops' to use the measurement widget.")
+
     if compute_direct_distances:
         n_neighbors = None
         segmentation = viewer.layers["segmentation"].data
