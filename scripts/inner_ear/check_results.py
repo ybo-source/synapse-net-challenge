@@ -116,6 +116,7 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
                 vesicle_pool_path = os.path.join(correction_folder, "vesicle_pools.tif")
                 if os.path.exists(vesicle_pool_path):
                     correction_file = vesicle_pool_path
+                pool_correction_path = os.path.join(os.path.split(correction_file)[0], "pool_correction.tif")
 
             seg = _load_segmentation(correction_file, seg_file, binning=binning, tomo=tomo)
             segmentations[seg_name] = seg
@@ -156,7 +157,12 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
         for name, lines in distance_lines.items():
             v.add_shapes(lines, shape_type="line", name=name, visible=False)
 
-        v.add_labels(name="pool_correction", data=np.zeros(tomo.shape, dtype="uint8"))
+        if os.path.exists(pool_correction_path):
+            pool_correction = imageio.imread(pool_correction_path)
+            pool_correction = _downsample(pool_correction, is_seg=True, scale=None, target_shape=tomo.shape)
+        else:
+            pool_correction = np.zeros(tomo.shape, dtype="uint8")
+        v.add_labels(name="pool_correction", data=pool_correction)
 
         v.title = f"{correction}: {folder}"
         napari.run()

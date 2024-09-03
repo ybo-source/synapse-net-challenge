@@ -17,11 +17,23 @@ from synaptic_reconstruction.distance_measurements import (
 from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
 from synaptic_reconstruction.inference.postprocessing import filter_border_vesicles
 from skimage.transform import resize
-from skimage.measure import regionprops
+from skimage.measure import regionprops, label
 
 from elf.io import open_file
 from tqdm import tqdm
 from parse_table import parse_table, get_data_root, _match_correction_folder, _match_correction_file
+
+
+def _to_pool_name(correction_val):
+    if correction_val == 1:
+        pool_name = "RA-V"
+    elif correction_val == 2:
+        pool_name = "MP-V"
+    elif correction_val == 3:
+        pool_name = "Docked-V"
+    else:
+        raise ValueError
+    return pool_name
 
 
 def _load_segmentation(seg_path, tomo_shape):
@@ -97,7 +109,9 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
     return distance_paths, False
 
 
-def _overwrite_pool_assignments(vesicles, vesicle_ids, pool_assignments, pool_correction_path):
+def _overwrite_pool_assignments(
+    vesicles, vesicle_ids, pool_assignments, pool_correction_path
+):
 
     correction = _load_segmentation(pool_correction_path, vesicles.shape)
     assert correction.shape == vesicles.shape
@@ -112,17 +126,12 @@ def _overwrite_pool_assignments(vesicles, vesicle_ids, pool_assignments, pool_co
         vals = prop.uniques
         if 0 in vals:
             vals = vals[1:]
+
         if len(vals) == 1:
             label_id = prop.label
             correction_val = vals[0]
-            if correction_val == 1:
-                pool_name = "RA-V"
-            elif correction_val == 2:
-                pool_name = "MP-V"
-            elif correction_val == 3:
-                pool_name = "Docked-V"
-            else:
-                raise ValueError
+            pool_name = _to_pool_name(correction_val)
+
             pool_assignments[label_id] = pool_name
             if label_id not in vesicle_ids:
                 vesicle_ids = np.concatenate([vesicle_ids, [label_id]])
@@ -131,10 +140,13 @@ def _overwrite_pool_assignments(vesicles, vesicle_ids, pool_assignments, pool_co
             warnings.warn("Multiple correction values found for a vesicle!")
 
     vesicle_ids = np.sort(vesicle_ids)
+
     return vesicle_ids, pool_assignments
 
 
-def assign_vesicles_to_pools(vesicles, distance_paths, keep_unassigned=False, pool_correction_path=None):
+def assign_vesicles_to_pools(
+    vesicles, distance_paths, keep_unassigned=False, pool_correction_path=None,
+):
 
     def load_dist(measurement_path, seg_ids=None):
         auto_dists = np.load(measurement_path)
@@ -251,17 +263,12 @@ def compute_morphology(ribbon, pd, resolution):
 
 
 def analyze_distances(
-    segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=False
+    segmentation_paths, distance_paths, resolution, result_path, tomo_shape,
+    keep_unassigned=False, pool_correction_path=None,
 ):
     vesicles = _load_segmentation(segmentation_paths["vesicles"], tomo_shape)
     ribbon = _load_segmentation(segmentation_paths["ribbon"], tomo_shape)
     pd = _load_segmentation(segmentation_paths["PD"], tomo_shape)
-
-    pool_correction_path = os.path.join(
-        os.path.split(segmentation_paths["vesicles"])[0], "pool_correction.tif"
-    )
-    if not os.path.exists(pool_correction_path):
-        pool_correction_path = None
 
     vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(
         vesicles, distance_paths, keep_unassigned=keep_unassigned,
@@ -293,6 +300,33 @@ def _relabel_vesicles(path):
     imageio.imwrite(path, seg, compression="zlib")
 
 
+def _insert_missing_vesicles(vesicle_path, original_vesicle_path, pool_correction_path):
+    print("Inserting missing vesicles due to correction at:", pool_correction_path)
+    vesicles = imageio.imread(vesicle_path)
+    original_vesicles = _load_segmentation(original_vesicle_path, vesicles.shape)
+    correction = _load_segmentation(pool_correction_path, vesicles.shape)
+
+    correction_labels = label(correction)
+    correction_ids = np.unique(correction_labels)[1:]
+
+    for corr_id in correction_ids:
+        area = np.where(correction_labels == corr_id)
+        vesicle_ids = np.unique(vesicles[area])
+        is_missing = len(vesicle_ids) == 1 and vesicle_ids[0] == 0
+        if is_missing:
+            og_vesicle_id = np.unique(original_vesicles[area])
+            print("Inserting", og_vesicle_id)
+            if 0 in og_vesicle_id:
+                og_vesicle_id = og_vesicle_id[1:]
+            assert len(og_vesicle_id) == 1
+
+            new_vesicle_id = int(vesicles.max() + 1)
+            vesicle_mask = original_vesicles == og_vesicle_id
+            vesicles[vesicle_mask] = new_vesicle_id
+
+    imageio.imwrite(vesicle_path, vesicles)
+
+
 # TODO adapt to segmentation without PD
 def analyze_folder(folder, version, n_ribbons, force):
     data_path = get_data_path(folder)
@@ -320,7 +354,12 @@ def analyze_folder(folder, version, n_ribbons, force):
             if os.path.exists(seg_path):
 
                 if seg_name == "vesicles":
-                    _relabel_vesicles(seg_path)
+                    pool_correction_path = os.path.join(correction_folder, "pool_correction.tif")
+                    if os.path.exists(pool_correction_path):
+                        original_vesicle_path = segmentation_paths["vesicles"]
+                        _insert_missing_vesicles(seg_path, original_vesicle_path, pool_correction_path)
+                    else:
+                        pool_correction_path = None
 
                 segmentation_paths[seg_name] = seg_path
 
@@ -345,7 +384,10 @@ def analyze_folder(folder, version, n_ribbons, force):
         return
 
     if force or not os.path.exists(result_path):
-        analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape)
+        analyze_distances(
+            segmentation_paths, distance_paths, resolution, result_path, tomo_shape,
+            pool_correction_path=pool_correction_path
+        )
 
 
 def run_analysis(table, version, force=False, val_table=None):
