@@ -7,7 +7,10 @@ import numpy as np
 from elf.evaluation.matching import label_overlap, intersection_over_union
 from skimage.segmentation import relabel_sequential
 from scipy.ndimage import binary_dilation
+from tqdm import tqdm
+
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
+from synaptic_reconstruction.inference.util import _get_file_paths
 
 MODEL_PATH = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
 
@@ -124,9 +127,17 @@ def create_vesicle_ground_truth_versions(input_path, output_path, gt_key):
         f.create_dataset("labels/vesicles/combined_vesicles", data=combined_vesicles, compression="gzip")
 
 
-# TODO
-def _process_folder(input_folder, output_folder, label_key):
-    pass
+def process_files(input_path, output_root, label_key):
+    input_files, input_root = _get_file_paths(input_path, ext=".h5")
+    for path in tqdm(input_files):
+        input_folder, fname = os.path.split(path)
+        if input_root is None:
+            output_path = os.path.join(output_root, fname)
+        else:  # If we have nested input folders then we preserve the folder structure in the output.
+            rel_folder = os.path.relpath(input_folder, input_root)
+            output_path = os.path.join(output_root, rel_folder, fname)
+        os.makedirs(os.path.split(output_path)[0], exist_ok=True)
+        create_vesicle_ground_truth_versions(path, output_path, label_key)
 
 
 def main():
@@ -136,14 +147,7 @@ def main():
     parser.add_argument("-k", "--label_key", default="labels/vesicles")
     args = parser.parse_args()
 
-    input_path, output_folder = args.input_path, args.output_folder
-
-    if os.path.isdir(args.input_path):
-        _process_folder(input_path, output_folder, args.label_key)
-    else:
-        os.makedirs(output_folder, exist_ok=True)
-        output_path = os.path.join(output_folder, os.path.basename(input_path))
-        create_vesicle_ground_truth_versions(input_path, output_path, args.label_key)
+    process_files(args.input_path, args.output_folder, args.label_key)
 
 
 if __name__ == "__main__":

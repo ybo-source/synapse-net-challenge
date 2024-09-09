@@ -1,10 +1,5 @@
 
 
-
-def extract_ves
-
-
-
 def main():
     pass
 
