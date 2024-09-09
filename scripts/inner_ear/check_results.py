@@ -192,6 +192,8 @@ def visualize_all_data(
     visualize_distances=False, skip_iteration=None,
     binning="auto", val_table=None,
 ):
+    from parse_table import check_val_table
+
     assert check_micro in ["new", "old", "both", None]
 
     for i, row in tqdm(table.iterrows(), total=len(table)):
@@ -203,19 +205,7 @@ def visualize_all_data(
             continue
 
         if val_table is not None:
-            row_selection = (val_table.Bedingung == row.Bedingung) &\
-                    (val_table.Maus == row.Maus) &\
-                    (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
-                    (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
-            complete_vals = val_table[row_selection]["Fertig 3.0?"].values
-            # skip_markers = ("ja", "skip", "Anzeigefehler", "Ausschluss", "Keine PD")
-            is_complete = (
-                (complete_vals == "ja") |
-                (complete_vals == "skip") |
-                (complete_vals == "Anzeigefehler") |
-                (complete_vals == "Ausschluss") |
-                (complete_vals == "Keine PD")
-            ).all()
+            is_complete = check_val_table(val_table, row)
             if is_complete:
                 continue
 

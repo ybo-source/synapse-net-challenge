@@ -21,7 +21,9 @@ from skimage.measure import regionprops, label
 
 from elf.io import open_file
 from tqdm import tqdm
-from parse_table import parse_table, get_data_root, _match_correction_folder, _match_correction_file
+from parse_table import (
+    parse_table, get_data_root, _match_correction_folder, _match_correction_file, check_val_table
+)
 
 
 def _to_pool_name(correction_val):
@@ -412,19 +414,7 @@ def run_analysis(table, version, force=False, val_table=None):
             continue
 
         if val_table is not None:
-            row_selection = (val_table.Bedingung == row.Bedingung) &\
-                    (val_table.Maus == row.Maus) &\
-                    (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
-                    (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
-            complete_vals = val_table[row_selection]["Fertig 3.0?"].values
-            # skip_markers = ("ja", "skip", "Anzeigefehler", "Ausschluss", "Keine PD")
-            is_complete = (
-                (complete_vals == "ja") |
-                (complete_vals == "skip") |
-                (complete_vals == "Anzeigefehler") |
-                (complete_vals == "Ausschluss") |
-                (complete_vals == "Keine PD")
-            ).all()
+            is_complete = check_val_table(val_table, row)
             if is_complete:
                 continue
 

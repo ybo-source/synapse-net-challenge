@@ -76,6 +76,36 @@ def _match_correction_file(correction_folder, seg_name):
     return correction_file
 
 
+def check_val_table(val_table, row):
+    row_selection = (val_table.Bedingung == row.Bedingung) &\
+            (val_table.Maus == row.Maus) &\
+            (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
+            (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
+
+    # We have different column names that mark the progress.
+    # Latest: "Kommentar 08.09.24"
+    # Fallback: "Fertig 3.0?"
+    if "Kommentar 08.09.24" in val_table.columns:
+        complete_vals = val_table[row_selection]["Kommentar 08.09.24"].values
+        is_complete = (
+            (complete_vals == "passt") |
+            (complete_vals == "Passt") |
+            (complete_vals == "")
+        ).all()
+    elif "Fertig 3.0?" in val_table.columns:
+        complete_vals = val_table[row_selection]["Fertig 3.0?"].values
+        is_complete = (
+            (complete_vals == "ja") |
+            (complete_vals == "skip") |
+            (complete_vals == "Anzeigefehler") |
+            (complete_vals == "Ausschluss") |
+            (complete_vals == "Keine PD")
+        ).all()
+    else:
+        raise ValueError
+    return is_complete
+
+
 def main():
     table_path = "./Übersicht.xlsx"
     data_root = "/scratch-emmy/usr/nimcpape/data/moser"
