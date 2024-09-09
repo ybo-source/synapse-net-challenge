@@ -320,6 +320,9 @@ def _insert_missing_vesicles(vesicle_path, original_vesicle_path, pool_correctio
             print("Inserting", og_vesicle_id)
             if 0 in og_vesicle_id:
                 og_vesicle_id = og_vesicle_id[1:]
+            if len(og_vesicle_id) == 0:
+                print("No vesicles found for", corr_id)
+                continue
             assert len(og_vesicle_id) == 1
 
             new_vesicle_id = int(vesicles.max() + 1)
@@ -343,6 +346,7 @@ def analyze_folder(folder, version, n_ribbons, force):
         print("Not all required segmentations were found")
         return
 
+    pool_correction_path = None
     correction_folder = _match_correction_folder(folder)
     if os.path.exists(correction_folder):
         output_folder = correction_folder
