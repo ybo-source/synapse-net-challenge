@@ -160,6 +160,9 @@ def supervised_training(
 
     # TODO determine whether we train a 2D or 3D model.
     is_2d = False
+    z,y,x = patch_shape
+    is_2d = z ==1
+
     if is_2d:
         model = get_2d_model(out_channels=2)
     else:
