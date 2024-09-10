@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from subprocess import run
+from typing import Dict
 
 import imageio.v3 as imageio
 import numpy as np
@@ -10,7 +11,10 @@ from skimage.morphology import ball
 from tqdm import tqdm
 
 
-def get_label_names(imod_path, return_types=False):
+def get_label_names(
+    imod_path: str,
+    return_types: bool = False,
+) -> Dict[str, str]:
     cmd = "imodinfo"
     cmd_path = shutil.which(cmd)
     assert cmd_path is not None, f"Could not find the {cmd} imod command."
@@ -177,6 +181,10 @@ def load_points_from_imodinfo(
                 except ValueError:
                     continue
 
+    # labelx = {seg_id: int(label_id) for seg_id, label_id in enumerate(labels, 1)}
+    # print("Extracted the following labels:", label_names)
+    # print("With counts:", {k: v for k, v in zip(*np.unique(list(labelx.values()), return_counts=True))})
+    # breakpoint()
     assert len(coordinates) == len(sizes) == len(labels) == len(in_bounds), \
         f"{len(coordinates)}, {len(sizes)}, {len(labels)}, {len(in_bounds)}"
 

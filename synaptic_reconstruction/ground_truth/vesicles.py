@@ -2,6 +2,7 @@ import json
 import os
 import warnings
 from pathlib import Path
+from typing import Optional, Tuple
 
 import mrcfile
 import numpy as np
@@ -50,20 +51,50 @@ def _export_segmentations(imod_path, data_path, object_ids):
 
 
 def write_vesicle_training_volume(
-    data_path,
-    imod_path,
-    output_path,
-    original_path=None,
-    exclude_labels=None,
-    exclude_label_patterns=None,
-    contour_label_patterns=None,
-    visualize=False,
-    resolution=None,
+    data_path: str,
+    imod_path: str,
+    output_path: str,
+    original_path: Optional[str] = None,
+    exclude_labels: Optional[Tuple[int]] = None,
+    exclude_label_patterns: Optional[Tuple[str]] = None,
+    contour_label_patterns: Optional[Tuple[str]] = None,
+    visualize: bool = False,
+    resolution: Optional[Tuple[int, int, int]] = None,
 ):
+    """Extract vesicle annotations from IMOD and write them to an hdf5 file.
+
+    By default this will export all point annotations from an imod file.
+    The arguments `exclude_labels` and `exclude_label_patterns` can be used
+    to exclude certain point annotations from the export.
+    The argument `contour_label_patterns` can be used to also export selected
+    contour annotations from the imod file.
+
+    Args:
+        data_path: The path to the mrc file.
+        imod_path: The path to the mod file with vesicle annotations.
+        output_path: The path to the hdf5 file to save the extracted annotations.
+        original_path: The orignal path name. This parameter is optional, and the path name
+            will be saved as an attribute in the output hdf5 file, in order to map back
+            extracted to original input data.
+        exclude_labels: An optional list of object ids in the mod file that should be excluded
+            from the export.
+        exclude_label_patterns: An optional list of object names in the mode file that
+            should be excluded from the export.
+        contour_label_patterns: An optonal list of object names for contour annotations
+            (= more complex object annotations) that should also be exported as vesicles
+            from the imod file. This can be used in case some vesicles are annotated as
+            objects with contours instead of just being point annotations.
+        visualize: Whether to visualize the exported data with napari instead of saving it.
+            For debugging purposes.
+        resolution: The voxel size of the data in nanometers. It will be used to scale the
+            radius of the point annotations exported from imod. By default the resolution
+            will be read from the mrc header, but can be over-ridden by passing this value
+            in case of wrong resolution information in the header.
+    """
     if resolution is None:
         with mrcfile.open(data_path, "r") as f:
             resolution = f.voxel_size.tolist()
-        resolution = np.array([np.round(res / 10, 3) for res in resolution])
+        resolution = tuple(np.round(res / 10, 3) for res in resolution)
     assert len(resolution) == 3
 
     with open_file(data_path, "r") as f:
@@ -118,17 +149,53 @@ def write_vesicle_training_volume(
 
 
 def extract_vesicle_training_data(
-    data_folder,
-    gt_folder,
-    output_folder,
-    to_label_path=None,
-    skip_no_labels=False,
-    exclude=None,
-    exclude_labels=None,
-    exclude_label_patterns=None,
-    contour_label_patterns=None,
-    visualize=False,
+    data_folder: str,
+    gt_folder: str,
+    output_folder: str,
+    to_label_path: Optional[callable] = None,
+    skip_no_labels: bool = False,
+    exclude: Optional[Tuple[str]] = None,
+    exclude_labels: Optional[Tuple[int]] = None,
+    exclude_label_patterns: Optional[Tuple[str]] = None,
+    contour_label_patterns: Optional[Tuple[str]] = None,
+    visualize: bool = False,
+    resolution: Optional[Tuple[int, int, int]] = None,
 ):
+    """Extract all vesicle annotations from a folder hierarchy stored in mrc and imod files
+    and write them to an hdf5 file.
+
+    This function calls `write_vesicle_training_volume` for each mrc/mod file pair it encounters.
+    The output files will be stored with a simple naming pattern 'tomogram00i.h5'.
+    The original filename for each exported file is stored in the attribute 'filename' at
+    the root level of the hdf5.
+
+    Args:
+        data_folder: The root folder containing the mrc files.
+        imod_path: The root folder containing the mod files. can be the same as `data_folder`.
+        output_folder: The output folder where the hdf5 files with exported raw data and
+            vesicle segmentations will be saved.
+        to_label_path: A function for converting the mrc filename to the name of the
+            corresponding .mod file. If not given the file extension .mrc will be replaced
+            with .mod.
+        skip_no_labels: Whether to skip extracting mrc files for which a matching .mod file
+            could not be found. If true will raise a warning for these cases,
+            otherwise will throw an error.
+        exclude: An optional list of filenames to be excluded from the export.
+        exclude_labels: An optional list of object ids in the mod file that should be excluded
+            from the export.
+        exclude_label_patterns: An optional list of object names in the mode file that
+            should be excluded from the export.
+        contour_label_patterns: An optonal list of object names for contour annotations
+            (= more complex object annotations) that should also be exported as vesicles
+            from the imod file. This can be used in case some vesicles are annotated as
+            objects with contours instead of just being point annotations.
+        visualize: Whether to visualize the exported data with napari instead of saving it.
+            For debugging purposes.
+        resolution: The voxel size of the data in nanometers. It will be used to scale the
+            radius of the point annotations exported from imod. By default the resolution
+            will be read from the mrc header, but can be over-ridden by passing this value
+            in case of wrong resolution information in the header.
+    """
     os.makedirs(output_folder, exist_ok=True)
 
     train_id = 0
@@ -173,5 +240,6 @@ def extract_vesicle_training_data(
                 exclude_label_patterns=exclude_label_patterns,
                 contour_label_patterns=contour_label_patterns,
                 visualize=visualize,
+                resolution=resolution,
             )
             train_id += 1
