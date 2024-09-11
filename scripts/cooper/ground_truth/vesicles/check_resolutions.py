@@ -5,7 +5,7 @@ import mrcfile
 import numpy as np
 
 
-ROOT = "/projects/extern/nhr/nhr_ni/nim00007/dir.project/data/synaptic-reconstruction/cooper/original_imod_data/20240909_cp_datatransfer"  # noqa
+ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/original_imod_data/20240909_cp_datatransfer"  # noqa
 
 
 def read_resolution(data_path):

@@ -4,8 +4,8 @@ from pathlib import Path
 
 from synaptic_reconstruction.ground_truth import extract_vesicle_training_data
 
-ROOT = "/projects/extern/nhr/nhr_ni/nim00007/dir.project/data/synaptic-reconstruction/cooper/original_imod_data/20240909_cp_datatransfer"  # noqa
-OUT_ROOT = "/projects/extern/nhr/nhr_ni/nim00007/dir.project/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer"  # noqa
+ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/original_imod_data/20240909_cp_datatransfer"  # noqa
+OUT_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer"  # noqa
 
 
 def extract_01():
@@ -139,6 +139,8 @@ def extract_05():
     return output_folder
 
 
+# NOTE: This contains vesicles automatically segmented with some other method.
+# We should not use it for now and will wait for Ben to copy over the original manual annotations.
 def extract_06():
     name = "06_hoi_wt_stem750_fm"
     input_folder = os.path.join(ROOT, name)
@@ -159,9 +161,22 @@ def extract_06():
     return output_folder
 
 
-# TODO wait for Ben to copy the data.
 def extract_07():
-    pass
+    name = "07_hoi_s1sy7_tem250_ihgp"
+    input_folder = os.path.join(ROOT, name)
+    output_folder = os.path.join(OUT_ROOT, name)
+
+    def to_label_path(gt_folder, relative_file_path):
+        rel_path = Path(relative_file_path)
+        folder, fname = rel_path.parent, rel_path.stem
+        imod_path = os.path.join(gt_folder, folder, f"{fname}.mod")
+        return imod_path
+
+    extract_vesicle_training_data(
+        input_folder, input_folder, output_folder, to_label_path, visualize=False,
+        exclude_label_patterns=["plasma membrane"]
+    )
+    return output_folder
 
 
 # NOTE: Ben claims this is a complete duplicate of 02.
@@ -184,9 +199,22 @@ def extract_08():
     )
 
 
-# TODO wait for Ben to copy the data
 def extract_09():
-    pass
+    name = "09_stem750_66k"
+    input_folder = os.path.join(ROOT, name)
+    output_folder = os.path.join(OUT_ROOT, name)
+
+    def to_label_path(gt_folder, relative_file_path):
+        folder = Path(relative_file_path).parent
+        fname = Path(relative_file_path).stem
+        imod_path = os.path.join(gt_folder, folder, f"{fname}.mod")
+        return imod_path
+
+    extract_vesicle_training_data(
+        input_folder, input_folder, output_folder, to_label_path, visualize=False,
+        exclude_label_patterns=["presyn", "postsyn", "ribo"]
+    )
+    return output_folder
 
 
 def extract_10():
@@ -268,9 +296,9 @@ def main():
     extract_04()
     extract_05()
     extract_06()
-    # extract_07()
+    extract_07()
     extract_08()
-    # extract_09()
+    extract_09()
     extract_10()
     extract_11()
     extract_12()
