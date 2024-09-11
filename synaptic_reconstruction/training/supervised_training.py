@@ -69,6 +69,8 @@ def get_supervised_loader(
     n_samples: Optional[int],
     add_boundary_transform: bool = True,
     label_dtype=torch.float32,
+    rois: Optional[Tuple[Tuple[slice]]] = None,
+    sampler: Optional[callable] = None,
 ) -> torch.utils.data.DataLoader:
     """Get a dataloader for supervised segmentation training.
 
@@ -84,6 +86,9 @@ def get_supervised_loader(
             based on the patch_shape and size of the volumes used for training.
         add_boundary_transform: Whether to add a boundary channel to the training data.
         label_dtype: The datatype of the labels returned by the dataloader.
+        rois: Optional region of interests for training.
+        sampler: Optional sampler for selecting blocks for training.
+            By default a minimum instance sampler will be used.
 
     Returns:
         The PyTorch dataloader.
@@ -99,14 +104,15 @@ def get_supervised_loader(
 
     num_workers = 4 * batch_size
 
-    sampler = torch_em.data.sampler.MinInstanceSampler(min_num_instances=4)
+    if sampler is None:
+        sampler = torch_em.data.sampler.MinInstanceSampler(min_num_instances=4)
     loader = torch_em.default_segmentation_loader(
         data_paths, raw_key,
         data_paths, label_key, sampler=sampler,
         batch_size=batch_size, patch_shape=patch_shape,
         is_seg_dataset=True, label_transform=label_transform, transform=transform,
         num_workers=num_workers, shuffle=True, n_samples=n_samples,
-        label_dtype=label_dtype,
+        label_dtype=label_dtype, rois=rois,
     )
     return loader
 
@@ -122,6 +128,9 @@ def supervised_training(
     batch_size: int = 1,
     lr: float = 1e-4,
     n_iterations: int = int(1e5),
+    train_rois: Optional[Tuple[Tuple[slice]]] = None,
+    val_rois: Optional[Tuple[Tuple[slice]]] = None,
+    sampler: Optional[callable] = None,
     n_samples_train: Optional[int] = None,
     n_samples_val: Optional[int] = None,
     check: bool = False,
@@ -141,6 +150,10 @@ def supervised_training(
         batch_size: The batch size for training.
         lr: The initial learning rate.
         n_iterations: The number of iterations to train for.
+        train_rois: Optional region of interests for training.
+        val_rois: Optional region of interests for validation.
+        sampler: Optional sampler for selecting blocks for training.
+            By default a minimum instance sampler will be used.
         n_samples_train: The number of train samples per epoch. By default this will be estimated
             based on the patch_shape and size of the volumes used for training.
         n_samples_val: The number of val samples per epoch. By default this will be estimated
@@ -148,9 +161,9 @@ def supervised_training(
         check: Whether to check the training and validation loaders instead of running training.
     """
     train_loader = get_supervised_loader(train_paths, raw_key, label_key, patch_shape, batch_size,
-                                         n_samples=n_samples_train)
+                                         n_samples=n_samples_train, rois=train_rois, sampler=sampler)
     val_loader = get_supervised_loader(val_paths, raw_key, label_key, patch_shape, batch_size,
-                                       n_samples=n_samples_val)
+                                       n_samples=n_samples_val, rois=val_rois, sampler=sampler)
 
     if check:
         from torch_em.util.debug import check_loader
