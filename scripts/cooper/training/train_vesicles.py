@@ -21,7 +21,7 @@ def train_check():
         train_paths=train_paths,
         val_paths=val_paths,
         label_key="/labels/vesicles_postprocessed",
-        patch_shape=(32, 128, 128),
+        patch_shape=(1, 256, 256),
         save_root=".",
     )
 
