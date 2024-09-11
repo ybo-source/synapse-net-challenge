@@ -2,7 +2,7 @@ import os
 from glob import glob
 
 from synaptic_reconstruction.training import supervised_training
-
+from synaptic_reconstruction.training import semisupervised_training
 
 def train_check():
     """Training on a subset of the old version of training data to
@@ -16,7 +16,7 @@ def train_check():
     train_paths = glob(os.path.join(root, "01_hoi_maus_2020_incomplete", "*.h5"))
     val_paths = glob(os.path.join(root, "02_hcc_nanogold", "*.h5"))
 
-    supervised_training(
+    semisupervised_training(
         name="check-vesicle-training",
         train_paths=train_paths,
         val_paths=val_paths,

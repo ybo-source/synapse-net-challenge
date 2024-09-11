@@ -61,8 +61,12 @@ def get_unsupervised_loader(
     else:
         roi = None
 
+    z,y,x = patch_shape
+    ndim = 2 if z == 1 else 3
+    print("ndim is: ", ndim)
+
     raw_transform = torch_em.transform.get_raw_transform()
-    transform = torch_em.transform.get_augmentations(ndim=3)
+    transform = torch_em.transform.get_augmentations(ndim=ndim)
 
     augmentations = (weak_augmentations(), weak_augmentations())
     datasets = [
@@ -132,8 +136,11 @@ def semisupervised_training(
         # check_loader(val_loader, n_samples=4)
         return
 
-    # TODO determine 2d vs 3d
+    #check for 2D or 3D training
     is_2d = False
+    z,y,x = patch_shape
+    is_2d = z == 1
+
     if is_2d:
         model = get_2d_model(out_channels=2)
     else:
