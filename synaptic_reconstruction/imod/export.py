@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from subprocess import run
+from typing import Dict
 
 import imageio.v3 as imageio
 import numpy as np
@@ -8,6 +9,42 @@ from elf.io import open_file
 from skimage.morphology import ball
 
 from tqdm import tqdm
+
+
+def get_label_names(
+    imod_path: str,
+    return_types: bool = False,
+) -> Dict[str, str]:
+    cmd = "imodinfo"
+    cmd_path = shutil.which(cmd)
+    assert cmd_path is not None, f"Could not find the {cmd} imod command."
+
+    label_names, label_types = {}, {}
+
+    with tempfile.NamedTemporaryFile() as f:
+        tmp_path = f.name
+        run([cmd, "-f", tmp_path, imod_path])
+
+        object_id = None
+        with open(tmp_path) as f:
+            lines = f.readlines()
+            for line in lines:
+
+                if line.startswith("OBJECT"):
+                    object_id = int(line.rstrip("\n").strip().split()[-1])
+
+                if line.startswith("NAME"):
+                    name = line.rstrip("\n").strip().split()[-1]
+                    assert object_id is not None
+                    label_names[object_id] = name
+
+                if "object uses" in line:
+                    type_ = " ".join(line.rstrip("\n").strip().split()[2:]).rstrip(".")
+                    label_types[object_id] = type_
+
+    if return_types:
+        return label_names, label_types
+    return label_names
 
 
 def export_segmentation(imod_path, mrc_path, object_id=None, output_path=None, require_object=True):
@@ -144,6 +181,10 @@ def load_points_from_imodinfo(
                 except ValueError:
                     continue
 
+    # labelx = {seg_id: int(label_id) for seg_id, label_id in enumerate(labels, 1)}
+    # print("Extracted the following labels:", label_names)
+    # print("With counts:", {k: v for k, v in zip(*np.unique(list(labelx.values()), return_counts=True))})
+    # breakpoint()
     assert len(coordinates) == len(sizes) == len(labels) == len(in_bounds), \
         f"{len(coordinates)}, {len(sizes)}, {len(labels)}, {len(in_bounds)}"
 
