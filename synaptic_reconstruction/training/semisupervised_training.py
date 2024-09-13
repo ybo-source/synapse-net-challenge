@@ -71,7 +71,7 @@ def get_unsupervised_loader(
     augmentations = (weak_augmentations(), weak_augmentations())
     datasets = [
         torch_em.data.RawDataset(path, raw_key, patch_shape, raw_transform, transform,
-                                 augmentations=augmentations, roi=roi)
+                                 augmentations=augmentations, roi=roi, ndim = ndim)
         for path in data_paths
     ]
     ds = torch.utils.data.ConcatDataset(datasets)

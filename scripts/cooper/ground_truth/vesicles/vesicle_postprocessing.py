@@ -16,6 +16,7 @@ from synaptic_reconstruction.inference.util import _get_file_paths
 
 from vigra.analysis import watershedsNew
 from skimage.segmentation import watershed
+from skimage import filters
 
 MODEL_PATH = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
 
@@ -39,7 +40,7 @@ def extract_gt_bounding_box(raw, vesicle_gt, coordinates, halo=[2, 32, 32]):
 
 
 # Postprocess the vesicle shape (if still necessary after fixing the IMOD extraction).
-def postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_ids):
+def postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_ids, raw):
     _, boundaries = prediction.squeeze()
     boundary_threshold = 0.05
     distance_map = distance_transform_edt(boundaries < boundary_threshold)
@@ -47,6 +48,8 @@ def postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_i
     distance_map += boundaries
 
     #TODO edge filter??
+    sobel_edges = filters.sobel(raw)
+    distance_map += sobel_edges
 
     shape = distance_map.shape
     labels_pp = np.zeros_like(distance_map, dtype="uint32")
@@ -79,7 +82,7 @@ def postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_i
         bg_mask = ~binary_dilation(mask, iterations=bg_mask_dilation)
 
         #TODO decide on seed erosion
-        seed_erosion = 5
+        seed_erosion = 30
         fg_mask = binary_erosion(mask, iterations=seed_erosion)
         centroid = tuple(co - b.start for co, b in zip(coord, roi))
         fg_mask[centroid] = 1
@@ -142,7 +145,7 @@ def postprocess_vesicle_gt(raw, vesicle_gt, coordinates, radii):
     segmentation, prediction = segment_vesicles(raw, MODEL_PATH, return_predictions=True)
 
     # Additional post-processing to improve the shape of the vesicles.
-    vesicle_gt = postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_ids)
+    vesicle_gt = postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_ids, raw)
 
     # Get vesicles in the prediction that are not part of the ground-truth.
     additional_vesicles = find_additional_vesicles(vesicle_gt, segmentation)
