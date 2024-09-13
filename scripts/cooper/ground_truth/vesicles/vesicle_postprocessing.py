@@ -16,6 +16,8 @@ from synaptic_reconstruction.inference.util import _get_file_paths
 
 from vigra.analysis import watershedsNew
 from skimage.segmentation import watershed
+from elf.segmentation import watershed
+from elf.parallel import seeded_watershed
 from skimage import filters
 
 MODEL_PATH = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
@@ -82,7 +84,7 @@ def postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_i
         bg_mask = ~binary_dilation(mask, iterations=bg_mask_dilation)
 
         #TODO decide on seed erosion
-        seed_erosion = 30
+        seed_erosion = 5
         fg_mask = binary_erosion(mask, iterations=seed_erosion)
         centroid = tuple(co - b.start for co, b in zip(coord, roi))
         fg_mask[centroid] = 1
@@ -92,9 +94,11 @@ def postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_i
         seeds[bg_mask] = 2
         #TODO choose between watershedsNews and from skimage.segmentation import watershed
         #pp = watershedsNew(dist.astype("float32"), seeds=seeds)[0]
-        pp = watershed(-dist, markers=seeds, mask=mask)
+        ##pp = watershed(-dist, markers=seeds, mask=mask)
+        halo = (4, 32, 32)
+        labels_pp = seeded_watershed(dist, seeds, labels_pp, mask.shape, halo)
         
-        labels_pp[roi][pp == 1] = label_id
+        #labels_pp[roi][pp == 1] = label_id
 
     return labels_pp
 
