@@ -60,7 +60,16 @@ def check_filters(
     sigmas: List[float] = [2.0, 4.0],
     show: bool = True,
 ) -> Dict[str, np.ndarray]:
-    """
+    """Apply different edge filters to the input data.
+
+    Args:
+        data: The input data volume.
+        filters: The names of edge filters to apply.
+            The filter names must match `method` in `edge_filter`.
+        sigmas: The sigma values to use for the filters.
+        show: Whether to show the filter responses in napari.
+    Returns:
+        Dictionary with the filter responses.
     """
 
     n_filters = len(filters) * len(sigmas)
@@ -87,22 +96,29 @@ def check_filters(
 
 def refine_vesicle_shapes(
     vesicles: np.ndarray,
-    boundary_map: np.ndarray,
+    edge_map: np.ndarray,
     foreground_erosion: int = 2,
     background_erosion: int = 6,
     fit_to_outer_boundary: bool = False,
     return_seeds: bool = False,
     compactness: float = 1.0,
-):
-    """
+) -> np.ndarray:
+    """Refine vesicle shapes by fitting vesicles to a boundary map.
+
+    This function erodes the segmented vesicles, and then fits them
+    to a bonudary using a seeded watershed.
+
     Args:
-        vesicles:
-        boundary_map:
-        foreground_erosion:
-        background_erosion:
-        fit_to_outer_boundary:
-        return_seeds:
-        compactness:
+        vesicles: The vesicle segmentation.
+        edge_map: Volume with high intensities for vesicle membrane.
+            You can use `edge_filter` to compute this based on the tomogram.
+        foreground_erosion: By how many pixels the foreground should be eroded in the seeds.
+        background_erosion: By how many pixels the background should be eroded in the seeds.
+        fit_to_outer_boundary: Whether to fit the seeds to the outer membrane by
+            applying a second edge filter to `edge_map`.
+        return_seeds: Whether to return the seeds used for the watershed.
+        compactness: The compactness parameter passed to the watershed function.
+            Higher compactness leads to more regular sized vesicles.
     Returns:
         The refined vesicles.
     """
@@ -116,15 +132,15 @@ def refine_vesicle_shapes(
     bg_seeds = binary_erosion(bg, iterations=background_erosion).astype("uint8")
 
     if fit_to_outer_boundary:
-        outer_boundary_map = edge_filter(boundary_map, sigma=2)
+        outer_edge_map = edge_filter(edge_map, sigma=2)
     else:
-        outer_boundary_map = boundary_map
+        outer_edge_map = edge_map
 
     seeds = fg_seeds + 2 * bg_seeds
-    refined_mask = watershed(outer_boundary_map, seeds, compactness=compactness)
+    refined_mask = watershed(outer_edge_map, seeds, compactness=compactness)
     refined_mask[refined_mask == 2] = 0
 
-    refined_vesicles = watershed(boundary_map, vesicles, mask=refined_mask, compactness=compactness)
+    refined_vesicles = watershed(edge_map, vesicles, mask=refined_mask, compactness=compactness)
 
     if return_seeds:
         return refined_vesicles, seeds
