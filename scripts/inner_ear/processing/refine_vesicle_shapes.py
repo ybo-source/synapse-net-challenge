@@ -26,7 +26,9 @@ def process_folder(folder):
         vesicle_path = os.path.join(ann_folder, "Vesikel.tif")
         if not os.path.exists(vesicle_path):
             vesicle_path = os.path.join(ann_folder, "vesikel.tif")
-        assert os.path.exists(vesicle_path), vesicle_path
+        if not os.path.exists(vesicle_path):
+            print("No vesicles in", ann_folder, "skipping!")
+            continue
 
         vesicles = imageio.imread(vesicle_path)
         full_shape = vesicles.shape
