@@ -9,11 +9,12 @@ from parse_table import parse_table, get_data_root
 from run_analyis import compute_distances, analyze_distances
 
 
-def analyze_folder(folder, n_ribbons, force):
+def analyze_folder(folder, n_ribbons, force, use_refined_vesicles):
     data_path = get_data_path(folder)
     output_folder = os.path.join(folder, "manuell")
 
-    segmentation_names = {"vesicles": "Vesikel", "ribbon": "Ribbon", "PD": "PD", "membrane": "Membrane"}
+    ves_name = "refined_vesicles" if use_refined_vesicles else "Vesikel"
+    segmentation_names = {"vesicles": ves_name, "ribbon": "Ribbon", "PD": "PD", "membrane": "Membrane"}
     segmentation_paths = {name: os.path.join(output_folder, f"{nname}.tif")
                           for name, nname in segmentation_names.items()}
 
@@ -44,7 +45,7 @@ def analyze_folder(folder, n_ribbons, force):
         analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=True)
 
 
-def run_analysis(table, force=False):
+def run_analysis(table, force=False, use_refined_vesicles=True):
     for i, row in tqdm(table.iterrows(), total=len(table)):
         folder = row["Local Path"]
         if folder == "":
@@ -66,19 +67,19 @@ def run_analysis(table, force=False):
 
         micro = row["EM alt vs. Neu"]
         if micro == "beides":
-            analyze_folder(folder, n_ribbons, force=force)
+            analyze_folder(folder, n_ribbons, force=force, use_refined_vesicles=use_refined_vesicles)
 
             folder_new = os.path.join(folder, "Tomo neues EM")
             if not os.path.exists(folder_new):
                 folder_new = os.path.join(folder, "neues EM")
             assert os.path.exists(folder_new), folder_new
-            analyze_folder(folder_new, n_ribbons, force=force)
+            analyze_folder(folder_new, n_ribbons, force=force, use_refined_vesicles=use_refined_vesicles)
 
         elif micro == "alt":
-            analyze_folder(folder, n_ribbons, force=force)
+            analyze_folder(folder, n_ribbons, force=force, use_refined_vesicles=use_refined_vesicles)
 
         elif micro == "neu":
-            analyze_folder(folder, n_ribbons, force=force)
+            analyze_folder(folder, n_ribbons, force=force, use_refined_vesicles=use_refined_vesicles)
 
 
 def main():
@@ -86,7 +87,7 @@ def main():
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    force = False
+    force = True
     run_analysis(table, force=force)
 
 
