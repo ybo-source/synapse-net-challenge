@@ -16,12 +16,22 @@ def train_check():
     train_paths = glob(os.path.join(root, "01_hoi_maus_2020_incomplete", "*.h5"))
     val_paths = glob(os.path.join(root, "02_hcc_nanogold", "*.h5"))
 
-    semisupervised_training(
-        name="check-vesicle-training",
+    print("Start training with:")
+    print(len(train_paths), "tomograms for training")
+    print(len(val_paths), "tomograms for validation")
+
+    patch_shape = [48, 256, 256]
+    batch_size = 4
+    check = False
+
+    supervised_training(
+        name="vesicles-model-new_postprocessing",
         train_paths=train_paths,
         val_paths=val_paths,
         label_key="/labels/vesicles_postprocessed",
-        patch_shape=(1, 256, 256),
+        patch_shape=patch_shape, batch_size=batch_size,
+        n_samples_train=None, n_samples_val=25,
+        check=check,
         save_root=".",
     )
 
