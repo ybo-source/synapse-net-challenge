@@ -12,6 +12,7 @@ from tqdm import tqdm
 from skimage.morphology import ball
 
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
+from synaptic_reconstruction.ground_truth import find_additional_objects
 from synaptic_reconstruction.inference.util import _get_file_paths
 
 from vigra.analysis import watershedsNew
@@ -152,7 +153,7 @@ def postprocess_vesicle_gt(raw, vesicle_gt, coordinates, radii):
     vesicle_gt = postprocess_vesicle_shape(vesicle_gt, prediction, coordinates, radii, seed_ids, raw)
 
     # Get vesicles in the prediction that are not part of the ground-truth.
-    additional_vesicles = find_additional_vesicles(vesicle_gt, segmentation)
+    additional_vesicles = find_additional_objects(vesicle_gt, segmentation, matching_threshold=0.5)
 
     return raw, vesicle_gt, additional_vesicles
 

@@ -281,7 +281,7 @@ def create_distance_lines(measurement_path, n_neighbors=None, pairs=None, bb=Non
     properties = {
         "id_a": pairs[:, 0],
         "id_b": pairs[:, 1],
-        "distance": distances,
+        "distance": np.round(distances, 2),
     }
     return lines, properties
 
@@ -310,7 +310,7 @@ def create_object_distance_lines(measurement_path, max_distance=None, seg_ids=No
         scale_factor = np.array(3 * [scale])[None, None]
         lines //= scale_factor
 
-    properties = {"id": seg_ids, "distance": distances}
+    properties = {"id": seg_ids, "distance": np.round(distances, 2)}
     return lines, properties
 
 
