@@ -4,31 +4,14 @@ from glob import glob
 import imageio.v3 as imageio
 import magicgui
 import napari
-import numpy as np
 
-from common import read_volume, read_labels
+from common import read_and_crop_folder, segment_vesicles_with_sam
 from micro_sam.util import get_sam_model
-from micro_sam.inference import batched_inference
-
-from skimage.measure import label
 
 
 def annotate_stack(folder, output_image, output_label):
 
-    stack = read_volume(folder)
-    vesicles = read_labels(folder, stack.shape, ["vesicles", "labeled_vesicles"])
-    membrane = read_labels(folder, stack.shape, "membrane")
-    if membrane.sum() == 0:
-        return
-
-    bb = np.where(membrane == 1)
-    bb = tuple(
-        slice(int(b.min()), int(b.max() + 1)) for b in bb
-    )
-
-    stack = stack[bb]
-    vesicles = vesicles[bb]
-    membrane = membrane[bb]
+    stack, vesicles, membrane, _ = read_and_crop_folder(folder)
 
     z = stack.shape[0] // 2
     stack, vesicles, membrane = stack[z], vesicles[z], membrane[z]
@@ -37,20 +20,8 @@ def annotate_stack(folder, output_image, output_label):
     # cid = compartment[shape[0] // 2, shape[1] // 2]
     # compartment = compartment == cid
 
-    vesicles = label(vesicles)
-    vesicle_ids, coordinates = np.unique(vesicles, return_index=True)
-    vesicle_ids, coordinates = vesicle_ids[1:], coordinates[1:]
-
-    points = np.unravel_index(coordinates, vesicles.shape)
-    points = np.concatenate([points[0][:, None], points[1][:, None]], axis=1)
-    points = points[:, ::-1]
-    point_labels = np.ones(len(points), dtype=int)
-
-    points = points[:, None]
-    point_labels = point_labels[:, None]
-
     predictor = get_sam_model(model_type="vit_b_em_organelles")
-    segmentation = batched_inference(predictor, stack, batch_size=16, points=points, point_labels=point_labels)
+    segmentation = segment_vesicles_with_sam(predictor, stack, vesicles)
 
     @magicgui.magicgui
     def save(v: napari.Viewer):
