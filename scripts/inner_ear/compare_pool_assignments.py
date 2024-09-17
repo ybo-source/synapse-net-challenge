@@ -20,8 +20,8 @@ def _create_manual_assignments(folder, assignment_path):
             pool_path = ff
         if "Vesikel" in ff and "Vesikel_pools" not in ff:
             vesicle_path = ff
-    assert pool_path is not None
-    assert vesicle_path is not None
+    assert pool_path is not None, folder
+    assert vesicle_path is not None, folder
 
     vesicles = imageio.imread(vesicle_path)
     pools = imageio.imread(pool_path)
@@ -41,7 +41,9 @@ def _create_manual_assignments(folder, assignment_path):
         json.dump(pool_assignments, f)
 
 
-def create_manual_assignment(data_root, tomograms, force):
+def create_manual_assignment(root, tomograms, force):
+    data_root = os.path.join(root, "Electron-Microscopy-Susi", "Analyse")
+
     for tomo in tqdm(tomograms, desc="Create manual pool assignments"):
         folder = os.path.join(data_root, tomo, "manuell")
         assignment_path = os.path.join(folder, "manual_pool_assignments.json")
@@ -50,9 +52,10 @@ def create_manual_assignment(data_root, tomograms, force):
         _create_manual_assignments(folder, assignment_path)
 
 
-def compare_assignments(data_root, tomograms, result_table):
-    translation = {"RA-V": 1, "MP-V": 2, "Docked-V": 3, "unassigned": 4}
+def compare_assignments(root, tomograms, result_table, output_path=None):
+    data_root = os.path.join(root, "Electron-Microscopy-Susi", "Analyse")
 
+    translation = {"RA-V": 1, "MP-V": 2, "Docked-V": 3, "unassigned": 4}
     manual_pools = []
     distance_pools = []
 
@@ -80,18 +83,21 @@ def compare_assignments(data_root, tomograms, result_table):
         distance_pools.extend(list(distance_assignments.values()))
 
     accuracy = accuracy_score(manual_pools, distance_pools)
-    print("Accuracy:", accuracy)
 
     plt_labels = list(translation.values())
     ConfusionMatrixDisplay.from_predictions(manual_pools, distance_pools, display_labels=plt_labels)
-    plt.show()
+    if output_path is None:
+        print("Accuracy:", accuracy)
+        plt.show()
+    else:
+        plt.title(f"Assignment accuacy = {np.round(accuracy, 4)}")
+        plt.savefig(output_path)
 
 
-def update_measurements(data_root, tomograms, result_path):
-    out_path = "fully_manual_analysis_results.xlsx"
+def update_measurements(root, tomograms, result_path, output_path="./fully_manual_analysis_results.xlsx"):
+    data_root = os.path.join(root, "Electron-Microscopy-Susi", "Analyse")
 
     vesicle_table = pd.read_excel(result_path)
-
     translation = {1: "RA-V", 2: "MP-V", 3: "Docked-V"}
 
     updated_results = []
@@ -107,10 +113,10 @@ def update_measurements(data_root, tomograms, result_path):
         updated_results.append(res_table)
 
     updated_results = pd.concat(updated_results)
-    updated_results.to_excel(out_path, index=False, sheet_name="vesicles")
+    updated_results.to_excel(output_path, index=False, sheet_name="vesicles")
 
     morpho_table = pd.read_excel(result_path, sheet_name="morphology")
-    with pd.ExcelWriter(out_path, engine="openpyxl", mode="a") as writer:
+    with pd.ExcelWriter(output_path, engine="openpyxl", mode="a") as writer:
         morpho_table.to_excel(writer, sheet_name="morphology", index=False)
 
 
@@ -124,8 +130,8 @@ def main():
     #     print(tomo)
     # return
 
-    data_root = "/home/pape/Work/data/moser/em-synapses/Electron-Microscopy-Susi/Analyse"
-    create_manual_assignment(data_root, tomograms, force=True)
+    data_root = "/home/pape/Work/data/moser/em-synapses"
+    create_manual_assignment(data_root, tomograms, force=False)
     compare_assignments(data_root, tomograms, result_table)
     update_measurements(data_root, tomograms, result_path)
 

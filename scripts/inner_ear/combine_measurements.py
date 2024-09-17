@@ -23,7 +23,7 @@ def combine_results(results, output_path, sheet_name):
         big_table.to_excel(output_path, sheet_name=sheet_name, index=False)
 
 
-def combine_manual_results(table, data_root):
+def combine_manual_results(table, data_root, output_path="./manual_analysis_results.xlsx"):
     results = {}
     for _, row in table.iterrows():
         folder = row["Local Path"]
@@ -55,12 +55,11 @@ def combine_manual_results(table, data_root):
             if os.path.exists(res_path):
                 results[tomo_name] = (res_path, "alt" if micro == "beides" else micro)
 
-    output_path = "./manual_analysis_results.xlsx"
     combine_results(results, output_path, sheet_name="vesicles")
     combine_results(results, output_path, sheet_name="morphology")
 
 
-def combine_automatic_results(table, data_root):
+def combine_automatic_results(table, data_root, output_path="./automatic_analysis_results.xlsx"):
     val_table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
     val_table = pd.read_excel(val_table_path)
 
@@ -102,7 +101,6 @@ def combine_automatic_results(table, data_root):
             assert os.path.exists(res_path), res_path
             results[tomo_name] = (res_path, "alt" if micro == "beides" else micro)
 
-    output_path = "./automatic_analysis_results.xlsx"
     combine_results(results, output_path, sheet_name="vesicles")
     combine_results(results, output_path, sheet_name="morphology")
 

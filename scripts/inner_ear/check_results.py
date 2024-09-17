@@ -18,17 +18,24 @@ from tqdm import tqdm
 sys.path.append("processing")
 
 
-def get_distance_visualization(tomo, segmentations, distance_paths, vesicle_ids, scale):
+def get_distance_visualization(
+    tomo, segmentations, distance_paths, vesicle_ids, scale, return_mem_props=False
+):
     ribbon_lines, _ = create_object_distance_lines(distance_paths["ribbon"], seg_ids=vesicle_ids, scale=scale)
     pd_lines, _ = create_object_distance_lines(distance_paths["PD"], seg_ids=vesicle_ids, scale=scale)
-    membrane_lines, _ = create_object_distance_lines(distance_paths["membrane"], seg_ids=vesicle_ids, scale=scale)
+    membrane_lines, mem_props = create_object_distance_lines(
+        distance_paths["membrane"], seg_ids=vesicle_ids, scale=scale
+    )
 
     distance_lines = {
         "ribbon_distances": ribbon_lines,
         "pd_distances": pd_lines,
         "membrane_distances": membrane_lines
     }
-    return tomo, segmentations, distance_lines
+    if return_mem_props:
+        return tomo, segmentations, distance_lines, mem_props
+    else:
+        return tomo, segmentations, distance_lines
 
 
 def create_vesicle_pools(vesicles, result_path):

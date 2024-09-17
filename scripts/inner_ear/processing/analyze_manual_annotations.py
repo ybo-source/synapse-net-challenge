@@ -42,7 +42,10 @@ def analyze_folder(folder, n_ribbons, force, use_refined_vesicles):
         return
 
     if force or not os.path.exists(result_path):
-        analyze_distances(segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=True)
+        analyze_distances(
+            segmentation_paths, distance_paths, resolution, result_path, tomo_shape, keep_unassigned=True,
+            apply_extra_filters=False
+        )
 
 
 def run_analysis(table, force=False, use_refined_vesicles=True):

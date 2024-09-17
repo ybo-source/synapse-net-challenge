@@ -147,7 +147,7 @@ def _overwrite_pool_assignments(
 
 
 def assign_vesicles_to_pools(
-    vesicles, distance_paths, keep_unassigned=False, pool_correction_path=None,
+    vesicles, distance_paths, keep_unassigned=False, pool_correction_path=None, apply_extra_filters=True,
 ):
 
     def load_dist(measurement_path, seg_ids=None):
@@ -168,27 +168,29 @@ def assign_vesicles_to_pools(
     # (i.e. not blocked by another vesicle).
     rav_ribbon_distance = 80  # nm
     rav_ids = seg_ids[ribbon_distances < rav_ribbon_distance]
+
     # Filter out the blocked vesicles.
-    rav_ids = filter_blocked_segmentation_to_object_distances(
-        vesicles, distance_paths["ribbon"], seg_ids=rav_ids, line_dilation=4, verbose=True,
-    )
-    rav_ids = filter_border_vesicles(vesicles, seg_ids=rav_ids)
-    # n_blocked = len(rav_ids_all) - len(rav_ids)
-    # print(n_blocked, "ribbon associated vesicles were blocked by the ribbon.")
+    if apply_extra_filters:
+        rav_ids = filter_blocked_segmentation_to_object_distances(
+            vesicles, distance_paths["ribbon"], seg_ids=rav_ids, line_dilation=4, verbose=True,
+        )
+        rav_ids = filter_border_vesicles(vesicles, seg_ids=rav_ids)
 
     # Find the vesicles that are membrane proximal (MP-V).
     # Criterion: vesicles are closer than 50 nm to the membrane and closer than 100 nm to the PD.
     mpv_pd_distance = 100  # nm
     mpv_bd_distance = 50  # nm
     mpv_ids = seg_ids[np.logical_and(pd_distances < mpv_pd_distance, bd_distances < mpv_bd_distance)]
-    mpv_ids = filter_border_vesicles(vesicles, seg_ids=mpv_ids)
+    if apply_extra_filters:
+        mpv_ids = filter_border_vesicles(vesicles, seg_ids=mpv_ids)
 
     # Find the vesicles that are membrane docked (Docked-V).
     # Criterion: vesicles are closer than 2 nm to the membrane and closer than 100 nm to the PD.
     docked_pd_distance = 100  # nm
     docked_bd_distance = 2  # nm
     docked_ids = seg_ids[np.logical_and(pd_distances < docked_pd_distance, bd_distances < docked_bd_distance)]
-    docked_ids = filter_border_vesicles(vesicles, seg_ids=docked_ids)
+    if apply_extra_filters:
+        docked_ids = filter_border_vesicles(vesicles, seg_ids=docked_ids)
 
     # Keep only the vesicle ids that are in one of the three categories.
     vesicle_ids = np.unique(np.concatenate([rav_ids, mpv_ids, docked_ids]))
@@ -266,7 +268,7 @@ def compute_morphology(ribbon, pd, resolution):
 
 def analyze_distances(
     segmentation_paths, distance_paths, resolution, result_path, tomo_shape,
-    keep_unassigned=False, pool_correction_path=None,
+    keep_unassigned=False, pool_correction_path=None, apply_extra_filters=True
 ):
     vesicles = _load_segmentation(segmentation_paths["vesicles"], tomo_shape)
     ribbon = _load_segmentation(segmentation_paths["ribbon"], tomo_shape)
@@ -274,7 +276,7 @@ def analyze_distances(
 
     vesicle_ids, pool_assignments, distances = assign_vesicles_to_pools(
         vesicles, distance_paths, keep_unassigned=keep_unassigned,
-        pool_correction_path=pool_correction_path,
+        pool_correction_path=pool_correction_path, apply_extra_filters=apply_extra_filters,
     )
     vesicle_ids, vesicle_radii = compute_radii(vesicles, resolution, ids=vesicle_ids)
     morphology_measurements = compute_morphology(ribbon, pd, resolution=resolution)
