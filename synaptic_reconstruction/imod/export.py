@@ -14,12 +14,14 @@ from tqdm import tqdm
 def get_label_names(
     imod_path: str,
     return_types: bool = False,
+    return_counts: bool = False,
+    filter_empty_labels: bool = True,
 ) -> Dict[str, str]:
     cmd = "imodinfo"
     cmd_path = shutil.which(cmd)
     assert cmd_path is not None, f"Could not find the {cmd} imod command."
 
-    label_names, label_types = {}, {}
+    label_names, label_types, label_counts = {}, {}, {}
 
     with tempfile.NamedTemporaryFile() as f:
         tmp_path = f.name
@@ -42,8 +44,33 @@ def get_label_names(
                     type_ = " ".join(line.rstrip("\n").strip().split()[2:]).rstrip(".")
                     label_types[object_id] = type_
 
-    if return_types:
+                # Parse the number of annotions for this object.
+                if "contours" in line:
+                    try:
+                        count = int(line.rstrip("\n").strip().split()[0])
+                        label_counts[object_id] = count
+                    # The condition also hits for 'closed countours' / 'open contours'.
+                    # We just catch the exception thrown for these cases and continue.
+                    except ValueError:
+                        pass
+
+                if "CONTOUR" in line and label_types[object_id] == "scattered points":
+                    count = int(line.rstrip("\n").strip().split()[2])
+                    label_counts[object_id] = count
+
+    if filter_empty_labels:
+        empty_labels = [k for k, v in label_counts.items() if v == 0]
+        label_names = {k: v for k, v in label_names.items() if k not in empty_labels}
+        label_types = {k: v for k, v in label_types.items() if k not in empty_labels}
+        label_counts = {k: v for k, v in label_counts.items() if k not in empty_labels}
+
+    if return_types and return_counts:
+        return label_names, label_types, label_counts
+    elif return_types:
         return label_names, label_types
+    elif return_counts:
+        return label_names, label_counts
+
     return label_names
 
 
