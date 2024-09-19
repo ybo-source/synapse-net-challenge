@@ -69,6 +69,8 @@ def get_supervised_loader(
     n_samples: Optional[int],
     add_boundary_transform: bool = True,
     label_dtype=torch.float32,
+    ignore_label: Optional[int] = None,
+    label_transform: Optional[callable] = None,
 ) -> torch.utils.data.DataLoader:
     """Get a dataloader for supervised segmentation training.
 
@@ -84,14 +86,28 @@ def get_supervised_loader(
             based on the patch_shape and size of the volumes used for training.
         add_boundary_transform: Whether to add a boundary channel to the training data.
         label_dtype: The datatype of the labels returned by the dataloader.
+        ignore_label: Ignore label in the ground-truth. The areas marked by this label will be
+            ignored in the loss computation. By default this option is not used.
+        label_transform: Label transform that is applied to the segmentation to compute the targets.
+            If no label transform is passed (the default) a boundary transform is used.
 
     Returns:
         The PyTorch dataloader.
     """
 
-    if add_boundary_transform:
-        label_transform = torch_em.transform.BoundaryTransform(add_binary_target=True)
+    if label_transform is not None:  # A specific label transform was passed, do nothing.
+        pass
+    elif add_boundary_transform:
+        if ignore_label is None:
+            label_transform = torch_em.transform.BoundaryTransform(add_binary_target=True)
+        else:
+            label_transform = torch_em.transform.BoundaryTransformWithIgnoreLabel(
+                add_binary_target=True, ignore_label=ignore_label
+            )
+
     else:
+        if ignore_label is not None:
+            raise NotImplementedError
         label_transform = torch_em.transform.label.connected_components
     transform = torch_em.transform.Compose(
         torch_em.transform.PadIfNecessary(patch_shape), torch_em.transform.get_augmentations(3)
@@ -125,6 +141,8 @@ def supervised_training(
     n_samples_train: Optional[int] = None,
     n_samples_val: Optional[int] = None,
     check: bool = False,
+    ignore_label: Optional[int] = None,
+    label_transform: Optional[callable] = None,
 ):
     """Run supervised segmentation training.
 
@@ -146,11 +164,17 @@ def supervised_training(
         n_samples_val: The number of val samples per epoch. By default this will be estimated
             based on the patch_shape and size of the volumes used for validation.
         check: Whether to check the training and validation loaders instead of running training.
+        ignore_label: Ignore label in the ground-truth. The areas marked by this label will be
+            ignored in the loss computation. By default this option is not used.
+        label_transform: Label transform that is applied to the segmentation to compute the targets.
+            If no label transform is passed (the default) a boundary transform is used.
     """
     train_loader = get_supervised_loader(train_paths, raw_key, label_key, patch_shape, batch_size,
-                                         n_samples=n_samples_train)
+                                         n_samples=n_samples_train, ignore_label=ignore_label,
+                                         label_transform=label_transform)
     val_loader = get_supervised_loader(val_paths, raw_key, label_key, patch_shape, batch_size,
-                                       n_samples=n_samples_val)
+                                       n_samples=n_samples_val, ignore_label=ignore_label,
+                                       label_transform=label_transform)
 
     if check:
         from torch_em.util.debug import check_loader
@@ -165,6 +189,17 @@ def supervised_training(
     else:
         model = get_3d_model(out_channels=2)
 
+    # No ignore label -> we can use default loss.
+    if ignore_label is None:
+        loss = None
+    # If we have an ignore label the loss and metric have to be modified
+    # so that the ignore mask is not used in the gradient calculation.
+    else:
+        loss = torch_em.loss.LossWrapper(
+            loss=torch_em.loss.DiceLoss(),
+            transform=torch_em.loss.wrapper.MaskIgnoreLabel(ignore_label=ignore_label)
+        )
+
     trainer = torch_em.default_segmentation_trainer(
         name=name,
         model=model,
@@ -175,5 +210,6 @@ def supervised_training(
         log_image_interval=100,
         compile_model=False,
         save_root=save_root,
+        loss=loss,
     )
     trainer.fit(n_iterations)
