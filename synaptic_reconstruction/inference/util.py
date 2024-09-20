@@ -245,12 +245,16 @@ def get_default_tiling():
     """Determine the tile shape and halo depending on the available VRAM.
     """
     if torch.cuda.is_available():
+        print("Determining suitable tiling")
+
         # We always use the same default halo.
-        halo = {"x": 64, "y": 64, "z": 8}
+        halo = {"x": 64, "y": 64, "z": 16} #before 64,64,8
 
         # Determine the GPU RAM and derive a suitable tiling.
         vram = torch.cuda.get_device_properties(0).total_memory / 1e9
-        if vram >= 40:
+        if vram >= 80:
+            tile = {"x": 640, "y": 640, "z": 80}
+        elif vram >= 40:
             tile = {"x": 512, "y": 512, "z": 64}
         elif vram >= 20:
             tile = {"x": 352, "y": 352, "z": 48}
@@ -258,11 +262,13 @@ def get_default_tiling():
             # TODO determine tilings for smaller VRAM
             raise NotImplementedError
 
+        print(f"using tile size: {tile}")
         tiling = {"tile": tile, "halo": halo}
 
     # I am not sure what is reasonable on a cpu. For now choosing very small tiling.
     # (This will not work well on a CPU in any case.)
     else:
+        print("Using default tiling")
         tiling = {
             "tile": {"x": 96, "y": 96, "z": 16},
             "halo": {"x": 16, "y": 16, "z": 4},

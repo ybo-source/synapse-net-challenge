@@ -5,3 +5,5 @@ logs/
 models/*/
 *.out
 *.egg-info/
+run_sbatch.sbatch
+slurm/

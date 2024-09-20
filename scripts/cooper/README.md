@@ -37,7 +37,7 @@ This command will open all tomograms saved under `/path/to/input_folder` and the
 The script `export_vesicles_to_imod.py` can be used to export the vesicle segmentations to an imod point model.
 You can run it like this:
 ```
-$ python -i /path/to/input_folder -s /path/to/vesicles -o /path/to/imod_export --min_radius 10
+$ python export_vesicles_to_imod.py -i /path/to/input_folder -s /path/to/vesicles -o /path/to/imod_export --min_radius 10
 ```
 The parameters have a similar meaning to the other scripts (`-i`: folder with mrc files, `-s`: folder with vesicle segmentation results, `-o`: folder for saving the imod export results); `--min_radius` controls the minimal vesicle radius in nanometer.
 In order to run this command, you need to install IMOD on the workstation.
