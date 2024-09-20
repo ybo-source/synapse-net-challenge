@@ -4,7 +4,7 @@ import os
 import h5py
 import numpy as np
 
-from elf.evaluation.matching import label_overlap, intersection_over_union
+from elf.evaluation.matching import label_overlap, intersection_over_pred
 from skimage.segmentation import relabel_sequential
 from scipy.ndimage import binary_dilation, binary_erosion, distance_transform_edt
 from tqdm import tqdm
@@ -16,10 +16,6 @@ from synaptic_reconstruction.ground_truth import find_additional_objects
 from synaptic_reconstruction.inference.util import _get_file_paths
 from synaptic_reconstruction.ground_truth.shape_refinement import refine_vesicle_shapes, edge_filter
 
-from vigra.analysis import watershedsNew
-from skimage.segmentation import watershed
-#from elf.segmentation import watershed
-from elf.parallel import seeded_watershed
 from skimage import filters
 
 MODEL_PATH = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
@@ -40,7 +36,7 @@ def extract_gt_bounding_box(raw, vesicle_gt,  halo=[2, 32, 32]):
 def postprocess_vesicle_shape(vesicle_gt):
 
     edge_map = edge_filter(vesicle_gt, sigma = 3, method = "sobel")
-    vesicle_gt = refine_vesicle_shapes(vesicle_gt, edge_map)
+    vesicle_gt = refine_vesicle_shapes(vesicle_gt, edge_map, background_erosion=7)
 
     return vesicle_gt
 
@@ -50,7 +46,7 @@ def find_additional_vesicles(vesicle_gt, segmentation, matching_threshold=0.5):
 
     # Match the vesicles in the segmentation to the ground-truth.
     overlap, _ = label_overlap(segmentation, vesicle_gt)
-    overlap = intersection_over_union(overlap)
+    overlap_pred = intersection_over_pred(overlap)
 
     # Get the segmentation IDs.
     seg_ids = np.unique(segmentation)
@@ -59,8 +55,8 @@ def find_additional_vesicles(vesicle_gt, segmentation, matching_threshold=0.5):
     # These likely correspond to a vesicle covered by the ground-truth.
     filter_ids = []
     for seg_id in seg_ids[1:]:
-        max_overlap = overlap[seg_id, :].max()
-        if max_overlap > matching_threshold:
+        max_overlap_pred = overlap_pred[seg_id, :].max()
+        if max_overlap_pred > matching_threshold:
             filter_ids.append(seg_id)
 
     # Get the additional vesicles by removing filtered vesicles.
@@ -94,7 +90,7 @@ def postprocess_vesicle_gt(raw, vesicle_gt):
     vesicle_gt = postprocess_vesicle_shape(vesicle_gt)
 
     # Get vesicles in the prediction that are not part of the ground-truth.
-    additional_vesicles = find_additional_objects(vesicle_gt, segmentation, matching_threshold=0.5)
+    additional_vesicles = find_additional_vesicles(vesicle_gt, segmentation, matching_threshold=0.06)
 
     return raw, vesicle_gt, additional_vesicles
 

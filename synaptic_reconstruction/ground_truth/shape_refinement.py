@@ -2,7 +2,7 @@ from typing import List, Dict
 
 import numpy as np
 
-from scipy.ndimage import binary_erosion
+from scipy.ndimage import binary_erosion, binary_dilation
 from skimage.segmentation import watershed
 from skimage.filters import gaussian, sobel
 from tqdm import tqdm
@@ -130,6 +130,21 @@ def refine_vesicle_shapes(
         fg_seeds = fg.astype("uint8")
     bg = vesicles == 0
     bg_seeds = binary_erosion(bg, iterations=background_erosion).astype("uint8")
+    #create 1 pixel wide mask and set to 1 and add to bg seed
+    #Create a 1-pixel wide boundary at the edges of the tomogram
+    boundary_mask = np.zeros_like(bg, dtype="uint8")
+
+    # Set the boundary to 1 along the edges of each dimension
+    boundary_mask[0, :, :] = 1
+    boundary_mask[-1, :, :] = 1
+    boundary_mask[:, 0, :] = 1
+    boundary_mask[:, -1, :] = 1
+    boundary_mask[:, :, 0] = 1
+    boundary_mask[:, :, -1] = 1
+
+    #Add the boundary to the background seeds without affecting existing seeds
+    bg_seeds = np.clip(bg_seeds + boundary_mask, 0, 1)  # Ensure values are either 0 or 1
+
 
     if fit_to_outer_boundary:
         outer_edge_map = edge_filter(edge_map, sigma=2)
