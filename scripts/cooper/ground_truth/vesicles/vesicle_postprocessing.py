@@ -4,30 +4,67 @@ import os
 import h5py
 import numpy as np
 
-from scipy.ndimage import binary_dilation
+from elf.evaluation.matching import label_overlap, intersection_over_pred
+from skimage.segmentation import relabel_sequential
+from scipy.ndimage import binary_dilation, binary_erosion, distance_transform_edt
 from tqdm import tqdm
+
+from skimage.morphology import ball
 
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
 from synaptic_reconstruction.ground_truth import find_additional_objects
 from synaptic_reconstruction.inference.util import _get_file_paths
+from synaptic_reconstruction.ground_truth.shape_refinement import refine_vesicle_shapes, edge_filter
+
+from skimage import filters
 
 MODEL_PATH = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
 
 
-def extract_gt_bounding_box(raw, vesicle_gt, halo=[2, 32, 32]):
+def extract_gt_bounding_box(raw, vesicle_gt,  halo=[2, 32, 32]):
     bb = np.where(vesicle_gt > 0)
     bb = tuple(slice(
         max(int(b.min() - ha), 0),
         min(int(b.max()) + ha, sh)
     ) for b, sh, ha in zip(bb, raw.shape, halo))
     raw, vesicle_gt = raw[bb], vesicle_gt[bb]
+
     return raw, vesicle_gt
 
 
-# TODO
 # Postprocess the vesicle shape (if still necessary after fixing the IMOD extraction).
-def postprocess_vesicle_shape(vesicle_gt, prediction):
+def postprocess_vesicle_shape(vesicle_gt):
+
+    edge_map = edge_filter(vesicle_gt, sigma = 3, method = "sobel")
+    vesicle_gt = refine_vesicle_shapes(vesicle_gt, edge_map, background_erosion=7)
+
     return vesicle_gt
+
+
+def find_additional_vesicles(vesicle_gt, segmentation, matching_threshold=0.5):
+    segmentation = relabel_sequential(segmentation)[0]
+
+    # Match the vesicles in the segmentation to the ground-truth.
+    overlap, _ = label_overlap(segmentation, vesicle_gt)
+    overlap_pred = intersection_over_pred(overlap)
+
+    # Get the segmentation IDs.
+    seg_ids = np.unique(segmentation)
+
+    # Filter out IDs with a larger overlap than the matching threshold:
+    # These likely correspond to a vesicle covered by the ground-truth.
+    filter_ids = []
+    for seg_id in seg_ids[1:]:
+        max_overlap_pred = overlap_pred[seg_id, :].max()
+        if max_overlap_pred > matching_threshold:
+            filter_ids.append(seg_id)
+
+    # Get the additional vesicles by removing filtered vesicles.
+    additional_vesicles = segmentation.copy()
+    additional_vesicles[np.isin(segmentation, filter_ids)] = 0
+    additional_vesicles = relabel_sequential(additional_vesicles)[0]
+
+    return additional_vesicles
 
 
 def postprocess_vesicle_gt(raw, vesicle_gt):
@@ -50,10 +87,10 @@ def postprocess_vesicle_gt(raw, vesicle_gt):
     segmentation, prediction = segment_vesicles(raw, MODEL_PATH, return_predictions=True)
 
     # Additional post-processing to improve the shape of the vesicles.
-    vesicle_gt = postprocess_vesicle_shape(vesicle_gt, prediction)
+    vesicle_gt = postprocess_vesicle_shape(vesicle_gt)
 
     # Get vesicles in the prediction that are not part of the ground-truth.
-    additional_vesicles = find_additional_objects(vesicle_gt, segmentation, matching_threshold=0.5)
+    additional_vesicles = find_additional_vesicles(vesicle_gt, segmentation, matching_threshold=0.06)
 
     return raw, vesicle_gt, additional_vesicles
 
