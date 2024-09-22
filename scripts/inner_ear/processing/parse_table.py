@@ -86,7 +86,16 @@ def check_val_table(val_table, row):
     # Latest: "Kommentar 16.09.24"
     # Previous: "Kommentar 08.09.24"
     # Fallback: "Fertig 3.0?"
-    if "Kommentar 16.09.24" in val_table.columns:
+    if "Fertig 3.0?" in val_table.columns:
+        complete_vals = val_table[row_selection]["Fertig 3.0?"].values
+        is_complete = (
+            (complete_vals == "ja") |
+            (complete_vals == "skip") |
+            (complete_vals == "Anzeigefehler") |
+            (complete_vals == "Ausschluss") |
+            (complete_vals == "Keine PD")
+        ).all()
+    elif "Kommentar 16.09.24" in val_table.columns:
         complete_vals = val_table[row_selection]["Kommentar 16.09.24"].values
         is_complete = (
             (complete_vals == "passt") |
@@ -99,15 +108,6 @@ def check_val_table(val_table, row):
             (complete_vals == "passt") |
             (complete_vals == "Passt") |
             (complete_vals == "")
-        ).all()
-    elif "Fertig 3.0?" in val_table.columns:
-        complete_vals = val_table[row_selection]["Fertig 3.0?"].values
-        is_complete = (
-            (complete_vals == "ja") |
-            (complete_vals == "skip") |
-            (complete_vals == "Anzeigefehler") |
-            (complete_vals == "Ausschluss") |
-            (complete_vals == "Keine PD")
         ).all()
     else:
         raise ValueError
