@@ -59,11 +59,13 @@ def get_2d_model(
     )
     return model
 
+
 def adjust_patch_shape(data_shape, patch_shape):
     # If data is 2D and patch_shape is 3D, drop the extra dimension in patch_shape
     if data_shape == 2 and len(patch_shape) == 3:
         return patch_shape[1:]  # Remove the leading dimension in patch_shape
     return patch_shape  # Return the original patch_shape for 3D data
+
 
 def get_supervised_loader(
     data_paths: Tuple[str],
@@ -74,6 +76,8 @@ def get_supervised_loader(
     n_samples: Optional[int],
     add_boundary_transform: bool = True,
     label_dtype=torch.float32,
+    rois: Optional[Tuple[Tuple[slice]]] = None,
+    sampler: Optional[callable] = None,
     ignore_label: Optional[int] = None,
     label_transform: Optional[callable] = None,
 ) -> torch.utils.data.DataLoader:
@@ -91,6 +95,9 @@ def get_supervised_loader(
             based on the patch_shape and size of the volumes used for training.
         add_boundary_transform: Whether to add a boundary channel to the training data.
         label_dtype: The datatype of the labels returned by the dataloader.
+        rois: Optional region of interests for training.
+        sampler: Optional sampler for selecting blocks for training.
+            By default a minimum instance sampler will be used.
         ignore_label: Ignore label in the ground-truth. The areas marked by this label will be
             ignored in the loss computation. By default this option is not used.
         label_transform: Label transform that is applied to the segmentation to compute the targets.
@@ -99,8 +106,9 @@ def get_supervised_loader(
     Returns:
         The PyTorch dataloader.
     """
-    #check for 2D or 3D training
-    z,y,x = patch_shape
+
+    # Check for 2D or 3D training
+    z, y, x = patch_shape
     ndim = 2 if z == 1 else 3
     print("ndim is: ", ndim)
 
@@ -131,16 +139,16 @@ def get_supervised_loader(
 
     num_workers = 4 * batch_size
 
+    if sampler is None:
+        sampler = torch_em.data.sampler.MinInstanceSampler(min_num_instances=4)
 
-
-    sampler = torch_em.data.sampler.MinInstanceSampler(min_num_instances=4)
     loader = torch_em.default_segmentation_loader(
         data_paths, raw_key,
         data_paths, label_key, sampler=sampler,
         batch_size=batch_size, patch_shape=patch_shape, ndim=ndim,
         is_seg_dataset=True, label_transform=label_transform, transform=transform,
         num_workers=num_workers, shuffle=True, n_samples=n_samples,
-        label_dtype=label_dtype,
+        label_dtype=label_dtype, rois=rois,
     )
     return loader
 
@@ -156,6 +164,9 @@ def supervised_training(
     batch_size: int = 1,
     lr: float = 1e-4,
     n_iterations: int = int(1e5),
+    train_rois: Optional[Tuple[Tuple[slice]]] = None,
+    val_rois: Optional[Tuple[Tuple[slice]]] = None,
+    sampler: Optional[callable] = None,
     n_samples_train: Optional[int] = None,
     n_samples_val: Optional[int] = None,
     check: bool = False,
@@ -177,6 +188,10 @@ def supervised_training(
         batch_size: The batch size for training.
         lr: The initial learning rate.
         n_iterations: The number of iterations to train for.
+        train_rois: Optional region of interests for training.
+        val_rois: Optional region of interests for validation.
+        sampler: Optional sampler for selecting blocks for training.
+            By default a minimum instance sampler will be used.
         n_samples_train: The number of train samples per epoch. By default this will be estimated
             based on the patch_shape and size of the volumes used for training.
         n_samples_val: The number of val samples per epoch. By default this will be estimated
@@ -188,11 +203,11 @@ def supervised_training(
             If no label transform is passed (the default) a boundary transform is used.
     """
     train_loader = get_supervised_loader(train_paths, raw_key, label_key, patch_shape, batch_size,
-                                         n_samples=n_samples_train, ignore_label=ignore_label,
-                                         label_transform=label_transform)
+                                         n_samples=n_samples_train, rois=train_rois, sampler=sampler,
+                                         ignore_label=ignore_label, label_transform=label_transform)
     val_loader = get_supervised_loader(val_paths, raw_key, label_key, patch_shape, batch_size,
-                                       n_samples=n_samples_val, ignore_label=ignore_label,
-                                       label_transform=label_transform)
+                                       n_samples=n_samples_val, rois=val_rois, sampler=sampler,
+                                       ignore_label=ignore_label, label_transform=label_transform)
 
     if check:
         from torch_em.util.debug import check_loader
@@ -200,9 +215,9 @@ def supervised_training(
         check_loader(val_loader, n_samples=4)
         return
 
-    #check for 2D or 3D training
+    # Check for 2D or 3D training
     is_2d = False
-    z,y,x = patch_shape
+    z, y, x = patch_shape
     is_2d = z == 1
 
     if is_2d:
