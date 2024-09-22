@@ -11,6 +11,7 @@ from synaptic_reconstruction.file_utils import get_data_path
 from elf.io import open_file
 from tqdm import tqdm
 
+from napari_skimage_regionprops import add_table
 from synaptic_reconstruction.tools.distance_measurement import _downsample
 from check_results import get_distance_visualization, create_vesicle_pools, _update_colors
 
@@ -48,7 +49,10 @@ def visualize_folder(folder, binning):
     seg_files = glob(os.path.join(result_folder, "*.tif"))
     segmentations = {}
     for seg_file in seg_files:
-        seg_name = os.path.basename(seg_file).split("_")[-1].rstrip(".tif").lower()
+        if "refined_vesicles" in seg_file:
+            seg_name = "refined_vesicles"
+        else:
+            seg_name = os.path.basename(seg_file).split("_")[-1].rstrip(".tif").lower()
         seg = _load_segmentation(seg_file, binning, tomo)
         if seg_name == "vesikel":
             segmentations["vesicles"] = seg
@@ -68,17 +72,25 @@ def visualize_folder(folder, binning):
         name: os.path.join(distance_folder, f"{name}.npz") for name in ["ribbon", "PD", "membrane"]
     }
 
-    tomo, segmentations, distance_lines = get_distance_visualization(
-        tomo, segmentations, distance_files, vesicle_ids, scale=binning
+    tomo, segmentations, distance_lines, mem_props = get_distance_visualization(
+        tomo, segmentations, distance_files, vesicle_ids, scale=binning, return_mem_props=True
     )
+    mem_props["distance"] = np.round(mem_props["distance"], 2)
 
     v = napari.Viewer()
     v.add_image(tomo)
     for name, seg in segmentations.items():
-        v.add_labels(seg, name=name, color=colors.get(name, None))
+        try:
+            v.add_labels(seg, name=name, color=colors.get(name, None))
+        except TypeError:
+            v.add_labels(seg, name=name, colormap=colors.get(name, None))
 
     for name, lines in distance_lines.items():
-        v.add_shapes(lines, shape_type="line", name=name, visible=False)
+        layer = v.add_shapes(
+            lines, shape_type="line", name=name, visible=False, properties=mem_props,
+        )
+        if name == "membrane_distances":
+            add_table(layer, v)
 
     v.title = folder
     napari.run()

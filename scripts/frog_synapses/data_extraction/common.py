@@ -5,7 +5,48 @@ import imageio.v3 as imageio
 import matplotlib.pyplot as plt
 import numpy as np
 
+from micro_sam.inference import batched_inference
 from natsort import natsorted
+from skimage.measure import label
+from skimage.filters import gaussian
+from skimage.segmentation import watershed
+
+
+def segment_vesicles_with_sam(predictor, image, vesicle_annotations):
+    vesicles = label(vesicle_annotations)
+    vesicle_ids, coordinates = np.unique(vesicles, return_index=True)
+    vesicle_ids, coordinates = vesicle_ids[1:], coordinates[1:]
+
+    points = np.unravel_index(coordinates, vesicles.shape)
+    points = np.concatenate([points[0][:, None], points[1][:, None]], axis=1)
+    points = points[:, ::-1]
+    point_labels = np.ones(len(points), dtype=int)
+
+    points = points[:, None]
+    point_labels = point_labels[:, None]
+
+    segmentation = batched_inference(predictor, image, batch_size=16, points=points, point_labels=point_labels)
+    return segmentation
+
+
+def read_and_crop_folder(folder):
+    stack = read_volume(folder)
+    membrane = read_labels(folder, stack.shape, "membrane")
+    if membrane.sum() == 0:
+        return None, None, None, None
+
+    vesicles = read_labels(folder, stack.shape, ["vesicles", "labeled_vesicles"])
+    active_zone = read_labels(folder, stack.shape, "active_zone")
+
+    bb = np.where(membrane == 1)
+    bb = tuple(slice(int(b.min()), int(b.max() + 1)) for b in bb)
+
+    stack = stack[bb]
+    vesicles = vesicles[bb]
+    membrane = membrane[bb]
+    active_zone = active_zone[bb]
+
+    return stack, vesicles, membrane, active_zone
 
 
 def read_volume(folder):
@@ -16,7 +57,27 @@ def read_volume(folder):
     return np.stack(images)
 
 
-def read_labels(folder, shape, annotation_names):
+def _fill_mask(labels):
+    filled_labels = np.zeros_like(labels)
+
+    center = tuple(sh // 2 for sh in labels.shape[1:])
+
+    for z in range(labels.shape[0]):
+        hmap = gaussian(labels[z], sigma=1)
+        seeds = np.zeros(hmap.shape, dtype="uint16")
+
+        seeds[center] = 1
+        seeds[:, [0, -1]] = 2
+        seeds[[0, -1], :] = 2
+
+        seg = watershed(hmap, markers=seeds)
+        seg = (seg == 1).astype(labels.dtype)
+        filled_labels[z] = seg
+
+    return filled_labels
+
+
+def read_labels(folder, shape, annotation_names, fill_mask=False):
     annotations = {
         "active_zone": (0, 1),
         "membrane": (2, 3),
@@ -48,6 +109,9 @@ def read_labels(folder, shape, annotation_names):
             if valid.any():
                 z_vals = np.full(x[valid].shape, z, dtype=int)
                 labels[z_vals, x[valid].astype(int), y[valid].astype(int)] = j + 1
+
+    if fill_mask:
+        labels = _fill_mask(labels)
 
     return labels
 
