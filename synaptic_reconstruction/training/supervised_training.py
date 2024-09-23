@@ -118,7 +118,7 @@ def get_supervised_loader(
         if ignore_label is None:
             label_transform = torch_em.transform.BoundaryTransform(add_binary_target=True)
         else:
-            label_transform = torch_em.transform.BoundaryTransformWithIgnoreLabel(
+            label_transform = torch_em.transform.label.BoundaryTransformWithIgnoreLabel(
                 add_binary_target=True, ignore_label=ignore_label
             )
 
@@ -233,7 +233,9 @@ def supervised_training(
     else:
         loss = torch_em.loss.LossWrapper(
             loss=torch_em.loss.DiceLoss(),
-            transform=torch_em.loss.wrapper.MaskIgnoreLabel(ignore_label=ignore_label)
+            transform=torch_em.loss.wrapper.MaskIgnoreLabel(
+                ignore_label=ignore_label, masking_method="multiply",
+            )
         )
 
     trainer = torch_em.default_segmentation_trainer(
