@@ -146,6 +146,12 @@ def process_files(input_path, output_root, label_key):
         else:  # If we have nested input folders then we preserve the folder structure in the output.
             rel_folder = os.path.relpath(input_folder, input_root)
             output_path = os.path.join(output_root, rel_folder, fname)
+        
+        # Skip processing if the file already exists
+        if os.path.exists(output_path):
+            print(f"Skipping {fname}, already processed.")
+            continue
+        
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
         create_vesicle_ground_truth_versions(path, output_path, label_key)
 
