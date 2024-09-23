@@ -49,7 +49,7 @@ Note: export to imod is not yet implemented for other structures than vesicles.
 We now have storage space to exchange tomogram data etc.
 You can copy data over there with the following command:
 ```
-$ rsync -avz --delete -e ssh /path/to/tomogram_folder constantin@sfb1286.ims.bio:/data/share/<NAME>
+$ rsync -avz --delete -e ssh /path/to/tomogram_folder constantin@sfb1286.ims.bio:data/share/<NAME>
 ```
 Here, `/path/to/tomogram_folder` is the folder with the tomograms (or any other data) you want to copy over.
 Replace `<NAME>` with the name for storing the data on the server. This name should not contain any additional `/`s,
