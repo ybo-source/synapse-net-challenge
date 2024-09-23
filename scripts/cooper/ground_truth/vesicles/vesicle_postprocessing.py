@@ -137,7 +137,7 @@ def create_vesicle_ground_truth_versions(input_path, output_path, gt_key):
         f.create_dataset("labels/vesicles/combined_vesicles", data=combined_vesicles, compression="gzip")
 
 
-def process_files(input_path, output_root, label_key):
+def process_files(input_path, output_root, label_key, overwrite=False):
     input_files, input_root = _get_file_paths(input_path, ext=".h5")
     for path in tqdm(input_files):
         input_folder, fname = os.path.split(path)
@@ -148,7 +148,7 @@ def process_files(input_path, output_root, label_key):
             output_path = os.path.join(output_root, rel_folder, fname)
         
         # Skip processing if the file already exists
-        if os.path.exists(output_path):
+        if os.path.exists(output_path) and not overwrite:
             print(f"Skipping {fname}, already processed.")
             continue
         
