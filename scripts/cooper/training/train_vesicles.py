@@ -52,7 +52,7 @@ def get_paths(split, datasets):
 
     return paths
 
-def train(key):
+def train(key, ignore_label = None, training_2D = False):
 
     datasets = [
     "01_hoi_maus_2020_incomplete",
@@ -72,26 +72,36 @@ def train(key):
     print(len(val_paths), "tomograms for validation")
 
     patch_shape = [48, 256, 256]
+    model_name=f"vesicles-model-new_postprocessing_{key}"
+
+    #checking for 2D training
+    if training_2D:
+        patch_shape = [1, 256, 256]
+        model_name=f"2D-vesicles-model-new_postprocessing_{key}"
+    
     batch_size = 4
     check = False
 
     supervised_training(
-        name=f"vesicles-model-new_postprocessing_{key}",
+        name=model_name,
         train_paths=train_paths,
         val_paths=val_paths,
         label_key=f"/labels/vesicles/{key}",
         patch_shape=patch_shape, batch_size=batch_size,
         n_samples_train=None, n_samples_val=25,
         check=check,
-        save_root=".",
+        save_root="/scratch-emmy/usr/nimsmuth/synapse_seg/models",
+        ignore_label= ignore_label,
     )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-k", "--key", required=True)
+    parser.add_argument("-k", "--key", required=True, help="Key ID that will be used by model in training")
+    parser.add_argument("-m", "--mask", type=int, default=None, help="Mask ID that will be ignored by model in training")
+    parser.add_argument("-2D", "--training_2D", default=False, help="Set to True for 2D training")
     args = parser.parse_args()
-    train(args.key)
+    train(args.key, args.mask, args.training_2D)
 
 
 if __name__ == "__main__":
