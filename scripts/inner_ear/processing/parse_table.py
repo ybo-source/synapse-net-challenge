@@ -11,9 +11,9 @@ def get_data_root():
     if hostname == "pc-kreshuk11":
         root = "/home/pape/Work/data/moser/em-synapses"
     elif hostname == "glogin9":
-        root = "/scratch-emmy/usr/nimcpape/data/moser"
+        root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/original_data_sophia"
     elif "ggpu" in hostname:
-        root = "/scratch-emmy/usr/nimcpape/data/moser"
+        root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/original_data_sophia"
     return root
 
 
@@ -78,9 +78,9 @@ def _match_correction_file(correction_folder, seg_name):
 
 def check_val_table(val_table, row):
     row_selection = (val_table.Bedingung == row.Bedingung) &\
-            (val_table.Maus == row.Maus) &\
-            (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
-            (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
+        (val_table.Maus == row.Maus) &\
+        (val_table["Ribbon-Orientierung"] == row["Ribbon-Orientierung"]) &\
+        (val_table["OwnCloud-Unterordner"] == row["OwnCloud-Unterordner"])
 
     # We have different column names that mark the progress.
     # Latest: "Kommentar 16.09.24"

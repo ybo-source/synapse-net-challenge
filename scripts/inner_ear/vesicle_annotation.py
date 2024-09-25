@@ -139,6 +139,7 @@ def create_data_for_vesicle_annotation(view=True):
 def correct_volume(path, show_corrected):
     fname = Path(path).stem
 
+    initial_vesicles = None
     with h5py.File(path, "r") as f:
         raw = f["raw"][:]
 
@@ -146,6 +147,8 @@ def correct_volume(path, show_corrected):
             if show_corrected:
                 vesicles = f["corrected/vesicles"][:]
                 correction_mask = f["corrected/correction_mask"][:]
+
+                initial_vesicles = f["labels/vesicles"][:]
             else:
                 print("Skipping annotations for", fname, "because corrections are already saved.")
                 return True
@@ -160,6 +163,8 @@ def correct_volume(path, show_corrected):
     v.add_image(raw)
     v.add_labels(vesicles)
     v.add_labels(correction_mask)
+    if initial_vesicles is not None:
+        v.add_labels(initial_vesicles, visible=False)
     v.title = fname
 
     @magicgui(call_button="Save Correction")
