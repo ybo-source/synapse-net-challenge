@@ -10,8 +10,12 @@ def check_file(path):
     with h5py.File(path, "r") as f:
         raw = f["raw"][:]
         segmentations = {}
-        for name, ds in f["labels"].items():
-            segmentations[name] = ds[:]
+        for name, node in f["labels"].items():
+            if name == "imod":
+                for sub_name, sub_node in f["labels/imod"].items():
+                    segmentations[f"imod/{sub_name}"] = sub_node[:]
+            else:
+                segmentations[name] = node[:]
 
     v = napari.Viewer()
     v.add_image(raw)
