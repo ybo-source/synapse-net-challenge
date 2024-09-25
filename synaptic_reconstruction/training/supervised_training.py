@@ -80,6 +80,7 @@ def get_supervised_loader(
     sampler: Optional[callable] = None,
     ignore_label: Optional[int] = None,
     label_transform: Optional[callable] = None,
+    **loader_kwargs,
 ) -> torch.utils.data.DataLoader:
     """Get a dataloader for supervised segmentation training.
 
@@ -102,6 +103,7 @@ def get_supervised_loader(
             ignored in the loss computation. By default this option is not used.
         label_transform: Label transform that is applied to the segmentation to compute the targets.
             If no label transform is passed (the default) a boundary transform is used.
+        loader_kwargs: Additional keyword arguments for the dataloader.
 
     Returns:
         The PyTorch dataloader.
@@ -137,7 +139,8 @@ def get_supervised_loader(
             torch_em.transform.PadIfNecessary(patch_shape), torch_em.transform.get_augmentations(3)
         )
 
-    num_workers = 4 * batch_size
+    num_workers = loader_kwargs.pop("num_workers", 4 * batch_size)
+    shuffle = loader_kwargs.pop("shuffle", True)
 
     if sampler is None:
         sampler = torch_em.data.sampler.MinInstanceSampler(min_num_instances=4)
@@ -147,8 +150,8 @@ def get_supervised_loader(
         data_paths, label_key, sampler=sampler,
         batch_size=batch_size, patch_shape=patch_shape, ndim=ndim,
         is_seg_dataset=True, label_transform=label_transform, transform=transform,
-        num_workers=num_workers, shuffle=True, n_samples=n_samples,
-        label_dtype=label_dtype, rois=rois,
+        num_workers=num_workers, shuffle=shuffle, n_samples=n_samples,
+        label_dtype=label_dtype, rois=rois, **loader_kwargs,
     )
     return loader
 
@@ -172,8 +175,15 @@ def supervised_training(
     check: bool = False,
     ignore_label: Optional[int] = None,
     label_transform: Optional[callable] = None,
+    out_channels: int = 2,
+    **loader_kwargs,
 ):
     """Run supervised segmentation training.
+
+    This function trains a UNet for predicting outputs for segmentation.
+    Expects instance labels and converts them to boundary targets.
+    This behaviour can be changed by passing custom arguments for `label_transform`
+    and/or `out_channels`.
 
     Args:
         name: The name for the checkpoint to be trained.
@@ -201,13 +211,17 @@ def supervised_training(
             ignored in the loss computation. By default this option is not used.
         label_transform: Label transform that is applied to the segmentation to compute the targets.
             If no label transform is passed (the default) a boundary transform is used.
+        out_channels: The number of output channels of the UNet.
+        loader_kwargs: Additional keyword arguments for the dataloader.
     """
     train_loader = get_supervised_loader(train_paths, raw_key, label_key, patch_shape, batch_size,
                                          n_samples=n_samples_train, rois=train_rois, sampler=sampler,
-                                         ignore_label=ignore_label, label_transform=label_transform)
+                                         ignore_label=ignore_label, label_transform=label_transform,
+                                         **loader_kwargs)
     val_loader = get_supervised_loader(val_paths, raw_key, label_key, patch_shape, batch_size,
                                        n_samples=n_samples_val, rois=val_rois, sampler=sampler,
-                                       ignore_label=ignore_label, label_transform=label_transform)
+                                       ignore_label=ignore_label, label_transform=label_transform,
+                                       **loader_kwargs)
 
     if check:
         from torch_em.util.debug import check_loader
@@ -221,9 +235,9 @@ def supervised_training(
     is_2d = z == 1
 
     if is_2d:
-        model = get_2d_model(out_channels=2)
+        model = get_2d_model(out_channels=out_channels)
     else:
-        model = get_3d_model(out_channels=2)
+        model = get_3d_model(out_channels=out_channels)
 
     # No ignore label -> we can use default loss.
     if ignore_label is None:
