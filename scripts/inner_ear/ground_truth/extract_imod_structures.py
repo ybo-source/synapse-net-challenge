@@ -59,7 +59,6 @@ def extract_folder(folder, output_path, rescale, show):
 
 
 def extract_structures_for_sophias_data(data_root, output_root, show=True):
-    output_root = "test-export"
 
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
@@ -108,10 +107,8 @@ def main():
 
     # Export for tomograms from Sophia.
     data_root = get_data_root()
-    output_root = "test-export"
+    output_root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/inner_ear_data"
     extract_structures_for_sophias_data(data_root, output_root, show=False)
-
-    # TODO: export for previous rat and tether tomograms.
 
 
 if __name__ == "__main__":

@@ -11,9 +11,9 @@ def get_data_root():
     if hostname == "pc-kreshuk11":
         root = "/home/pape/Work/data/moser/em-synapses"
     elif hostname == "glogin9":
-        root = "/scratch-emmy/usr/nimcpape/data/moser"
+        root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/original_data_sophia"
     elif "ggpu" in hostname:
-        root = "/scratch-emmy/usr/nimcpape/data/moser"
+        root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/original_data_sophia"
     return root
 
 

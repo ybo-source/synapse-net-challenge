@@ -190,7 +190,7 @@ def extract_automatic_structures(table, val_table, output_root):
 
 def main():
     data_root = get_data_root()
-    output_root = "test-export"
+    output_root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/inner_ear_data"
 
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
