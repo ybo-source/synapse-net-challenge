@@ -30,9 +30,20 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
     #check
     os.makedirs(Path(seg_path).parent, exist_ok=True)
 
+    print(f"Saving results in {seg_path}")
     with h5py.File(seg_path, "a") as f:
-        f.create_dataset("raw", data=input, compression="gzip")
-        f.create_dataset(f"vesicles/{key_label}", data=segmentation, compression="gzip")
+        if "raw" in f:
+            print("raw image already saved")
+        else:
+            f.create_dataset("raw", data=input, compression="gzip")
+
+        key=f"vesicles/segment_from_{key_label}"
+        if key in f:
+            print("Skipping", input_path, "because", key, "exists")
+        else:
+            f.create_dataset(key, data=segmentation, compression="gzip")
+        
+        
 
 
 def segment_folder(args):
@@ -72,17 +83,19 @@ def main():
         help="Include vesicles that touch the top / bottom of the tomogram. By default these are excluded."
     )
     parser.add_argument(
-        "--key_label", default = "segment_from_combined_vesicles",
+        "--key_label", "-k", default = "combined_vesicles",
         help="Give the key name for saving the segmentation in h5."
     )
     args = parser.parse_args()
 
     input_ = args.input_path
+    
     if os.path.isdir(input_):
         segment_folder(args)
     else:
         run_vesicle_segmentation(input_, args.output_path, args.model_path, args.tile_shape, args.halo, args.include_boundary, args.key_label)
 
+    print("Finished segmenting!")
 
 if __name__ == "__main__":
     main()
