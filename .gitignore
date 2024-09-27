@@ -7,3 +7,4 @@ models/*/
 *.egg-info/
 run_sbatch.sbatch
 slurm/
+scripts/cooper/evaluation_results/
