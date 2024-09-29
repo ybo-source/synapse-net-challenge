@@ -62,13 +62,16 @@ def get_prediction(
         # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.
         if model_path.endswith("best.pt"):
             model_path = os.path.split(model_path)[0]
-
-        updated_tiling = {}
-        for tile, dimensions in tiling.items():
-            updated_tiling[tile] = {
-                dim: dimensions[dim] - halo[dim]
-                for dim in dimensions
-            }
+        print(f"tiling {tiling}")
+        # Create updated_tiling with the same structure
+        updated_tiling = {
+            'tile': {},
+            'halo': tiling['halo']  # Keep the halo part unchanged
+        }
+        # Update tile dimensions
+        for dim in tiling['tile']:
+            updated_tiling['tile'][dim] = tiling['tile'][dim] - tiling['halo'][dim]
+        print(f"updated_tiling {updated_tiling}")
         pred = get_prediction_torch_em(input_volume, model_path, updated_tiling, verbose, with_channels)
 
     return pred
@@ -137,6 +140,12 @@ def get_prediction_torch_em(
 
     # Run prediction with the model.
     with torch.no_grad():
+        
+        #deal with 2D segmentation case
+        if len(input_volume.shape) == 2:
+            block_shape = [block_shape[1], block_shape[2]]
+            halo = [halo[1], halo[2]]
+
         pred = predict_with_halo(
             input_volume, model, gpu_ids=[device],
             block_shape=block_shape, halo=halo,

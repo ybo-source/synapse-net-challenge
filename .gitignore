@@ -8,3 +8,4 @@ models/*/
 run_sbatch.sbatch
 slurm/
 scripts/cooper/evaluation_results/
+scripts/cooper/training/copy_testset.py

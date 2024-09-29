@@ -52,7 +52,6 @@ def _run_distance_segmentation_parallel(
         print("Size filter in", time.time() - t0, "s")
     return seg
 
-
 def _run_segmentation_parallel(
     foreground, boundaries, verbose, min_size,
     # blocking shapes for parallel computation
@@ -137,13 +136,19 @@ def segment_vesicles(
     pred = get_prediction(input_volume, model_path, tiling, verbose)
     foreground, boundaries = pred[:2]
 
+    #deal with 2D segmentation case
+    kwargs = {}
+    if len(input_volume.shape) == 2:
+        kwargs['block_shape'] = (256, 256)
+        kwargs['halo'] = (48, 48) 
+
     if distance_based_segmentation:
         seg = _run_distance_segmentation_parallel(
-            foreground, boundaries, verbose=verbose, min_size=min_size,
+            foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs 
         )
     else:
         seg = _run_segmentation_parallel(
-            foreground, boundaries, verbose=verbose, min_size=min_size
+            foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs 
         )
 
     if exclude_boundary:
