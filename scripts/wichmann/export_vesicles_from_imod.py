@@ -21,9 +21,9 @@ def extract():
         return imod_path
 
     extract_vesicle_training_data(
-        input_folder, input_folder, output_folder, to_label_path, visualize=False,
-        exclude_label_patterns=["Endbulb", "Active Zone", "ribo"]
-    ) #exclude=["1Otof_AVCN07_449T_KO_M.Stim_M4_4_35934.rec"], 
+        input_folder, input_folder, output_folder, to_label_path, exclude=["1Otof_AVCN07_449T_KO_M.Stim_M4_4_35934.rec"], visualize=False,
+        exclude_label_patterns=["Endbulb", "Active Zone"]
+    ) 
     return output_folder
 
 
