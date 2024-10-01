@@ -5,6 +5,7 @@ from pathlib import Path
 
 from tqdm import tqdm
 import torch
+import torch_em
 
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
 from synaptic_reconstruction.inference.util import parse_tiling
@@ -66,11 +67,14 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
     tiling = parse_tiling(tile_shape, halo)
     input = get_volume(input_path)
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = torch_em.util.load_model(checkpoint=model_path, device="cpu")
+
     def process_slices(input_volume):
         processed_slices = []
         for z in range(input_volume.shape[0]):
             slice_ = input_volume[z, :, :]
-            segmented_slice = segment_vesicles(input_volume=slice_, model_path=model_path, verbose=False, tiling=tiling, exclude_boundary=not include_boundary)
+            segmented_slice = segment_vesicles(input_volume=slice_, model=model, verbose=False, tiling=tiling, exclude_boundary=not include_boundary)
             processed_slices.append(segmented_slice)
         return processed_slices
 
@@ -121,7 +125,7 @@ def main():
         help="The filepath to directory where the segmentations will be saved."
     )
     parser.add_argument(
-        "--model_path", "-m", required=True, help="The filepath to the vesicle model."
+        "--model_path", "-m", required=True, help="The DIRECTORY path to the vesicle model."
     )
     parser.add_argument(
         "--tile_shape", type=int, nargs=3,
