@@ -33,6 +33,8 @@ def evaluate_slices(gt, vesicles):
         precision_scores.append(precision)
         recall_scores.append(recall)
     
+    print(f"f1 scores to be averaged {f1_scores}")
+
     # Calculate the mean for each metric
     mean_f1 = np.mean(f1_scores)
     mean_precision = np.mean(precision_scores)
@@ -55,8 +57,8 @@ def evaluate_file(labels_path, vesicles_path, model_name, segment_key, anno_key)
 
     #get the labels and vesicles
     with h5py.File(labels_path) as label_file:
-        labels = label_file["labels"]
-        vesicles = labels["vesicles"]
+        #labels = label_file["labels"]
+        vesicles = label_file["vesicles"]
         gt = vesicles[anno_key][:]
         
     with h5py.File(vesicles_path) as seg_file:
