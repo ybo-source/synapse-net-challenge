@@ -148,15 +148,15 @@ def segment_vesicles(
     kwargs = {}
     if len(input_volume.shape) == 2:
         kwargs['block_shape'] = (256, 256)
-        kwargs['halo'] = (48, 48) 
+        kwargs['halo'] = (48, 48)
 
     if distance_based_segmentation:
         seg = _run_distance_segmentation_parallel(
-            foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs 
+            foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs
         )
     else:
         seg = _run_segmentation_parallel(
-            foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs 
+            foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs
         )
 
     if exclude_boundary:
