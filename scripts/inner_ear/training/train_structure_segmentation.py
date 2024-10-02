@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from torch_em.data.sampler import MinForegroundSampler
 from tqdm import tqdm
 
-ROOT = "../ground_truth/test-export"
+ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/inner_ear_data"
 LABEL_KEY = "labels/inner_ear_structures"
 
 
@@ -55,6 +55,10 @@ def preprocess_labels(tomograms):
             f.create_dataset(LABEL_KEY, data=labels, compression="gzip")
 
 
+def noop(x):
+    return x
+
+
 def train_inner_ear_structures(train_tomograms, val_tomograms):
     patch_shape = (64, 512, 512)
     sampler = MinForegroundSampler(min_fraction=0.05, p_reject=0.95)
@@ -62,8 +66,9 @@ def train_inner_ear_structures(train_tomograms, val_tomograms):
         name="inner_ear_structure_model",
         train_paths=train_tomograms, val_paths=val_tomograms,
         label_key=LABEL_KEY, patch_shape=patch_shape, save_root=".",
-        sampler=sampler, label_transform=lambda x: x, out_channels=3,
-        with_label_channels=True,
+        sampler=sampler, label_transform=noop, out_channels=3,
+        with_label_channels=True, num_workers=12,
+        n_samples_train=500, n_samples_val=25,
     )
 
 
