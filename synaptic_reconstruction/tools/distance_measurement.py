@@ -47,7 +47,7 @@ def _downsample(data, scale, is_seg=False, target_shape=None):
     return data
 
 
-# @magicgui(call_button="Visualize Distances")
+@magicgui(call_button="Visualize Distances")
 def measurement_widget(
     viewer: napari.Viewer,
     compute_direct_distances: bool = True,

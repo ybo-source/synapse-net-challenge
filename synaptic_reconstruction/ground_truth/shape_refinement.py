@@ -33,7 +33,7 @@ def edge_filter(
             - "laplace": Edges are found with a laplacian of gaussian filter.
             - "ggm": Edges are found with a gaussian gradient magnitude filter.
             - "structure-tensor": Edges are found based on the 2nd eigenvalue of the structure tensor.
-        per_slice:
+        per_slice: Compute the filter per slice instead of for the whole volume.
     Returns:
         Volume with edge strength.
     """
