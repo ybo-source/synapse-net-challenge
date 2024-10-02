@@ -54,6 +54,7 @@ def _run_distance_segmentation_parallel(
         print("Size filter in", time.time() - t0, "s")
     return seg
 
+
 def _run_segmentation_parallel(
     foreground, boundaries, verbose, min_size,
     # blocking shapes for parallel computation
@@ -98,7 +99,7 @@ def segment_vesicles(
     tiling: Optional[Dict[str, Dict[str, int]]] = None,
     min_size: int = 500,
     verbose: bool = True,
-    distance_based_segmentation: bool = False,
+    distance_based_segmentation: bool = True,
     return_predictions: bool = False,
     scale: Optional[List[float]] = None,
     exclude_boundary: bool = False,
@@ -122,10 +123,6 @@ def segment_vesicles(
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
         and the predictions if return_predictions is True.
     """
-    #make sure either model path or model is passed
-    if model is None and model_path is None:
-        raise ValueError("Either 'model_path' or 'model' must be provided.")
-
     if verbose:
         print("Segmenting vesicles in volume of shape", input_volume.shape)
 
@@ -144,7 +141,7 @@ def segment_vesicles(
     pred = get_prediction(input_volume, tiling, model_path, model, verbose)
     foreground, boundaries = pred[:2]
 
-    #deal with 2D segmentation case
+    # Deal with 2D segmentation case
     kwargs = {}
     if len(input_volume.shape) == 2:
         kwargs['block_shape'] = (256, 256)

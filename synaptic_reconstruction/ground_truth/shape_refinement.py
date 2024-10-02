@@ -104,7 +104,7 @@ def check_filters(
     return responses
 
 
-def refine_vesicle_shapes_v1(
+def refine_vesicle_shapes(
     vesicles: np.ndarray,
     edge_map: np.ndarray,
     foreground_erosion: int = 2,
@@ -173,7 +173,7 @@ def refine_vesicle_shapes_v1(
     return refined_vesicles
 
 
-def refine_vesicle_shapes_v2(
+def refine_individual_vesicle_shapes(
     vesicles: np.ndarray,
     edge_map: np.ndarray,
     foreground_erosion: int = 4,
