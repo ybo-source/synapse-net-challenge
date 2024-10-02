@@ -4,6 +4,8 @@ from typing import Dict, List, Optional, Tuple, Union
 import elf.parallel as parallel
 import numpy as np
 
+import torch
+
 from skimage.transform import rescale, resize
 from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
 from synaptic_reconstruction.inference.postprocessing.vesicles import filter_zborder_objects
@@ -91,7 +93,8 @@ def _run_segmentation_parallel(
 
 def segment_vesicles(
     input_volume: np.ndarray,
-    model_path: str,
+    model_path: Optional[str] = None,
+    model: Optional[torch.nn.Module] = None,
     tiling: Optional[Dict[str, Dict[str, int]]] = None,
     min_size: int = 500,
     verbose: bool = True,
@@ -105,7 +108,8 @@ def segment_vesicles(
 
     Args:
         input_volume: The input volume to segment.
-        model_path: The path to the model checkpoint.
+        model_path: The path to the model checkpoint if 'model' is not provided.
+        model: Pre-loaded model. Either model_path or model is required.
         tiling: The tiling configuration for the prediction.
         min_size: The minimum size of a vesicle to be considered.
         verbose: Whether to print timing information.
@@ -118,6 +122,10 @@ def segment_vesicles(
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
         and the predictions if return_predictions is True.
     """
+    #make sure either model path or model is passed
+    if model is None and model_path is None:
+        raise ValueError("Either 'model_path' or 'model' must be provided.")
+
     if verbose:
         print("Segmenting vesicles in volume of shape", input_volume.shape)
 
@@ -133,7 +141,7 @@ def segment_vesicles(
     if tiling is None:
         tiling = get_default_tiling()
 
-    pred = get_prediction(input_volume, model_path, tiling, verbose)
+    pred = get_prediction(input_volume, tiling, model_path, model, verbose)
     foreground, boundaries = pred[:2]
 
     #deal with 2D segmentation case

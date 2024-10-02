@@ -21,8 +21,9 @@ from tqdm import tqdm
 
 def get_prediction(
     input_volume: np.ndarray,  # [z, y, x]
-    model_path: str,
     tiling: Dict[str, Dict[str, int]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
+    model_path: Optional[str] = None,
+    model: Optional[torch.nn.Module] = None,
     verbose: bool = True,
     with_channels: bool = False,
 ):
@@ -34,7 +35,8 @@ def get_prediction(
 
     Args:
         input_volume: The input volume to predict on.
-        model_path: The path to the model checkpoint.
+        model_path: The path to the model checkpoint if 'model' is not provided.
+        model: Pre-loaded model. Either model_path or model is required.
         tiling: The tiling configuration for the prediction.
         verbose: Whether to print timing information.
         with_channels: Whether to predict with channels.
@@ -45,7 +47,11 @@ def get_prediction(
     # We always use the same default halo.
     halo = {"x": 64, "y": 64, "z": 16}
 
-    is_bioimageio = model_path.endswith(".zip")
+    if model is not None:
+        is_bioimageio = None
+    else:
+        is_bioimageio = model_path.endswith(".zip")
+    
 
     # We standardize the data for the whole volume beforehand.
     # If we have channels then the standardization is done independently per channel.
@@ -59,9 +65,10 @@ def get_prediction(
         # TODO determine if we use the old or new API and select the corresponding function
         pred = get_prediction_bioimageio_old(input_volume, model_path, tiling, verbose)
     else:
-        # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.
-        if model_path.endswith("best.pt"):
-            model_path = os.path.split(model_path)[0]
+        if model is None:
+            # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.          
+            if model_path.endswith("best.pt"):
+                model_path = os.path.split(model_path)[0]
         print(f"tiling {tiling}")
         # Create updated_tiling with the same structure
         updated_tiling = {
@@ -72,7 +79,7 @@ def get_prediction(
         for dim in tiling['tile']:
             updated_tiling['tile'][dim] = tiling['tile'][dim] - tiling['halo'][dim]
         print(f"updated_tiling {updated_tiling}")
-        pred = get_prediction_torch_em(input_volume, model_path, updated_tiling, verbose, with_channels)
+        pred = get_prediction_torch_em(input_volume, updated_tiling, model_path, model, verbose, with_channels)
 
     return pred
 
@@ -108,8 +115,9 @@ def get_prediction_bioimageio_old(
 
 def get_prediction_torch_em(
     input_volume: np.ndarray,  # [z, y, x]
-    model_path: str,
     tiling: Dict[str, Dict[str, int]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
+    model_path: Optional[str] = None,
+    model: Optional[torch.nn.Module] = None,
     verbose: bool = True,
     with_channels: bool = False,
 ) -> np.ndarray:
@@ -118,7 +126,8 @@ def get_prediction_torch_em(
 
     Args:
         input_volume: The input volume to predict on.
-        model_path: The path to the model checkpoint.
+        model_path: The path to the model checkpoint if 'model' is not provided.
+        model: Pre-loaded model. Either model_path or model is required.
         tiling: The tiling configuration for the prediction.
         verbose: Whether to print timing information.
         with_channels: Whether to predict with channels.
@@ -133,10 +142,11 @@ def get_prediction_torch_em(
     t0 = time.time()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    if os.path.isdir(model_path):  # Load the model from a torch_em checkpoint.
-        model = torch_em.util.load_model(checkpoint=model_path, device=device)
-    else:  # Load the model directly from a serialized pytorch model.
-        model = torch.load(model_path)
+    if model is None:
+        if os.path.isdir(model_path):  # Load the model from a torch_em checkpoint.
+            model = torch_em.util.load_model(checkpoint=model_path, device=device)
+        else:  # Load the model directly from a serialized pytorch model.
+            model = torch.load(model_path)
 
     # Run prediction with the model.
     with torch.no_grad():

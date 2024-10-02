@@ -9,7 +9,8 @@ from synaptic_reconstruction.inference.vesicles import segment_vesicles
 from synaptic_reconstruction.inference.util import parse_tiling
 
 def _require_output_folders(output_folder):
-    seg_output = os.path.join(output_folder, "segmentations")
+    #seg_output = os.path.join(output_folder, "segmentations")
+    seg_output = output_folder
     os.makedirs(seg_output, exist_ok=True)
     return seg_output
 
