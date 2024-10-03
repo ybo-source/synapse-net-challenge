@@ -6,22 +6,18 @@ import numpy as np
 
 from elf.evaluation.matching import label_overlap, intersection_over_pred
 from skimage.segmentation import relabel_sequential
-from scipy.ndimage import binary_dilation, binary_erosion, distance_transform_edt
+from scipy.ndimage import binary_dilation
 from tqdm import tqdm
 
-from skimage.morphology import ball
-
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
-from synaptic_reconstruction.ground_truth import find_additional_objects
+# from synaptic_reconstruction.ground_truth import find_additional_objects
 from synaptic_reconstruction.inference.util import _get_file_paths
 from synaptic_reconstruction.ground_truth.shape_refinement import refine_vesicle_shapes, edge_filter
-
-from skimage import filters
 
 MODEL_PATH = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
 
 
-def extract_gt_bounding_box(raw, vesicle_gt,  halo=[2, 32, 32]):
+def extract_gt_bounding_box(raw, vesicle_gt, halo=[2, 32, 32]):
     bb = np.where(vesicle_gt > 0)
     bb = tuple(slice(
         max(int(b.min() - ha), 0),
@@ -34,10 +30,8 @@ def extract_gt_bounding_box(raw, vesicle_gt,  halo=[2, 32, 32]):
 
 # Postprocess the vesicle shape (if still necessary after fixing the IMOD extraction).
 def postprocess_vesicle_shape(vesicle_gt):
-
-    edge_map = edge_filter(vesicle_gt, sigma = 3, method = "sobel")
+    edge_map = edge_filter(vesicle_gt, sigma=3, method="sobel", per_slice=True)
     vesicle_gt = refine_vesicle_shapes(vesicle_gt, edge_map, background_erosion=7)
-
     return vesicle_gt
 
 
@@ -67,7 +61,7 @@ def find_additional_vesicles(vesicle_gt, segmentation, matching_threshold=0.5):
     return additional_vesicles
 
 
-def postprocess_vesicle_gt(raw, vesicle_gt):
+def postprocess_vesicle_gt(raw, vesicle_gt, refine_shapes):
     """Run post-processing for the vesicle ground-truth extracted from IMOD.
     This includes the following steps:
     - Extract the bounding box around the annotated vesicles in the ground-truth.
@@ -81,18 +75,23 @@ def postprocess_vesicle_gt(raw, vesicle_gt):
     assert raw.shape == vesicle_gt.shape
 
     # Extract the bounding box of the data that contains the vesicles in the GT.
-    raw, vesicle_gt = extract_gt_bounding_box(raw, vesicle_gt)
-
-    # Get the model predictions and segmentation for this data.
-    segmentation, prediction = segment_vesicles(raw, MODEL_PATH, return_predictions=True)
+    raw, vesicle_gt_orig = extract_gt_bounding_box(raw, vesicle_gt)
 
     # Additional post-processing to improve the shape of the vesicles.
-    vesicle_gt = postprocess_vesicle_shape(vesicle_gt)
+    if refine_shapes:
+        vesicle_gt = postprocess_vesicle_shape(vesicle_gt_orig)
+    else:
+        vesicle_gt = vesicle_gt_orig
 
+    # Get the model predictions and segmentation for this data.
+    segmentation, prediction = segment_vesicles(
+        raw, MODEL_PATH, return_predictions=True, distance_based_segmentation=True,
+        verbose=False,
+    )
     # Get vesicles in the prediction that are not part of the ground-truth.
     additional_vesicles = find_additional_vesicles(vesicle_gt, segmentation, matching_threshold=0.06)
 
-    return raw, vesicle_gt, additional_vesicles
+    return raw, vesicle_gt, vesicle_gt_orig, additional_vesicles
 
 
 def _mask_additional_vesicles(vesicle_gt, additional_vesicles, dilation_radius=2):
@@ -105,13 +104,9 @@ def _mask_additional_vesicles(vesicle_gt, additional_vesicles, dilation_radius=2
     return masked_vesicles
 
 
-def create_vesicle_ground_truth_versions(input_path, output_path, gt_key):
-    with h5py.File(input_path, "r") as f:
-        raw = f["raw"][:]
-        vesicle_gt = f[gt_key][:]
-
-    # Extract raw data, vesicle gt and additional vesicles from the gt bounding box.
-    raw, vesicle_gt, additional_vesicles = postprocess_vesicle_gt(raw, vesicle_gt)
+def get_vesicle_versions(vesicle_gt, additional_vesicles):
+    if additional_vesicles is None:
+        return None, None
 
     # Create a new ground-truth version where all additional vesicles are masked out with -1.
     masked_vesicles = _mask_additional_vesicles(vesicle_gt, additional_vesicles)
@@ -123,6 +118,30 @@ def create_vesicle_ground_truth_versions(input_path, output_path, gt_key):
     extra_mask = additional_vesicles != 0
     extra_vesicles[extra_mask] += offset
     combined_vesicles[extra_mask] = extra_vesicles[extra_mask]
+
+    return masked_vesicles, combined_vesicles
+
+
+def create_vesicle_ground_truth_versions(
+    input_path,
+    output_path,
+    gt_key,
+    refine_shapes=False
+):
+    ds_name = os.path.basename(os.path.split(input_path)[0])
+    # Skip preprocessing 06 since it takes long and will not be used fortraining anyways
+    if ds_name.startswith("06"):
+        return
+
+    with h5py.File(input_path, "r") as f:
+        raw = f["raw"][:]
+        vesicle_gt_orig = f[gt_key][:]
+
+    # Extract raw data, vesicle gt and additional vesicles from the gt bounding box.
+    raw, vesicle_gt, vesicle_gt_orig, additional_vesicles = postprocess_vesicle_gt(raw, vesicle_gt_orig, refine_shapes)
+
+    # Get different version of vesicle gt.
+    masked_vesicles, combined_vesicles = get_vesicle_versions(vesicle_gt, additional_vesicles)
 
     # Save all ground-truth data.
     with h5py.File(output_path, "a") as f:
@@ -137,7 +156,7 @@ def create_vesicle_ground_truth_versions(input_path, output_path, gt_key):
         f.create_dataset("labels/vesicles/combined_vesicles", data=combined_vesicles, compression="gzip")
 
 
-def process_files(input_path, output_root, label_key, overwrite=False):
+def process_files(input_path, output_root, label_key, overwrite=False, refine_shapes=False):
     input_files, input_root = _get_file_paths(input_path, ext=".h5")
     for path in tqdm(input_files):
         input_folder, fname = os.path.split(path)
@@ -146,14 +165,14 @@ def process_files(input_path, output_root, label_key, overwrite=False):
         else:  # If we have nested input folders then we preserve the folder structure in the output.
             rel_folder = os.path.relpath(input_folder, input_root)
             output_path = os.path.join(output_root, rel_folder, fname)
-        
+
         # Skip processing if the file already exists
         if os.path.exists(output_path) and not overwrite:
             print(f"Skipping {fname}, already processed.")
             continue
-        
+
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
-        create_vesicle_ground_truth_versions(path, output_path, label_key)
+        create_vesicle_ground_truth_versions(path, output_path, label_key, refine_shapes=refine_shapes)
 
 
 def main():
@@ -161,9 +180,10 @@ def main():
     parser.add_argument("-i", "--input_path", required=True)
     parser.add_argument("-o", "--output_folder", required=True)
     parser.add_argument("-k", "--label_key", default="labels/vesicles")
+    parser.add_argument("--refine_shapes", action="store_true")
     args = parser.parse_args()
 
-    process_files(args.input_path, args.output_folder, args.label_key)
+    process_files(args.input_path, args.output_folder, args.label_key, refine_shape=args.refine_shapes)
 
 
 if __name__ == "__main__":

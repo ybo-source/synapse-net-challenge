@@ -1,10 +1,12 @@
 from typing import List, Dict
+from concurrent import futures
 
 import numpy as np
 
 from scipy.ndimage import binary_erosion, binary_dilation
-from skimage.segmentation import watershed
 from skimage.filters import gaussian, sobel
+from skimage.measure import regionprops
+from skimage.segmentation import watershed
 from tqdm import tqdm
 
 try:
@@ -19,6 +21,7 @@ def edge_filter(
     data: np.ndarray,
     sigma: float,
     method: str = "sobel",
+    per_slice: bool = False,
 ) -> np.ndarray:
     """Find edges in the image data.
 
@@ -30,6 +33,7 @@ def edge_filter(
             - "laplace": Edges are found with a laplacian of gaussian filter.
             - "ggm": Edges are found with a gaussian gradient magnitude filter.
             - "structure-tensor": Edges are found based on the 2nd eigenvalue of the structure tensor.
+        per_slice: Compute the filter per slice instead of for the whole volume.
     Returns:
         Volume with edge strength.
     """
@@ -37,6 +41,12 @@ def edge_filter(
         raise ValueError(f"Invalid edge filter method: {method}. Expect one of {FILTERS}.")
     if method in FILTERS[1:] and vigra is None:
         raise ValueError(f"Filter {method} requires vigra.")
+
+    if per_slice:
+        edge_map = np.zeros(data.shape, dtype="float32")
+        for z in range(data.shape[0]):
+            edge_map[z] = edge_filter(data[z], sigma=sigma, method=method)
+        return edge_map
 
     if method == "sobel":
         edge_map = gaussian(data, sigma=sigma)
@@ -106,7 +116,9 @@ def refine_vesicle_shapes(
     """Refine vesicle shapes by fitting vesicles to a boundary map.
 
     This function erodes the segmented vesicles, and then fits them
-    to a bonudary using a seeded watershed.
+    to a bonudary using a seeded watershed. This is done with two watersheds,
+    one two separate foreground from background and one to separate vesicles within
+    the foreground.
 
     Args:
         vesicles: The vesicle segmentation.
@@ -130,8 +142,8 @@ def refine_vesicle_shapes(
         fg_seeds = fg.astype("uint8")
     bg = vesicles == 0
     bg_seeds = binary_erosion(bg, iterations=background_erosion).astype("uint8")
-    #create 1 pixel wide mask and set to 1 and add to bg seed
-    #Create a 1-pixel wide boundary at the edges of the tomogram
+    # Create 1 pixel wide mask and set to 1 and add to bg seed
+    # Create a 1-pixel wide boundary at the edges of the tomogram
     boundary_mask = np.zeros_like(bg, dtype="uint8")
 
     # Set the boundary to 1 along the edges of each dimension
@@ -142,9 +154,8 @@ def refine_vesicle_shapes(
     boundary_mask[:, :, 0] = 1
     boundary_mask[:, :, -1] = 1
 
-    #Add the boundary to the background seeds without affecting existing seeds
+    # Add the boundary to the background seeds without affecting existing seeds
     bg_seeds = np.clip(bg_seeds + boundary_mask, 0, 1)  # Ensure values are either 0 or 1
-
 
     if fit_to_outer_boundary:
         outer_edge_map = edge_filter(edge_map, sigma=2)
@@ -159,4 +170,77 @@ def refine_vesicle_shapes(
 
     if return_seeds:
         return refined_vesicles, seeds
+    return refined_vesicles
+
+
+def refine_individual_vesicle_shapes(
+    vesicles: np.ndarray,
+    edge_map: np.ndarray,
+    foreground_erosion: int = 4,
+    background_erosion: int = 8,
+) -> np.ndarray:
+    """Refine vesicle shapes by fitting vesicles to a boundary map.
+
+    This function erodes the segmented vesicles, and then fits them
+    to a bonudary using a seeded watershed. This is done individually for each vesicle.
+
+    Args:
+        vesicles: The vesicle segmentation.
+        edge_map: Volume with high intensities for vesicle membrane.
+            You can use `edge_filter` to compute this based on the tomogram.
+        foreground_erosion: By how many pixels the foreground should be eroded in the seeds.
+        background_erosion: By how many pixels the background should be eroded in the seeds.
+    Returns:
+        The refined vesicles.
+    """
+
+    refined_vesicles = np.zeros_like(vesicles)
+    halo = [0, 12, 12]
+
+    def fit_vesicle(prop):
+        label_id = prop.label
+
+        bb = prop.bbox
+        bb = tuple(
+            slice(max(start - ha, 0), min(stop + ha, sh)) for start, stop, ha, sh in
+            zip(bb[:3], bb[3:], halo, vesicles.shape)
+        )
+        vesicle_sub = vesicles[bb]
+
+        vesicle_mask = vesicle_sub == label_id
+        hmap = edge_map[bb]
+
+        # Do refinement in 2d to avoid effects caused by anisotropy.
+        seg = np.zeros_like(vesicle_mask)
+        for z in range(seg.shape[0]):
+            m = vesicle_mask[z]
+            fg_seed = binary_erosion(m, iterations=foreground_erosion).astype("uint8")
+            if fg_seed.sum() == 0:
+                seg[z][m] = 1
+                continue
+            bg_seed = (~binary_dilation(m, iterations=background_erosion)).astype("uint8")
+            # Make sure all other vesicles in the local bbox are part of the bg seed,
+            # to avoid leaking into other vesicles.
+            bg_seed[(vesicle_sub[z] != 0) & (vesicle_sub[z] != label_id)] = 1
+
+            # Run seeded watershed to fit the shapes.
+            seeds = fg_seed + 2 * bg_seed
+            seg[z] = watershed(hmap[z], seeds) == 1
+
+        # import napari
+        # v = napari.Viewer()
+        # v.add_image(hmap)
+        # # v.add_labels(seeds)
+        # v.add_labels(seg)
+        # v.title = label_id
+        # napari.run()
+
+        refined_vesicles[bb][seg] = label_id
+
+    props = regionprops(vesicles)
+    # fit_vesicle(props[1])
+    n_threads = 8
+    with futures.ThreadPoolExecutor(n_threads) as tp:
+        list(tqdm(tp.map(fit_vesicle, props), total=len(props), disable=False, desc="refine vesicles"))
+
     return refined_vesicles
