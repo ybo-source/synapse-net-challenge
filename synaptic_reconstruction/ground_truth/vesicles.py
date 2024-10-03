@@ -209,6 +209,12 @@ def extract_vesicle_training_data(
             continue
 
         for fname in files:
+            # check if we exclude this file
+            #TODO distinguish between directory and file to skip
+            if exclude is not None and fname in exclude:
+                print("Skipping", fname)
+                continue
+
             if Path(fname).suffix not in (".mrc", ".rec"):
                 continue
 
