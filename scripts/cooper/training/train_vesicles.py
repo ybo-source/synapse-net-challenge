@@ -120,8 +120,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-k", "--key", required=True, help="Key ID that will be used by model in training")
     parser.add_argument("-m", "--mask", type=int, default=None, help="Mask ID that will be ignored by model in training")
-    parser.add_argument("-2D", "--training_2D", default=False, help="Set to True for 2D training")
-    parser.add_argument("-t", "--testset", default=True, help="Set to False if no testset should be created")
+    parser.add_argument("-2D", "--training_2D", action='store_true', help="Set to True for 2D training")
+    parser.add_argument("-t", "--testset", action='store_false', help="Set to False if no testset should be created")
     args = parser.parse_args()
     train(args.key, args.mask, args.training_2D, args.testset)
 
