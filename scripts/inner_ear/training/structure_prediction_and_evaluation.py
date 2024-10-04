@@ -11,12 +11,14 @@ from tqdm import tqdm
 from train_structure_segmentation import get_train_val_test_split
 from train_structure_segmentation import noop  # noqa
 
+# ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
+ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
 OUTPUT_ROOT = "./predictions"
 
 
 def run_prediction(input_paths, model_path, name, is_nested=False, prefix=None):
     output_root = os.path.join(OUTPUT_ROOT, name)
-    model = load_model(model_path)
+    model = None
 
     for path in input_paths:
         root, fname = os.path.split(path)
@@ -36,6 +38,9 @@ def run_prediction(input_paths, model_path, name, is_nested=False, prefix=None):
                 if prefix in f:
                     continue
 
+        if model is None:
+            model = load_model(model_path)
+
         with h5py.File(path, "r") as f:
             tomogram = f["raw"][:]
 
@@ -49,10 +54,6 @@ def run_prediction(input_paths, model_path, name, is_nested=False, prefix=None):
             for name, pred in prediction.items():
                 ds_name = name if prefix is None else f"{prefix}/{name}"
                 f.create_dataset(ds_name, data=pred, compression="gzip")
-
-
-def visualize():
-    pass
 
 
 def evaluate(input_paths, name, is_nested=False, prefix=None, save_path=None, label_names=None):
@@ -94,8 +95,51 @@ def evaluate(input_paths, name, is_nested=False, prefix=None, save_path=None, la
     return results
 
 
+def visualize(input_paths, name, is_nested=False, label_names=None, prefixes=None):
+    import napari
+
+    structure_names = ["ribbon", "PD", "membrane"]
+    if label_names is None:
+        label_names = structure_names
+
+    output_root = os.path.join(OUTPUT_ROOT, name)
+    for path in input_paths:
+        root, fname = os.path.split(path)
+        if is_nested:
+            folder_name = os.path.split(root)[1]
+            output_folder = os.path.join(output_root, folder_name)
+        else:
+            output_folder = output_root
+        output_path = os.path.join(output_folder, fname)
+
+        labels = {}
+        with h5py.File(path, "r") as f:
+            raw = f["raw"][:]
+            for name, sname in zip(label_names, structure_names):
+                labels[sname] = f[f"labels/{name}"][:]
+
+        predictions = {}
+        with h5py.File(output_path, "r") as f:
+            if prefixes is None:
+                for name in structure_names:
+                    predictions[name] = f[name][:]
+            else:
+                for prefix in prefixes:
+                    for name in structure_names:
+                        predictions[f"{prefix}/{name}"] = f[f"{prefix}/{name}"][:]
+
+        v = napari.Viewer()
+        v.add_image(raw)
+        for name, seg in labels.items():
+            v.add_labels(seg, name=f"labels/{name}", visible=False)
+        for name, seg in predictions.items():
+            v.add_labels(seg, name=f"predictions/{name}")
+        v.title = fname
+        napari.run()
+
+
 def predict_and_evaluate_train_domain():
-    _, _, paths = get_train_val_test_split()
+    _, _, paths = get_train_val_test_split(os.path.join(ROOT, "inner_ear_data"))
     print("Run evaluation on", len(paths), "tomos")
 
     name = "train_domain"
@@ -103,9 +147,7 @@ def predict_and_evaluate_train_domain():
 
     run_prediction(paths, model_path, name, is_nested=True)
     evaluate(paths, name, is_nested=True, save_path="./results/train_domain.csv")
-
-    # TODO
-    # visualize()
+    visualize(paths, name, is_nested=True)
 
 
 def predict_and_evaluate_target_domain(paths, name, adapted_model_path):
@@ -129,22 +171,17 @@ def predict_and_evaluate_target_domain(paths, name, adapted_model_path):
         results = pd.concat([results_src, results_adapted])
         results.to_csv(save_path, index=False)
 
-    # TODO
-    # visualize()
+    visualize(paths, name, label_names=label_names, prefixes=["Src", "Adapted"])
 
 
 def predict_and_evaluate_vesicle_pools():
-    paths = sorted(glob(
-        "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/other_tomograms/01_vesicle_pools/*.h5"  # noqa
-    ))
+    paths = sorted(glob(os.path.join(ROOT, "other_tomograms/01_vesicle_pools", "*.h5")))
     adapted_model_path = "./checkpoints/structure-model-adapt-vesicle_pools"
     predict_and_evaluate_target_domain(paths, "vesicle_pools", adapted_model_path)
 
 
 def predict_and_evaluate_rat():
-    paths = sorted(glob(
-        "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/other_tomograms/03_ratten_tomos/*.h5"
-    ))
+    paths = sorted(glob(os.path.join(ROOT, "other_tomograms/03_ratten_tomos", "*.h5")))
     adapted_model_path = "./checkpoints/structure-model-adapt-rat"
     predict_and_evaluate_target_domain(paths, "rat", adapted_model_path)
 
