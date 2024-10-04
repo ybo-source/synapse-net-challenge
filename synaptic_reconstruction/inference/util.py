@@ -44,14 +44,14 @@ def get_prediction(
     Returns:
         The predicted volume.
     """
-    # We always use the same default halo.
-    halo = {"x": 64, "y": 64, "z": 16}
+    # make sure either model path or model is passed
+    if model is None and model_path is None:
+        raise ValueError("Either 'model_path' or 'model' must be provided.")
 
     if model is not None:
         is_bioimageio = None
     else:
         is_bioimageio = model_path.endswith(".zip")
-    
 
     # We standardize the data for the whole volume beforehand.
     # If we have channels then the standardization is done independently per channel.
@@ -66,7 +66,7 @@ def get_prediction(
         pred = get_prediction_bioimageio_old(input_volume, model_path, tiling, verbose)
     else:
         if model is None:
-            # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.          
+            # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.
             if model_path.endswith("best.pt"):
                 model_path = os.path.split(model_path)[0]
         print(f"tiling {tiling}")
@@ -150,8 +150,8 @@ def get_prediction_torch_em(
 
     # Run prediction with the model.
     with torch.no_grad():
-        
-        #deal with 2D segmentation case
+
+        # Deal with 2D segmentation case
         if len(input_volume.shape) == 2:
             block_shape = [block_shape[1], block_shape[2]]
             halo = [halo[1], halo[2]]
@@ -277,7 +277,7 @@ def get_default_tiling():
         print("Determining suitable tiling")
 
         # We always use the same default halo.
-        halo = {"x": 64, "y": 64, "z": 16} #before 64,64,8
+        halo = {"x": 64, "y": 64, "z": 16}  # before 64,64,8
 
         # Determine the GPU RAM and derive a suitable tiling.
         vram = torch.cuda.get_device_properties(0).total_memory / 1e9
