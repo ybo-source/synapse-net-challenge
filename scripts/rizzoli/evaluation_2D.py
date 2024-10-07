@@ -57,8 +57,8 @@ def evaluate_file(labels_path, vesicles_path, model_name, segment_key, anno_key)
 
     #get the labels and vesicles
     with h5py.File(labels_path) as label_file:
-        #labels = label_file["labels"]
-        vesicles = label_file["vesicles"]
+        labels = label_file["labels"]
+        vesicles = labels["vesicles"]
         gt = vesicles[anno_key][:]
         
     with h5py.File(vesicles_path) as seg_file:
