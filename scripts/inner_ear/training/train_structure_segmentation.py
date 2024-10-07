@@ -13,8 +13,9 @@ ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/mose
 LABEL_KEY = "labels/inner_ear_structures"
 
 
-def get_train_val_test_split():
-    all_tomos = sorted(glob(os.path.join(ROOT, "**/*.h5"), recursive=True))
+def get_train_val_test_split(root):
+    assert os.path.exists(root), root
+    all_tomos = sorted(glob(os.path.join(root, "**/*.h5"), recursive=True))
 
     # Sort into train/test tomograms. We use the tomograms that have IMOD annotations for test.
     train_tomos, test_tomos = [], []
@@ -73,7 +74,7 @@ def train_inner_ear_structures(train_tomograms, val_tomograms):
 
 
 def main():
-    train_tomograms, val_tomograms, _ = get_train_val_test_split()
+    train_tomograms, val_tomograms, _ = get_train_val_test_split(ROOT)
     preprocess_labels(train_tomograms)
     preprocess_labels(val_tomograms)
     train_inner_ear_structures(train_tomograms, val_tomograms)

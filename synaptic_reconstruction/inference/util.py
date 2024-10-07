@@ -77,7 +77,7 @@ def get_prediction(
         }
         # Update tile dimensions
         for dim in tiling['tile']:
-            updated_tiling['tile'][dim] = tiling['tile'][dim] - tiling['halo'][dim]
+            updated_tiling['tile'][dim] = tiling['tile'][dim] - 2 * tiling['halo'][dim]
         print(f"updated_tiling {updated_tiling}")
         pred = get_prediction_torch_em(input_volume, updated_tiling, model_path, model, verbose, with_channels)
 
@@ -214,6 +214,7 @@ def inference_helper(
     extra_input_path: Optional[str] = None,
     extra_input_ext: str = ".tif",
     force: bool = False,
+    output_key: Optional[str] = None,
 ):
     """
     Helper function to run segmentation for mrc files.
@@ -231,6 +232,7 @@ def inference_helper(
             This enables cristae segmentation with an extra mito channel.
         extra_input_ext: File extension for the extra inputs (by default .tif).
         force: Whether to rerun segmentation for output files that are already present.
+        output_key: Output key for the prediction. If none will write an hdf5 file.
     """
     # Get the input files. If input_path is a folder then this will load all
     # the mrc files beneath it. Otherwise we assume this is an mrc file already
@@ -247,7 +249,12 @@ def inference_helper(
     for i, img_path in tqdm(enumerate(input_files), total=len(input_files)):
         # Determine the output file name.
         input_folder, input_name = os.path.split(img_path)
-        fname = os.path.splitext(input_name)[0] + "_prediction.tif"
+
+        if output_key is None:
+            fname = os.path.splitext(input_name)[0] + "_prediction.tif"
+        else:
+            fname = os.path.splitext(input_name)[0] + "_prediction.h5"
+
         if input_root is None:
             output_path = os.path.join(output_root, fname)
         else:  # If we have nested input folders then we preserve the folder structure in the output.
@@ -264,9 +271,15 @@ def inference_helper(
         input_volume = _load_input(img_path, extra_files, i)
         segmentation = segmentation_function(input_volume)
 
-        # Write the result to tif.
+        # Write the result to tif or h5.
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
-        imageio.imwrite(output_path, segmentation, compression="zlib")
+
+        if output_key is None:
+            imageio.imwrite(output_path, segmentation, compression="zlib")
+        else:
+            with open_file(output_path, "a") as f:
+                f.create_dataset(output_key, data=segmentation, compression="gzip")
+
         print(f"Saved segmentation to {output_path}.")
 
 
