@@ -2,7 +2,7 @@ from typing import Optional, Dict, Union, Tuple
 
 import numpy as np
 
-from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
+from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling, apply_size_filter
 from skimage.measure import label
 
 
@@ -33,9 +33,7 @@ def segment_actin(
     seg = foreground > foreground_threshold
     if min_size > 0:
         seg = label(seg)
-        ids, sizes = np.unique(seg, return_counts=True)
-        filter_ids = ids[sizes < min_size]
-        seg[np.isin(seg, filter_ids)] = 0
+        seg = apply_size_filter(seg, min_size, verbose=verbose)
         seg = (seg > 0).astype("uint8")
 
     if return_predictions:

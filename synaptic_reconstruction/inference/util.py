@@ -2,13 +2,15 @@ import os
 import time
 import warnings
 from glob import glob
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 # Suppress annoying import warnings.
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import bioimageio.core
+
 import imageio.v3 as imageio
+import elf.parallel as parallel
 import numpy as np
 import torch
 import torch_em
@@ -347,3 +349,31 @@ def parse_tiling(tile_shape, halo):
 
     tiling = {"tile": tile_shape, "halo": halo}
     return tiling
+
+
+def apply_size_filter(
+    segmentation: np.ndarray,
+    min_size: int,
+    verbose: bool = False,
+    block_shape: Tuple[int, int, int] = (128, 256, 256),
+) -> np.ndarray:
+    """Apply size filter to the segmentation to remove small objects.
+
+    Args:
+        segmentation: The segmentation.
+        min_size: The minimal object size in pixels.
+        verbose: Whether to print runtimes.
+        block_shape: Block shape for parallelizing the operations.
+
+    Returns:
+        The size filtered segmentation.
+    """
+    if min_size == 0:
+        return segmentation
+    t0 = time.time()
+    ids, sizes = parallel.unique(segmentation, return_counts=True, block_shape=block_shape, verbose=verbose)
+    filter_ids = ids[sizes < min_size]
+    segmentation[np.isin(segmentation, filter_ids)] = 0
+    if verbose:
+        print("Size filter in", time.time() - t0, "s")
+    return segmentation

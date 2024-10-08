@@ -5,7 +5,7 @@ import elf.parallel as parallel
 import numpy as np
 from skimage.transform import rescale, resize
 
-from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
+from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling, apply_size_filter
 
 
 def _run_segmentation(
@@ -36,12 +36,7 @@ def _run_segmentation(
     if verbose:
         print("Compute watershed in", time.time() - t0, "s")
 
-    t0 = time.time()
-    ids, sizes = parallel.unique(seg, return_counts=True, block_shape=block_shape, verbose=verbose)
-    filter_ids = ids[sizes < min_size]
-    seg[np.isin(seg, filter_ids)] = 0
-    if verbose:
-        print("Size filter in", time.time() - t0, "s")
+    seg = apply_size_filter(seg, min_size, verbose=verbose, block_shape=block_shape)
     return seg
 
 
