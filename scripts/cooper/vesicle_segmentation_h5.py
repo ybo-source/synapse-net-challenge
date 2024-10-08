@@ -21,8 +21,10 @@ def get_volume(input_path):
 
 def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, halo, include_boundary, key_label):
     tiling = parse_tiling(tile_shape, halo)
+    print(f"using tiling {tiling}")
     input = get_volume(input_path)
-    segmentation = segment_vesicles(input_volume=input, model_path=model_path, verbose=False, tiling=tiling, exclude_boundary=not include_boundary)
+    segmentation, prediction = segment_vesicles(input_volume=input, model_path=model_path, verbose=False, tiling=tiling, return_predictions=True, exclude_boundary=not include_boundary)
+    foreground, boundaries = prediction[:2]
 
     seg_output = _require_output_folders(output_path)
     file_name = Path(input_path).stem
@@ -43,6 +45,8 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
             print("Skipping", input_path, "because", key, "exists")
         else:
             f.create_dataset(key, data=segmentation, compression="gzip")
+            f.create_dataset(f"prediction_{key_label}/foreground", data = foreground, compression="gzip")
+            f.create_dataset(f"prediction_{key_label}/boundaries", data = boundaries, compression="gzip")
         
         
 
