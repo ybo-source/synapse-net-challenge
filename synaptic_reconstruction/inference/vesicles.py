@@ -7,30 +7,55 @@ import numpy as np
 import torch
 
 from skimage.transform import rescale, resize
-from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
+from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling, apply_size_filter
 from synaptic_reconstruction.inference.postprocessing.vesicles import filter_zborder_objects
 
 
-def _run_distance_segmentation_parallel(
-    foreground, boundaries, verbose, min_size,
-    # blocking shapes for parallel computation
-    distance_threshold=8,
-    block_shape=(128, 256, 256),
-    halo=(48, 48, 48)
-):
-    # compute the boundary distances
+def distance_based_vesicle_segmentation(
+    foreground: np.ndarray,
+    boundaries: np.ndarray,
+    verbose: bool,
+    min_size: int,
+    boundary_threshold: float = 0.9,  # previous default value was 0.9
+    distance_threshold: int = 8,
+    block_shape: Tuple[int, int, int] = (128, 256, 256),
+    halo: Tuple[int, int, int] = (48, 48, 48),
+) -> np.ndarray:
+    """Segment vesicles using a seeded watershed from connected components derived from
+    distance transform of the boundary predictions.
+
+    This approach can prevent false merges that occur with the `simple_vesicle_segmentation`.
+
+    Args:
+        foreground: The foreground prediction.
+        boundaries: The boundary prediction.
+        verbose: Whether to print timing information.
+        min_size: The minimal vesicle size.
+        boundary_threshold: The threshold for binarizing the boundary predictions for the distance computation.
+        distance_threshold: The threshold for finding connected components in the boundary distances.
+        block_shape: Block shape for parallelizing the operations.
+        halo: Halo for parallelizing the operations.
+
+    Returns:
+        The vesicle segmentation.
+    """
+    # Compute the boundary distances.
     t0 = time.time()
-    bd_dist = parallel.distance_transform(boundaries < 0.9, halo=halo, verbose=verbose, block_shape=block_shape)
+    bd_dist = parallel.distance_transform(
+        boundaries < boundary_threshold, halo=halo, verbose=verbose, block_shape=block_shape
+    )
     bd_dist[foreground < 0.5] = 0
     if verbose:
         print("Compute distance transform in", time.time() - t0, "s")
 
-    # get the segmentation via seeded watershed
+    # Get the segmentation via seeded watershed of components in the boundary distances.
     t0 = time.time()
     seeds = parallel.label(bd_dist > distance_threshold, block_shape=block_shape, verbose=verbose)
     if verbose:
         print("Compute connected components in", time.time() - t0, "s")
 
+    # Compute distances from the seeds, which are used as heightmap for the watershed,
+    # to assign all pixels to the nearest seed.
     t0 = time.time()
     dist = parallel.distance_transform(seeds == 0, halo=halo, verbose=verbose, block_shape=block_shape)
     if verbose:
@@ -46,23 +71,33 @@ def _run_distance_segmentation_parallel(
     if verbose:
         print("Compute watershed in", time.time() - t0, "s")
 
-    t0 = time.time()
-    ids, sizes = parallel.unique(seg, return_counts=True, block_shape=block_shape, verbose=verbose)
-    filter_ids = ids[sizes < min_size]
-    seg[np.isin(seg, filter_ids)] = 0
-    if verbose:
-        print("Size filter in", time.time() - t0, "s")
+    seg = apply_size_filter(seg, min_size, verbose, block_shape)
     return seg
 
 
-def _run_segmentation_parallel(
-    foreground, boundaries, verbose, min_size,
-    # blocking shapes for parallel computation
-    block_shape=(128, 256, 256),
-    halo=(48, 48, 48)
-):
+def simple_vesicle_segmentation(
+    foreground: np.ndarray,
+    boundaries: np.ndarray,
+    verbose: bool,
+    min_size: int,
+    block_shape: Tuple[int, int, int] = (128, 256, 256),
+    halo: Tuple[int, int, int] = (48, 48, 48),
+) -> np.ndarray:
+    """Segment vesicles by subtracting boundary from foreground prediction and
+    applying connected components.
 
-    # get the segmentation via seeded watershed
+    Args:
+        foreground: The foreground prediction.
+        boundaries: The boundary prediction.
+        verbose: Whether to print timing information.
+        min_size: The minimal vesicle size.
+        block_shape: Block shape for parallelizing the operations.
+        halo: Halo for parallelizing the operations.
+
+    Returns:
+        The vesicle segmentation.
+    """
+
     t0 = time.time()
     seeds = parallel.label((foreground - boundaries) > 0.5, block_shape=block_shape, verbose=verbose)
     if verbose:
@@ -83,12 +118,7 @@ def _run_segmentation_parallel(
     if verbose:
         print("Compute watershed in", time.time() - t0, "s")
 
-    t0 = time.time()
-    ids, sizes = parallel.unique(seg, return_counts=True, block_shape=block_shape, verbose=verbose)
-    filter_ids = ids[sizes < min_size]
-    seg[np.isin(seg, filter_ids)] = 0
-    if verbose:
-        print("Size filter in", time.time() - t0, "s")
+    seg = apply_size_filter(seg, min_size, verbose, block_shape)
     return seg
 
 
@@ -144,15 +174,15 @@ def segment_vesicles(
     # Deal with 2D segmentation case
     kwargs = {}
     if len(input_volume.shape) == 2:
-        kwargs['block_shape'] = (256, 256)
-        kwargs['halo'] = (48, 48)
+        kwargs["block_shape"] = (256, 256)
+        kwargs["halo"] = (48, 48)
 
     if distance_based_segmentation:
-        seg = _run_distance_segmentation_parallel(
+        seg = distance_based_vesicle_segmentation(
             foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs
         )
     else:
-        seg = _run_segmentation_parallel(
+        seg = simple_vesicle_segmentation(
             foreground, boundaries, verbose=verbose, min_size=min_size, **kwargs
         )
 
