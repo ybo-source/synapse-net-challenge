@@ -8,7 +8,7 @@ import torch
 
 from skimage.transform import rescale, resize
 from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling, apply_size_filter
-from synaptic_reconstruction.inference.postprocessing.vesicles import filter_zborder_objects
+from synaptic_reconstruction.inference.postprocessing.vesicles import filter_border_objects
 
 
 def distance_based_vesicle_segmentation(
@@ -187,7 +187,7 @@ def segment_vesicles(
         )
 
     if exclude_boundary:
-        seg = filter_zborder_objects(seg)
+        seg = filter_border_objects(seg)
 
     if scale is not None:
         assert seg.ndim == input_volume.ndim
