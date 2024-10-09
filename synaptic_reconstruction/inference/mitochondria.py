@@ -49,6 +49,7 @@ def segment_mitochondria(
     distance_based_segmentation: bool = False,
     return_predictions: bool = False,
     scale: Optional[List[float]] = None,
+    mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Segment mitochondria in an input volume.
@@ -62,11 +63,15 @@ def segment_mitochondria(
         distance_based_segmentation: Whether to use distance-based segmentation.
         return_predictions: Whether to return the predictions (foreground, boundaries) alongside the segmentation.
         scale: The scale factor to use for rescaling the input volume before prediction.
+        mask:
 
     Returns:
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
         and the predictions if return_predictions is True.
     """
+    if mask is not None:
+        raise NotImplementedError
+
     if verbose:
         print("Segmenting mitochondria in volume of shape", input_volume.shape)
 

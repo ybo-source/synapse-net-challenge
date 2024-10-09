@@ -20,7 +20,10 @@ def segment_actin(
     verbose: bool = True,
     return_predictions: bool = False,
     exclude_boundary: bool = False,
+    mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+    if mask is not None:
+        raise NotImplementedError
 
     if tiling is None:
         tiling = get_default_tiling()

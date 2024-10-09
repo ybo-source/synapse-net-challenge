@@ -16,6 +16,7 @@ def segment_ribbon_synapse_structures(
     tiling: Optional[Dict[str, Dict[str, int]]] = None,
     threshold: Optional[Union[float, Dict[str, float]]] = None,
     scale: Optional[Sequence[float]] = None,
+    mask: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Segment ribbon synapse structures.
 
@@ -29,11 +30,15 @@ def segment_ribbon_synapse_structures(
         verbose: Whether to print timing information.
         threshold: The threshold for binarizing predictions.
         scale: The scale factor to use for rescaling the input volume before prediction.
+        mask:
 
     Returns:
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
         and the predictions if return_predictions is True.
     """
+    if mask is not None:
+        raise NotImplementedError
+
     if verbose:
         print(f"Segmenting synaptic structures: {structure_names} in volume of shape", input_volume.shape)
 

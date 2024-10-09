@@ -133,6 +133,7 @@ def segment_vesicles(
     return_predictions: bool = False,
     scale: Optional[List[float]] = None,
     exclude_boundary: bool = False,
+    mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Segment vesicles in an input volume.
@@ -148,6 +149,7 @@ def segment_vesicles(
         return_predictions: Whether to return the predictions (foreground, boundaries) alongside the segmentation.
         scale: The scale factor to use for rescaling the input volume before prediction.
         exclude_boundary: Whether to exclude vesicles that touch the upper / lower border in z.
+        mask:
 
     Returns:
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
@@ -168,7 +170,7 @@ def segment_vesicles(
     if tiling is None:
         tiling = get_default_tiling()
 
-    pred = get_prediction(input_volume, tiling, model_path, model, verbose)
+    pred = get_prediction(input_volume, tiling, model_path, model, verbose=verbose, mask=mask)
     foreground, boundaries = pred[:2]
 
     # Deal with 2D segmentation case

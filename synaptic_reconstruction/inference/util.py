@@ -28,6 +28,7 @@ def get_prediction(
     model: Optional[torch.nn.Module] = None,
     verbose: bool = True,
     with_channels: bool = False,
+    mask: Optional[np.ndarray] = None,
 ):
     """
     Run prediction on a given volume.
@@ -42,6 +43,7 @@ def get_prediction(
         tiling: The tiling configuration for the prediction.
         verbose: Whether to print timing information.
         with_channels: Whether to predict with channels.
+        mask:
 
     Returns:
         The predicted volume.
@@ -63,9 +65,14 @@ def get_prediction(
     else:
         input_volume = torch_em.transform.raw.standardize(input_volume)
 
+    # Run prediction with the bioimage.io library.
     if is_bioimageio:
         # TODO determine if we use the old or new API and select the corresponding function
+        if mask is not None:
+            raise NotImplementedError
         pred = get_prediction_bioimageio_old(input_volume, model_path, tiling, verbose)
+
+    # Run prediction with the torch-em library.
     else:
         if model is None:
             # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.
@@ -74,14 +81,16 @@ def get_prediction(
         print(f"tiling {tiling}")
         # Create updated_tiling with the same structure
         updated_tiling = {
-            'tile': {},
-            'halo': tiling['halo']  # Keep the halo part unchanged
+            "tile": {},
+            "halo": tiling["halo"]  # Keep the halo part unchanged
         }
         # Update tile dimensions
-        for dim in tiling['tile']:
-            updated_tiling['tile'][dim] = tiling['tile'][dim] - 2 * tiling['halo'][dim]
+        for dim in tiling["tile"]:
+            updated_tiling["tile"][dim] = tiling["tile"][dim] - 2 * tiling["halo"][dim]
         print(f"updated_tiling {updated_tiling}")
-        pred = get_prediction_torch_em(input_volume, updated_tiling, model_path, model, verbose, with_channels)
+        pred = get_prediction_torch_em(
+            input_volume, updated_tiling, model_path, model, verbose, with_channels, mask=mask
+        )
 
     return pred
 
@@ -122,6 +131,7 @@ def get_prediction_torch_em(
     model: Optional[torch.nn.Module] = None,
     verbose: bool = True,
     with_channels: bool = False,
+    mask: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """
     Run prediction using torch-em on a given volume.
@@ -158,11 +168,12 @@ def get_prediction_torch_em(
             block_shape = [block_shape[1], block_shape[2]]
             halo = [halo[1], halo[2]]
 
+        if mask is not None:
+            mask = mask.astype("bool")
         pred = predict_with_halo(
             input_volume, model, gpu_ids=[device],
             block_shape=block_shape, halo=halo,
-            preprocess=None,
-            with_channels=with_channels
+            preprocess=None, with_channels=with_channels, mask=mask,
         )
     if verbose:
         print("Prediction time in", time.time() - t0, "s")
@@ -215,6 +226,8 @@ def inference_helper(
     data_ext: str = ".mrc",
     extra_input_path: Optional[str] = None,
     extra_input_ext: str = ".tif",
+    mask_input_path: Optional[str] = None,
+    mask_input_ext: str = ".tif",
     force: bool = False,
     output_key: Optional[str] = None,
 ):
@@ -233,6 +246,8 @@ def inference_helper(
         extra_input_path: Filepath to extra inputs that need to be concatenated to the raw data loaded from mrc.
             This enables cristae segmentation with an extra mito channel.
         extra_input_ext: File extension for the extra inputs (by default .tif).
+        mask_input_path: Filepath to mask(s) that will be used to restrict the segmentation.
+        mask_input_ext: File extension for the mask inputs (by default .tif).
         force: Whether to rerun segmentation for output files that are already present.
         output_key: Output key for the prediction. If none will write an hdf5 file.
     """
@@ -247,6 +262,13 @@ def inference_helper(
     else:
         extra_files, _ = _get_file_paths(extra_input_path, extra_input_ext)
         assert len(input_files) == len(extra_files)
+
+    # Load the masks if they were specified.
+    if mask_input_path is None:
+        mask_files = None
+    else:
+        mask_files, _ = _get_file_paths(mask_input_path, mask_input_ext)
+        assert len(input_files) == len(mask_files)
 
     for i, img_path in tqdm(enumerate(input_files), total=len(input_files)):
         # Determine the output file name.
@@ -271,7 +293,11 @@ def inference_helper(
         # Load the input volume. If we have extra_files then this concatenates the
         # data across a new first axis (= channel axis).
         input_volume = _load_input(img_path, extra_files, i)
-        segmentation = segmentation_function(input_volume)
+        # Load the mask (if given).
+        mask = None if mask_files is None else imageio.imread(mask_files[i])
+
+        # Run the segmentation.
+        segmentation = segmentation_function(input_volume, mask=mask)
 
         # Write the result to tif or h5.
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)

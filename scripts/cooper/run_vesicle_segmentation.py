@@ -28,6 +28,10 @@ def main():
         "--model_path", "-m", required=True, help="The filepath to the vesicle model."
     )
     parser.add_argument(
+        "--mask_path", help="The filepath to a tif file with a mask that will be used to restrict the segmentation."
+        "Can also be a directory with tifs if the filestructure matches input_path."
+    )
+    parser.add_argument(
         "--force", action="store_true",
         help="Whether to over-write already present segmentation results."
     )
