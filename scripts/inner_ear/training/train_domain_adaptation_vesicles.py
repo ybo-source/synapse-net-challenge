@@ -6,8 +6,16 @@ import json
 from sklearn.model_selection import train_test_split
 from synaptic_reconstruction.training.domain_adaptation import mean_teacher_adaptation
 
-TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/wichmann/extracted/endbulb_of_held/"
-OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/DA_training_endbulb_v2"
+TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser/inner_ear_data"
+OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/DA_training_inner_ear"
+
+# Define a dictionary for skipped files
+TESTSET = {
+    "WT-control_Mouse-1.0_modiolar": ["1.h5", "2.h5", "3.h5"],
+    "WT-control_Mouse-1.0_pillar": ["1.h5", "2.h5", "4.h5"],
+    "WT-strong-stim_Mouse-1.0_modiolar": ["2.h5", "3.h5", "9.h5"],
+    "WT-strong-stim_Mouse-1.0_pillar": ["1.h5", "2.h5", "4.h5"]
+}
 
 def _require_train_val_test_split(datasets):
     train_ratio, val_ratio, test_ratio = 0.8, 0.1, 0.1
@@ -41,15 +49,6 @@ def _require_train_val_test_split(datasets):
 def _require_train_val_split(datasets):
     train_ratio, val_ratio = 0.8, 0.2
 
-    # Define the list of files to skip
-    testset = {
-        "1Otof_AVCN03_429A_WT_M.Stim_D3_2_35461.h5",
-        "1Otof_AVCN03_429D_WT_Rest_H5_4_35461.h5",
-        "1Otof_AVCN07_451A_WT_Rest_B3_10_35932.h5",
-        "Otof_AVCN07_449S_KO_Rest_G5_7_35934.h5",
-        "Otof_AVCN07_449T_KO_M.Stim_M1_6_35934.h5"
-    }
-
     def _train_val_split(names):
         train, val = train_test_split(names, test_size=1 - train_ratio, shuffle=True)
         return train, val
@@ -63,8 +62,9 @@ def _require_train_val_split(datasets):
         file_paths = sorted(glob(os.path.join(TRAIN_ROOT, ds, "*.h5")))
         file_names = [os.path.basename(path) for path in file_paths]
 
-        # Filter out files that should be skipped
-        file_names = [name for name in file_names if name not in testset]
+        # Exclude skipped files for the dataset
+        skipped_files = TESTSET.get(ds, [])
+        file_names = [name for name in file_names if name not in skipped_files]
 
         # Check if there are no files left after filtering
         if len(file_names) == 0:
@@ -101,16 +101,14 @@ def get_paths(split, datasets, testset=True):
 
 def vesicle_domain_adaptation(teacher_model, testset = True):
     datasets = [
-    "Adult_KO_MStim",
-    "Adult_KO_Rest",
-    "Adult_WT_MStim",
-    "Adult_WT_Rest",
-    "Old_KO_MStim",
-    "Old_WT_Rest",
-    "Young_KO_MStim",
-    "Young_KO_Rest",
-    "Young_WT_MStim",
-    "Young_WT_Rest"
+    "WT-control_Mouse-1.0_modiolar",
+    "WT-control_Mouse-1.0_pillar",
+    "WT-control_Mouse-2.0_modiolar",
+    "WT-control_Mouse-2.0_pillar",
+    "WT-strong-stim_Mouse-1.0_modiolar",
+    "WT-strong-stim_Mouse-1.0_pillar",
+    "WT-strong-stim_Mouse-2.0_modiolar",
+    "WT-strong-stim_Mouse-2.0_pillar"
 ]
     train_paths = get_paths("train", datasets=datasets, testset=testset)
     val_paths = get_paths("val", datasets=datasets, testset=testset)
@@ -121,7 +119,7 @@ def vesicle_domain_adaptation(teacher_model, testset = True):
 
     #adjustable parameters
     patch_shape = [48, 256, 256]
-    model_name = "vesicle-DA-endbulb-v2"
+    model_name = "vesicle-DA-inner_ear-v1"
     
     model_root = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/models_v2/checkpoints/"
     checkpoint_path = os.path.join(model_root, teacher_model)
