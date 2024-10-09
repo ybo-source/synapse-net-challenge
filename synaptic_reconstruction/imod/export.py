@@ -1,11 +1,12 @@
 import shutil
 import tempfile
 from subprocess import run
-from typing import Dict
+from typing import Dict, Optional
 
 import imageio.v3 as imageio
 import numpy as np
 from elf.io import open_file
+from scipy.ndimage import maximum_filter1d
 from skimage.morphology import ball
 
 from tqdm import tqdm
@@ -17,6 +18,19 @@ def get_label_names(
     return_counts: bool = False,
     filter_empty_labels: bool = True,
 ) -> Dict[str, str]:
+    """Get the ids and names of annotations in an imod file.
+
+    Uses the imodinfo command to parse the contents of the imod file.
+
+    Args:
+        imod_path: The filepath to the imod annotation file.
+        return_types: Whether to also return the annotation types.
+        return_counts: Whether to also return the number of annotations per object.
+        filter_empty_labels: Whether to filter out empty objects from the object list.
+
+    Returns:
+        Dictionary that maps the object ids to their names.
+    """
     cmd = "imodinfo"
     cmd_path = shutil.which(cmd)
     assert cmd_path is not None, f"Could not find the {cmd} imod command."
@@ -74,7 +88,32 @@ def get_label_names(
     return label_names
 
 
-def export_segmentation(imod_path, mrc_path, object_id=None, output_path=None, require_object=True):
+def export_segmentation(
+    imod_path: str,
+    mrc_path: str,
+    object_id: Optional[int] = None,
+    output_path: Optional[int] = None,
+    require_object: bool = True,
+    depth_interpolation: Optional[int] = None,
+) -> Optional[np.ndarray]:
+    """Export a segmentation mask from IMOD annotations.
+
+    This function uses the imodmop command to extract masks.
+
+    Args:
+        imod_path: The filepath to the imod annotation file.
+        mrc_path: The filepath to the mrc file with the corresponding tomogram data.
+        object_id: The id of the object to be extracted.
+            If none is given all objects in the mod file will be extracted.
+        output_path: Optional path to a file where to save the extracted mask as tif.
+            If not given the segmentation mask will be returned as a numpy array.
+        require_object: Whether to throw an error if the object could not be extractd.
+        depth_interpolation: Window for interpolating the extracted mask across the depth
+            axis. This can be used to close masks which are only annotated in a subset of slices.
+
+    Returns:
+        The extracted mask. Will only be returned if `output_path` is not given.
+    """
     cmd = "imodmop"
     cmd_path = shutil.which(cmd)
     assert cmd_path is not None, f"Could not find the {cmd} imod command."
@@ -95,6 +134,9 @@ def export_segmentation(imod_path, mrc_path, object_id=None, output_path=None, r
     if require_object and segmentation.sum() == 0:
         id_str = "" if object_id is None else f"for object {object_id}"
         raise RuntimeError(f"Segmentation extracted from {imod_path} {id_str} is empty.")
+
+    if depth_interpolation is not None:
+        segmentation = maximum_filter1d(segmentation, size=depth_interpolation, axis=0, mode="constant")
 
     if output_path is None:
         return segmentation
