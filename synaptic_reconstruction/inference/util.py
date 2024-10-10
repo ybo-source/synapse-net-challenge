@@ -17,13 +17,61 @@ import torch_em
 import xarray
 
 from elf.io import open_file
+from skimage.transform import rescale, resize
 from torch_em.util.prediction import predict_with_halo
 from tqdm import tqdm
 
 
+class _Scaler:
+    def __init__(self, scale, verbose):
+        self.scale = scale
+        self.verbose = verbose
+        self._original_shape = None
+
+    def scale_input(self, input_volume, is_segmentation=False):
+        if self.scale is None:
+            return input_volume
+
+        if self._original_shape is None:
+            self._original_shape = input_volume.shape
+        elif self._oringal_shape != input_volume.shape:
+            raise RuntimeError(
+                "Scaler was called with different input shapes. "
+                "This is not supported, please create a new instance of the class for it."
+            )
+
+        if is_segmentation:
+            input_volume = rescale(
+                input_volume, self.scale, preserve_range=True, order=0, anti_aliasing=False,
+            ).astype(input_volume.dtype)
+        else:
+            input_volume = rescale(input_volume, self.scale, preserve_range=True).astype(input_volume.dtype)
+
+        if self.verbose:
+            print("Rescaled volume from", self._original_shape, "to", input_volume.shape)
+        return input_volume
+
+    def rescale_output(self, output, is_segmentation):
+        if self.scale is None:
+            return output
+
+        assert self._original_shape is not None
+        out_shape = self._original_shape
+        if output.ndim > len(out_shape):
+            assert output.ndim == len(out_shape) + 1
+            out_shape = (output.shape[0],) + out_shape
+
+        if is_segmentation:
+            output = resize(output, out_shape, preserve_range=True, order=0, anti_aliasing=False).astype(output.dtype)
+        else:
+            output = resize(output, out_shape, preserve_range=True).astype(output.dtype)
+
+        return output
+
+
 def get_prediction(
     input_volume: np.ndarray,  # [z, y, x]
-    tiling: Dict[str, Dict[str, int]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
+    tiling: Optional[Dict[str, Dict[str, int]]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
     model_path: Optional[str] = None,
     model: Optional[torch.nn.Module] = None,
     verbose: bool = True,
@@ -56,6 +104,9 @@ def get_prediction(
         is_bioimageio = None
     else:
         is_bioimageio = model_path.endswith(".zip")
+
+    if tiling is None:
+        tiling = get_default_tiling()
 
     # We standardize the data for the whole volume beforehand.
     # If we have channels then the standardization is done independently per channel.
@@ -154,11 +205,14 @@ def get_prediction_torch_em(
     t0 = time.time()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    if model is None:
-        if os.path.isdir(model_path):  # Load the model from a torch_em checkpoint.
-            model = torch_em.util.load_model(checkpoint=model_path, device=device)
-        else:  # Load the model directly from a serialized pytorch model.
-            model = torch.load(model_path)
+    # Suppress warning when loading the model.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if model is None:
+            if os.path.isdir(model_path):  # Load the model from a torch_em checkpoint.
+                model = torch_em.util.load_model(checkpoint=model_path, device=device)
+            else:  # Load the model directly from a serialized pytorch model.
+                model = torch.load(model_path)
 
     # Run prediction with the model.
     with torch.no_grad():
