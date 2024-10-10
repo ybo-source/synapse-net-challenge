@@ -7,8 +7,13 @@ from synaptic_reconstruction.inference.util import inference_helper, parse_tilin
 
 def run_mitochondria_segmentation(args):
     tiling = parse_tiling(args.tile_shape, args.halo)
-    segmentation_function = partial(segment_mitochondria, model_path=args.model_path, verbose=False, tiling=tiling)
-    inference_helper(args.input_path, args.output_path, segmentation_function, force=args.force, data_ext=args.data_ext)
+    segmentation_function = partial(
+        segment_mitochondria, model_path=args.model_path, verbose=False, tiling=tiling, scale=[0.5, 0.5, 0.5]
+    )
+    inference_helper(
+        args.input_path, args.output_path, segmentation_function,
+        mask_input_path=args.mask_path, force=args.force, data_ext=args.data_ext
+    )
 
 
 def main():
@@ -27,6 +32,10 @@ def main():
     parser.add_argument(
         "--force", action="store_true",
         help="Whether to over-write already present segmentation results."
+    )
+    parser.add_argument(
+        "--mask_path", help="The filepath to a tif file with a mask that will be used to restrict the segmentation."
+        "Can also be a directory with tifs if the filestructure matches input_path."
     )
     parser.add_argument(
         "--tile_shape", type=int, nargs=3,

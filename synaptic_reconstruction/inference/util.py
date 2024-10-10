@@ -223,7 +223,10 @@ def get_prediction_torch_em(
             halo = [halo[1], halo[2]]
 
         if mask is not None:
+            if verbose:
+                print("Run prediction with mask.")
             mask = mask.astype("bool")
+
         pred = predict_with_halo(
             input_volume, model, gpu_ids=[device],
             block_shape=block_shape, halo=halo,

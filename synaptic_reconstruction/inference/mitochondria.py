@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import elf.parallel as parallel
 import numpy as np
+import torch
 
 from synaptic_reconstruction.inference.util import apply_size_filter, get_prediction, _Scaler
 
@@ -41,7 +42,8 @@ def _run_segmentation(
 
 def segment_mitochondria(
     input_volume: np.ndarray,
-    model_path: str,
+    model_path: Optional[str] = None,
+    model: Optional[torch.nn.Module] = None,
     tiling: Optional[Dict[str, Dict[str, int]]] = None,
     min_size: int = 50000,
     verbose: bool = True,
@@ -55,7 +57,8 @@ def segment_mitochondria(
 
     Args:
         input_volume: The input volume to segment.
-        model_path: The path to the model checkpoint.
+        model_path: The path to the model checkpoint if `model` is not provided.
+        model: Pre-loaded model. Either `model_path` or `model` is required.
         tiling: The tiling configuration for the prediction.
         min_size: The minimum size of a mitochondria to be considered.
         verbose: Whether to print timing information.
@@ -70,7 +73,6 @@ def segment_mitochondria(
     """
     if verbose:
         print("Segmenting mitochondria in volume of shape", input_volume.shape)
-
     # Create the scaler to handle prediction with a different scaling factor.
     scaler = _Scaler(scale, verbose)
     input_volume = scaler.scale_input(input_volume)
@@ -78,7 +80,7 @@ def segment_mitochondria(
     # Rescale the mask if it was given and run prediction.
     if mask is not None:
         mask = scaler.scale_input(mask, is_segmentation=True)
-    pred = get_prediction(input_volume, model_path, tiling, mask=mask)
+    pred = get_prediction(input_volume, model_path=model_path, model=model, tiling=tiling, mask=mask, verbose=verbose)
 
     # Run segmentation and rescale the result if necessary.
     foreground, boundaries = pred[:2]

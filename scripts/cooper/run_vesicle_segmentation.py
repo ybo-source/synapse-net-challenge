@@ -11,7 +11,10 @@ def run_vesicle_segmentation(args):
         segment_vesicles, model_path=args.model_path, verbose=False, tiling=tiling,
         exclude_boundary=not args.include_boundary
     )
-    inference_helper(args.input_path, args.output_path, segmentation_function, force=args.force, data_ext=args.data_ext)
+    inference_helper(
+        args.input_path, args.output_path, segmentation_function,
+        mask_input_path=args.mask_path, force=args.force, data_ext=args.data_ext,
+    )
 
 
 def main():

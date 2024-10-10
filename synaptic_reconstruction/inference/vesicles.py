@@ -139,8 +139,8 @@ def segment_vesicles(
 
     Args:
         input_volume: The input volume to segment.
-        model_path: The path to the model checkpoint if 'model' is not provided.
-        model: Pre-loaded model. Either model_path or model is required.
+        model_path: The path to the model checkpoint if `model` is not provided.
+        model: Pre-loaded model. Either `model_path` or `model` is required.
         tiling: The tiling configuration for the prediction.
         min_size: The minimum size of a vesicle to be considered.
         verbose: Whether to print timing information.
@@ -156,7 +156,6 @@ def segment_vesicles(
     """
     if verbose:
         print("Segmenting vesicles in volume of shape", input_volume.shape)
-
     # Create the scaler to handle prediction with a different scaling factor.
     scaler = _Scaler(scale, verbose)
     input_volume = scaler.scale_input(input_volume)
@@ -164,7 +163,7 @@ def segment_vesicles(
     # Rescale the mask if it was given and run prediction.
     if mask is not None:
         mask = scaler.scale_input(mask, is_segmentation=True)
-    pred = get_prediction(input_volume, tiling, model_path, model, verbose=verbose, mask=mask)
+    pred = get_prediction(input_volume, tiling=tiling, model_path=model_path, model=model, verbose=verbose, mask=mask)
     foreground, boundaries = pred[:2]
 
     # Deal with 2D segmentation case.
