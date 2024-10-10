@@ -169,7 +169,7 @@ def export_segmentation(imod_path, mrc_path, object_ids_string, object_id=None, 
 
     imageio.imwrite(output_path, segmentation.astype("uint8"), compression="zlib")
 
-def save_segmentation( out_path, mrc_path, segmentation_mito=None, segmentation_cristae=None, segmentation_endbulb=None, segmentation_AZ=None):
+def save_segmentation( out_path, mrc_path, segmentation_mito=None, segmentation_cristae=None, segmentation_endbulb=None, segmentation_AZ=None, segmentation_presynapse=None):
     with mrcfile.open(mrc_path) as mrc:
         data = mrc.data
     
@@ -189,6 +189,8 @@ def save_segmentation( out_path, mrc_path, segmentation_mito=None, segmentation_
             f.create_dataset("labels/endbulb", data=segmentation_endbulb, compression="gzip")
         if segmentation_AZ is not None:
             f.create_dataset("labels/AZ", data=segmentation_AZ, compression="gzip")
+        if segmentation_presynapse is not None:
+            f.create_dataset("labels/presynapse", data=segmentation_presynapse, compression="gzip")
 
 def convert_file(imod_path, mrc_path, out_path):
 
@@ -210,11 +212,14 @@ def convert_folder(imod_path, mrc_path, out_path):
     mrc_files = sorted([f for f in os.listdir(mrc_path) if f.endswith('.rec')])
 
     for imod_file, mrc_file in zip(imod_files, mrc_files):
-        print("you joking?")
         convert_file(os.path.join(imod_path, imod_file), os.path.join(mrc_path, mrc_file), out_path)
 
 
-
+def convert_presynapse(imod_path, mrc_path, out_path):
+    presynapse_ids_list= ['25'] 
+    presynapse_ids_string = ','.join(presynapse_ids_list)
+    segmentation_presynapse = export_segmentation(imod_path, mrc_path, object_ids_string=presynapse_ids_string)
+    save_segmentation(out_path, mrc_path, segmentation_presynapse=segmentation_presynapse)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -223,12 +228,13 @@ def main():
     parser.add_argument("-o", "--out_path", required=True)
     args = parser.parse_args()
     imod_path =args.imod_path
-
+    #convert_presynapse(imod_path, args.mrc_path, args.out_path)
+    
     if os.path.isdir(imod_path):
         convert_folder(imod_path, args.mrc_path, args.out_path)
     else:
         convert_file(imod_path, args.mrc_path, args.out_path)
-
+    
 
 
 if __name__ == "__main__":

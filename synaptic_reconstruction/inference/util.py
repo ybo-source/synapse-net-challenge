@@ -307,13 +307,13 @@ def get_default_tiling():
             # TODO determine tilings for smaller VRAM
             raise NotImplementedError
 
-        print(f"using tile size: {tile}")
+        print(f"Determined tile size: {tile}")
         tiling = {"tile": tile, "halo": halo}
 
     # I am not sure what is reasonable on a cpu. For now choosing very small tiling.
     # (This will not work well on a CPU in any case.)
     else:
-        print("Using default tiling")
+        print("Determining default tiling")
         tiling = {
             "tile": {"x": 96, "y": 96, "z": 16},
             "halo": {"x": 16, "y": 16, "z": 4},
@@ -333,6 +333,7 @@ def parse_tiling(tile_shape, halo):
     Returns:
         dict: the tiling specification
     """
+
     default_tiling = get_default_tiling()
 
     if tile_shape is None:

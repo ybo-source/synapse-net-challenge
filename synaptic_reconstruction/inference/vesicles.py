@@ -16,7 +16,7 @@ def distance_based_vesicle_segmentation(
     boundaries: np.ndarray,
     verbose: bool,
     min_size: int,
-    boundary_threshold: float = 0.9,  # previous default value was 0.9
+    boundary_threshold: float = 0.5,  # previous default value was 0.9
     distance_threshold: int = 8,
     block_shape: Tuple[int, int, int] = (128, 256, 256),
     halo: Tuple[int, int, int] = (48, 48, 48),

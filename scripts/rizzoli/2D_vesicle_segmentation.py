@@ -69,7 +69,7 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
     input = get_volume(input_path)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = torch_em.util.load_model(checkpoint=model_path, device="cpu")
+    model = torch_em.util.load_model(checkpoint=model_path, device=device)
 
     def process_slices(input_volume):
         processed_slices = []
