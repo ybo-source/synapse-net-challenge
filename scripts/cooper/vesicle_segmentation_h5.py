@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from tqdm import tqdm
+from elf.io import open_file
 
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
 from synaptic_reconstruction.inference.util import parse_tiling
@@ -15,8 +16,22 @@ def _require_output_folders(output_folder):
     return seg_output
 
 def get_volume(input_path):
+    '''
     with h5py.File(input_path) as seg_file:
         input_volume = seg_file["raw"][:]
+    '''
+    with open_file(input_path, "r") as f:
+
+        # Try to automatically derive the key with the raw data.
+        keys = list(f.keys())
+        if len(keys) == 1:
+            key = keys[0]
+        elif "data" in keys:
+            key = "data"
+        elif "raw" in keys:
+            key = "raw"
+
+        input_volume = f[key][:]
     return input_volume
 
 def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, halo, include_boundary, key_label):
