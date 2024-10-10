@@ -21,13 +21,17 @@ def convert_segmentation_to_spheres(
     verbose: bool = False,
     num_workers: Optional[int] = None,
     resolution: Optional[Tuple[float, float, float]] = None,
+    radius_factor: float = 1.0,
 ):
     """Extract spheres parameterized by center and radius from a segmentation.
 
     Args:
-        segmentation: the segmentation.
-        verbose: whether to print a progress bar.
-        num_workers: number of workers to use for parallelization.
+        segmentation: The segmentation.
+        verbose: Whether to print a progress bar.
+        num_workers: Number of workers to use for parallelization.
+        resolution: The physical resolution of the data.
+        radius_factor: Factor for increasing the radius to account for too small exported spheres.
+
     Returns:
         np.array: the center coordinates
         np.array: the radii
@@ -44,7 +48,7 @@ def convert_segmentation_to_spheres(
         seg_radii = distance_transform_edt(mask, sampling=resolution)
 
         max_coord = np.unravel_index(np.argmax(seg_radii), mask.shape)
-        radius = seg_radii[max_coord]
+        radius = seg_radii[max_coord] * radius_factor
 
         offset = np.array(bbox[:3])
         coord = np.array(max_coord) + offset
@@ -115,6 +119,7 @@ def write_segmentation_to_imod_as_points(
     segmentation_path: str,
     output_path: str,
     min_radius: Union[int, float],
+    radius_factor: float = 1.0,
 ):
     """Write segmentation results to .mod file with imod point annotations.
 
@@ -123,21 +128,21 @@ def write_segmentation_to_imod_as_points(
     Args:
         mrc_path: Filepath to the mrc volume that was segmented.
         segmentation_path: Filepath to the segmentation stored as .tif.
-        min_radius: Minimum radius for export.
         output_path: Where to save the .mod file.
+        min_radius: Minimum radius for export.
+        radius_factor: Factor for increasing the radius to account for too small exported spheres.
     """
 
     # Read the resolution information from the mrcfile.
     with mrcfile.open(mrc_path, "r") as f:
         resolution = f.voxel_size.tolist()
 
-    # TODO double check this with Fidi / Ben
     # The resolution is stored in angstrom, we convert it to nanometer.
     resolution = [res / 10 for res in resolution]
 
     # Extract the center coordinates and radii from the segmentation.
     segmentation = imageio.imread(segmentation_path)
-    coordinates, radii = convert_segmentation_to_spheres(segmentation, resolution=resolution)
+    coordinates, radii = convert_segmentation_to_spheres(segmentation, resolution=resolution, radius_factor=radius_factor)
 
     # Write the point annotations to imod.
     write_points_to_imod(coordinates, radii, segmentation.shape, min_radius, output_path)
