@@ -11,7 +11,10 @@ def run_vesicle_segmentation(args):
         segment_vesicles, model_path=args.model_path, verbose=False, tiling=tiling,
         exclude_boundary=not args.include_boundary
     )
-    inference_helper(args.input_path, args.output_path, segmentation_function, force=args.force, data_ext=args.data_ext)
+    inference_helper(
+        args.input_path, args.output_path, segmentation_function,
+        mask_input_path=args.mask_path, force=args.force, data_ext=args.data_ext,
+    )
 
 
 def main():
@@ -26,6 +29,10 @@ def main():
     )
     parser.add_argument(
         "--model_path", "-m", required=True, help="The filepath to the vesicle model."
+    )
+    parser.add_argument(
+        "--mask_path", help="The filepath to a tif file with a mask that will be used to restrict the segmentation."
+        "Can also be a directory with tifs if the filestructure matches input_path."
     )
     parser.add_argument(
         "--force", action="store_true",

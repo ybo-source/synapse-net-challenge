@@ -3,8 +3,7 @@ from typing import Dict, Sequence, Optional, Union
 import numpy as np
 import torch
 
-from skimage.transform import rescale, resize
-from synaptic_reconstruction.inference.util import get_prediction, get_default_tiling
+from synaptic_reconstruction.inference.util import get_prediction, _Scaler
 
 
 def segment_ribbon_synapse_structures(
@@ -16,6 +15,7 @@ def segment_ribbon_synapse_structures(
     tiling: Optional[Dict[str, Dict[str, int]]] = None,
     threshold: Optional[Union[float, Dict[str, float]]] = None,
     scale: Optional[Sequence[float]] = None,
+    mask: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Segment ribbon synapse structures.
 
@@ -29,34 +29,28 @@ def segment_ribbon_synapse_structures(
         verbose: Whether to print timing information.
         threshold: The threshold for binarizing predictions.
         scale: The scale factor to use for rescaling the input volume before prediction.
+        mask: An optional mask that is used to restrict the segmentation.
 
     Returns:
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
         and the predictions if return_predictions is True.
     """
     if verbose:
-        print(f"Segmenting synaptic structures: {structure_names} in volume of shape", input_volume.shape)
+        print("Segmenting mitochondria in volume of shape", input_volume.shape)
+    # Create the scaler to handle prediction with a different scaling factor.
+    scaler = _Scaler(scale, verbose)
+    input_volume = scaler.scale_input(input_volume)
 
-    if scale is not None:
-        original_shape = input_volume.shape
-        input_volume = rescale(input_volume, scale, preserve_range=True).astype(input_volume.dtype)
-        if verbose:
-            print("Rescaled volume from", original_shape, "to", input_volume.shape)
-
-    if tiling is None:
-        tiling = get_default_tiling()
+    if mask is not None:
+        mask = scaler.scale_input(mask, is_segmentation=True)
     predictions = get_prediction(
-        input_volume=input_volume, tiling=tiling, model_path=model_path, model=model, verbose=verbose
+        input_volume, model_path=model_path, model=model, tiling=tiling, mask=mask, verbose=verbose
     )
     assert len(structure_names) == predictions.shape[0]
 
-    if scale is not None:
-        assert predictions.ndim == input_volume.ndim + 1
-        original_shape = (predictions.shape[0],) + original_shape
-        predictions = resize(predictions, original_shape, preserve_range=True,).astype(predictions.dtype)
-        assert predictions.shape == original_shape
-
-    predictions = {name: predictions[i] for i, name in enumerate(structure_names)}
+    predictions = {
+        name: scaler.scale_output(predictions[i], is_segmentation=False) for i, name in enumerate(structure_names)
+    }
     if threshold is not None:
         for name in structure_names:
             # We can either have a single threshold value or a threshold per structure

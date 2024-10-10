@@ -22,17 +22,30 @@ def close_holes(vesicle_segmentation, closing_iterations=4, min_size=0, verbose=
     return closed_segmentation
 
 
-def filter_zborder_objects(segmentation):
-    """Filter any object that touches the upper or lower z-border.
+def filter_border_objects(segmentation: np.ndarray, z_border_only: bool = False) -> np.ndarray:
+    """Filter any object that touches one of the volume borders.
+
+    Args:
+        segmentation: The input segmentation.
+        z_border_only: Whether to only filter the objects that touch the depth axis border (True)
+            or to filter all objects touching an image borhder (False).
+
+    Returns:
+        The filtered segmentation.
     """
     props = regionprops(segmentation)
 
     filter_ids = []
     for prop in props:
-        bbox = prop.bbox
-        z_start, z_stop = bbox[0], bbox[3]
-        if z_start == 0 or z_stop == segmentation.shape[0]:
-            filter_ids.append(prop.label)
+        bbox = np.array(prop.bbox)
+        if z_border_only:
+            z_start, z_stop = bbox[0], bbox[3]
+            if z_start == 0 or z_stop == segmentation.shape[0]:
+                filter_ids.append(prop.label)
+        else:
+            start, stop = bbox[:3], bbox[3:]
+            if (start == 0).any() or (stop == np.array(segmentation.shape)).any():
+                filter_ids.append(prop.label)
 
     segmentation[np.isin(segmentation, filter_ids)] = 0
     return segmentation
