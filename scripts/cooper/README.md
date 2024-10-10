@@ -7,6 +7,7 @@ It currently holds the following scripts:
 - `run_cristae_segmentation.py`: Segment cristae from tomograms stored as mrc.
 - `visualize_segmentation.py`: Visualize segmentation results with napari.
 - `export_vesicles_to_imod.py`: Export the vesicle segmentation to IMOD point annotations.
+- `extract_mask_from_imod.py`: Extract a mask from IMOD annotations.
 
 ## Usage
 
