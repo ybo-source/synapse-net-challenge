@@ -7,6 +7,7 @@ It currently holds the following scripts:
 - `run_cristae_segmentation.py`: Segment cristae from tomograms stored as mrc.
 - `visualize_segmentation.py`: Visualize segmentation results with napari.
 - `export_vesicles_to_imod.py`: Export the vesicle segmentation to IMOD point annotations.
+- `extract_mask_from_imod.py`: Extract a mask from IMOD annotations.
 
 ## Usage
 
@@ -21,6 +22,7 @@ For example, you can run vesicle segmentation like this:
 $ python run_vesicle_segmentation.py -i /path/to/input_folder -o /path/to/output_folder -m /path/to/vesicle_model.pt
 ```
 The filepath after `-i` specifices the location of the folder with the mrcs to be segmented, the segmentation results will be stored (as tifs) in the folder following `-o` and `-m` is used to specify the path to the segmentation model.
+To segment vesicles with an additional mask, you can use the `--mask_path` option.
 
 The segmentation scripts accept additional parameters, e.g. `--force` to overwrite existing segmentations in the output folder (by default these are skipped to avoid unnecessary computation) and `--tile_shape <TILE_Z> <TILE_Y> <TILE_X>` to specify a different tile shape (which may be necessary to avoid running out of GPU memory).
 You can check out all parameters by printing the help message of the give string, e.g.
@@ -37,11 +39,19 @@ This command will open all tomograms saved under `/path/to/input_folder` and the
 The script `export_vesicles_to_imod.py` can be used to export the vesicle segmentations to an imod point model.
 You can run it like this:
 ```
-$ python export_vesicles_to_imod.py -i /path/to/input_folder -s /path/to/vesicles -o /path/to/imod_export --min_radius 10
+$ python export_vesicles_to_imod.py -i /path/to/input_folder -s /path/to/vesicles -o /path/to/imod_export --min_radius 10 --increase_radius 1.5
 ```
 The parameters have a similar meaning to the other scripts (`-i`: folder with mrc files, `-s`: folder with vesicle segmentation results, `-o`: folder for saving the imod export results); `--min_radius` controls the minimal vesicle radius in nanometer.
+The option `--increase_radius` specifies a factor that is used to increase the vesicle diameter for export to better fit the data in IMOD.
 In order to run this command, you need to install IMOD on the workstation.
 Note: export to imod is not yet implemented for other structures than vesicles.
+
+The script `extract_mask_from_imod.py` can be used to export compartment masks from IMOD. You can run it like this:
+```
+$ python extract_mask_from_imod.py -i /path/to/tomogram.mrc -m /path/to/imodfile.mod -o /path/to/mask.tif -n object_name
+```
+Here, `-i` and `-m` are the input paths to mrc file and imod file, `-o` is where the mask extracted as tif will be stored and `-n` is the name
+of the object to be extracted from the imod file.
 
 
 ## Data Transfer
