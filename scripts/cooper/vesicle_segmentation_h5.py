@@ -34,11 +34,19 @@ def get_volume(input_path):
         input_volume = f[key][:]
     return input_volume
 
-def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, halo, include_boundary, key_label):
+def run_vesicle_segmentation(input_path, output_path, model_path, mask_path, mask_key,tile_shape, halo, include_boundary, key_label):
     tiling = parse_tiling(tile_shape, halo)
     print(f"using tiling {tiling}")
     input = get_volume(input_path)
-    segmentation, prediction = segment_vesicles(input_volume=input, model_path=model_path, verbose=False, tiling=tiling, return_predictions=True, exclude_boundary=not include_boundary)
+
+    #check if we have a restricting mask for the segmentation
+    if mask_path is not None:
+        with open_file(mask_path, "r") as f:
+                        mask = f[mask_key][:]
+    else:
+        mask = None
+
+    segmentation, prediction = segment_vesicles(input_volume=input, model_path=model_path, verbose=False, tiling=tiling, return_predictions=True, exclude_boundary=not include_boundary, mask = mask)
     foreground, boundaries = prediction[:2]
 
     seg_output = _require_output_folders(output_path)
@@ -63,6 +71,12 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
             f.create_dataset(f"prediction_{key_label}/foreground", data = foreground, compression="gzip")
             f.create_dataset(f"prediction_{key_label}/boundaries", data = boundaries, compression="gzip")
         
+        if mask is not None:
+            if mask_key in f:
+                print("mask image already saved")
+            else:
+                f.create_dataset(mask_key, data = mask, compression = "gzip")
+        
         
 
 
@@ -75,7 +89,16 @@ def segment_folder(args):
     print(input_files)
     pbar = tqdm(input_files, desc="Run segmentation")
     for input_path in pbar:
-        run_vesicle_segmentation(input_path, args.output_path, args.model_path, args.tile_shape, args.halo, args.include_boundary, args.key_label)
+
+        filename = os.path.basename(input_path)
+        mask_path = os.path.join(args.mask_path, filename)
+        
+        # Check if the mask file exists
+        if not os.path.exists(mask_path):
+            print(f"Mask file not found for {input_path}: {mask_path}")
+            mask_path = None
+
+        run_vesicle_segmentation(input_path, args.output_path, args.model_path, mask_path, args.mask_key, args.tile_shape, args.halo, args.include_boundary, args.key_label)
 
 def main():
     parser = argparse.ArgumentParser(description="Segment vesicles in EM tomograms.")
@@ -89,6 +112,12 @@ def main():
     )
     parser.add_argument(
         "--model_path", "-m", required=True, help="The filepath to the vesicle model."
+    )
+    parser.add_argument(
+        "--mask_path", help="The filepath to a h5 file with a mask that will be used to restrict the segmentation. Needs to be in combination with mask_key."
+    )
+    parser.add_argument(
+        "--mask_key", help="Key name that holds the mask segmentation"
     )
     parser.add_argument(
         "--tile_shape", type=int, nargs=3,
@@ -113,7 +142,7 @@ def main():
     if os.path.isdir(input_):
         segment_folder(args)
     else:
-        run_vesicle_segmentation(input_, args.output_path, args.model_path, args.tile_shape, args.halo, args.include_boundary, args.key_label)
+        run_vesicle_segmentation(input_, args.output_path, args.model_path, args.mask_path, args.mask_key, args.tile_shape, args.halo, args.include_boundary, args.key_label)
 
     print("Finished segmenting!")
 

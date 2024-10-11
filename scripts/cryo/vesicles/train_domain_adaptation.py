@@ -84,7 +84,7 @@ def vesicle_domain_adaptation(teacher_model, testset = True):
 
     #adjustable parameters
     patch_shape = [48, 256, 256]
-    model_name = "vesicle-DA-cryo-v1"
+    model_name = "vesicle-DA-cryo-v2"
     
     model_root = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/models_v2/checkpoints/"
     checkpoint_path = os.path.join(model_root, teacher_model)
@@ -98,6 +98,7 @@ def vesicle_domain_adaptation(teacher_model, testset = True):
         save_root="/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/DA_models",
         source_checkpoint=checkpoint_path,
         confidence_threshold=0.75,
+        n_iterations=int(5e4),
     )
 
 
