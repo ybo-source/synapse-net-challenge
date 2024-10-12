@@ -94,6 +94,7 @@ def extract_vesicles(raw_file, seg_file, correction_file, apply_closing=True, ou
         v.add_labels(seg)
         napari.run()
     else:
+        # TODO size filter the vesicles
         with open_file(output_path, "a") as f:
             f.create_dataset("raw", data=raw, compression="gzip")
             f.create_dataset("labels/vesicles", data=seg, compression="gzip")
@@ -121,14 +122,14 @@ def process_64K_LAM12(output_root):
 
 
 def main():
-    # output_root = None
-    output_root = "/home/pape/Work/data/fernandez-busnadiego/vesicle_gt/v1"
+    output_root = None
+    # output_root = "/home/pape/Work/data/fernandez-busnadiego/vesicle_gt/v1"
 
     if output_root is not None and not os.path.exists(output_root):
         os.makedirs(output_root, exist_ok=True)
 
-    process_33K_L1(output_root)
-    # process_64K_LAM12(output_root)
+    # process_33K_L1(output_root)
+    process_64K_LAM12(output_root)
 
 
 if __name__ == "__main__":
