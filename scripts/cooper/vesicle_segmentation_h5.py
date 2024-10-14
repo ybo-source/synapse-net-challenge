@@ -91,11 +91,10 @@ def segment_folder(args):
     for input_path in pbar:
 
         filename = os.path.basename(input_path)
-        mask_path = os.path.join(args.mask_path, filename)
-        
-        # Check if the mask file exists
-        if not os.path.exists(mask_path):
-            print(f"Mask file not found for {input_path}: {mask_path}")
+        try:
+            mask_path = os.path.join(args.mask_path, filename)
+        except:
+            print(f"Mask file not found for {input_path}")
             mask_path = None
 
         run_vesicle_segmentation(input_path, args.output_path, args.model_path, mask_path, args.mask_key, args.tile_shape, args.halo, args.include_boundary, args.key_label)
