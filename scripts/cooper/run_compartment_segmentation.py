@@ -1,47 +1,51 @@
-import h5py
-import napari
+import argparse
+from functools import partial
 
 from synaptic_reconstruction.inference.compartments import segment_compartments
+from synaptic_reconstruction.inference.util import inference_helper, parse_tiling
 
 
-def check_2d():
-
-    input_path = "synapse-examples/36859_J1_66K_TS_CA3_PS_26_rec_2Kb1dawbp_crop.h5"
-    model_path = "synapse-examples/compartment_model.pt"
-
-    with h5py.File(input_path, "r") as f:
-        input_ = f["raw"][279]
-
-    seg, pred = segment_compartments(
-        input_, model_path=model_path, verbose=True, return_predictions=True, scale=(0.25, 0.25),
-        tiling={"tile": {"x": 512, "y": 512, "z": 1}, "halo": {"x": 32, "y": 32, "z": 1}}
+def run_compartment_segmentation(args):
+    tiling = parse_tiling(args.tile_shape, args.halo)
+    segmentation_function = partial(
+        segment_compartments, model_path=args.model_path, verbose=False, tiling=tiling, scale=[0.25, 0.25, 0.25]
     )
-
-    v = napari.Viewer()
-    v.add_image(input_)
-    v.add_image(pred)
-    v.add_labels(seg)
-    napari.run()
-
-
-def check_3d():
-
-    input_path = "synapse-examples/36859_J1_66K_TS_CA3_PS_26_rec_2Kb1dawbp_crop.h5"
-    model_path = "./synapse-examples/compartment_model_3d.pt"
-
-    with h5py.File(input_path, "r") as f:
-        input_ = f["raw"][:]
-
-    seg, pred = segment_compartments(
-        input_, model_path=model_path, verbose=True, return_predictions=True, scale=(0.25, 0.25, 0.25),
+    inference_helper(
+        args.input_path, args.output_path, segmentation_function, force=args.force, data_ext=args.data_ext
     )
-    with h5py.File("./synapse-examples/distance_prediction.h5", "a") as f:
-        f.create_dataset("pred", data=pred, compression="gzip")
 
 
 def main():
-    # check_2d()
-    check_3d()
+    parser = argparse.ArgumentParser(description="Segment synaptic compartments in EM tomograms.")
+    parser.add_argument(
+        "--input_path", "-i", required=True,
+        help="The filepath to mrc file or directory containing the tomogram data."
+    )
+    parser.add_argument(
+        "--output_path", "-o", required=True,
+        help="The filepath to directory where the segmentation will be saved."
+    )
+    parser.add_argument(
+        "--model_path", "-m", required=True, help="The filepath to the compartment model."
+    )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Whether to over-write already present segmentation results."
+    )
+    parser.add_argument(
+        "--tile_shape", type=int, nargs=3,
+        help="The tile shape for prediction. Lower the tile shape if GPU memory is insufficient."
+    )
+    parser.add_argument(
+        "--halo", type=int, nargs=3,
+        help="The halo for prediction. Increase the halo to minimize boundary artifacts."
+    )
+    parser.add_argument(
+        "--data_ext", default=".mrc", help="The extension of the tomogram data. By default .mrc."
+    )
+
+    args = parser.parse_args()
+    run_compartment_segmentation(args)
 
 
 if __name__ == "__main__":
