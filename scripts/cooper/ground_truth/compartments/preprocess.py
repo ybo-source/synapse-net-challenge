@@ -40,8 +40,9 @@ def preprocess_tomogram(dataset, tomogram):
         output_path=output_path,
         model_type="vit_b",
         key="data",
-        checkpoint_path="./checkpoints/compartment_model/best.pt",
+        checkpoint_path="./checkpoints/compartment_model_v2/best.pt",
         ndim=3,
+        precompute_amg_state=True,
     )
 
 
@@ -78,7 +79,7 @@ def preprocess_cryo_tomogram(fname):
         output_path=output_path,
         model_type="vit_b",
         key="data",
-        checkpoint_path="./checkpoints/compartment_model/best.pt",
+        checkpoint_path="./checkpoints/compartment_model_v2/best.pt",
         ndim=3,
     )
 
@@ -113,10 +114,10 @@ def preprocess_cryo():
 
 
 def main():
-    # preprocess_05()
-    # preprocess_06()
-    # preprocess_09()
     preprocess_cryo()
+    preprocess_05()
+    preprocess_06()
+    preprocess_09()
 
 
 if __name__ == "__main__":

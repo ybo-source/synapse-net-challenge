@@ -12,8 +12,8 @@ from scipy.ndimage import binary_dilation
 
 from synaptic_reconstruction.training import supervised_training
 
-# TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2"
-TRAIN_ROOT = "/home/pape/Work/my_projects/synaptic-reconstruction/scripts/cooper/ground_truth/compartments/output/compartment_gt"  # noqa
+TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/ground_truth/compartments"
+# TRAIN_ROOT = "/home/pape/Work/my_projects/synaptic-reconstruction/scripts/cooper/ground_truth/compartments/output/compartment_gt"  # noqa
 
 
 def get_paths_2d():
@@ -77,7 +77,7 @@ def train_compartments_3d_v1():
     patch_shape = (64, 384, 384)
     batch_size = 1
 
-    check = True
+    check = False
 
     save_root = "."
     supervised_training(
@@ -98,8 +98,8 @@ def train_compartments_3d_v1():
 
 
 def main():
-    train_compartments_2d_v1()
-    # train_compartments_3d_v1()
+    # train_compartments_2d_v1()
+    train_compartments_3d_v1()
 
 
 if __name__ == "__main__":
