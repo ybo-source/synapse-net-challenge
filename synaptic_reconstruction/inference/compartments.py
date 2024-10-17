@@ -71,6 +71,12 @@ def segment_compartments(
     # Run prediction.
     pred = get_prediction(input_volume, tiling=tiling, model_path=model_path, model=model, verbose=verbose)
 
+    # Remove channel axis if necessary.
+    if pred.ndim != input_volume.ndim:
+        assert pred.ndim == input_volume.ndim + 1
+        assert pred.shape[0] == 1
+        pred = pred[0]
+
     # The parameters for the segmentation. The second two probably need to be optimized further.
     boundary_threshold = 0.5
     # The distance for thresholding the boundary distacne for computing connected components.

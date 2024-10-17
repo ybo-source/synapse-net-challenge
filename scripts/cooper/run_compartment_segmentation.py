@@ -27,7 +27,7 @@ def check_2d():
 def check_3d():
 
     input_path = "synapse-examples/36859_J1_66K_TS_CA3_PS_26_rec_2Kb1dawbp_crop.h5"
-    model_path = "synapse-examples/compartment_model.pt"
+    model_path = "./synapse-examples/compartment_model_3d.pt"
 
     with h5py.File(input_path, "r") as f:
         input_ = f["raw"][:]
@@ -35,8 +35,8 @@ def check_3d():
     seg, pred = segment_compartments(
         input_, model_path=model_path, verbose=True, return_predictions=True, scale=(0.25, 0.25, 0.25),
     )
-    with h5py.File() as f:
-        pass
+    with h5py.File("./synapse-examples/distance_prediction.h5", "a") as f:
+        f.create_dataset("pred", data=pred, compression="gzip")
 
 
 def main():
