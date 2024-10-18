@@ -1,16 +1,24 @@
 import os
-import argparse
 from glob import glob
+import argparse
 import json
 
-from sklearn.model_selection import train_test_split
-from synaptic_reconstruction.training.domain_adaptation import mean_teacher_adaptation
+import torch_em
+import torch
 
-TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/rizzoli/extracted"
-OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/2D_DA_training_rizzoli"
+from sklearn.model_selection import train_test_split
+
+from synaptic_reconstruction.training import supervised_training
+from synaptic_reconstruction.training import semisupervised_training
+
+TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/exported_imod_objects"
+OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/training_AZ_v1"
+
 
 def _require_train_val_test_split(datasets):
     train_ratio, val_ratio, test_ratio = 0.8, 0.1, 0.1
+    if len(datasets) < 10:
+        train_ratio, val_ratio, test_ratio = 0.5, 0.25, 0.25
 
     def _train_val_test_split(names):
         train, test = train_test_split(names, test_size=1 - train_ratio, shuffle=True)
@@ -70,44 +78,56 @@ def get_paths(split, datasets, testset=True):
 
     return paths
 
-def vesicle_domain_adaptation(teacher_model, testset = True):
+def train(key, ignore_label = None, training_2D = False, testset = True):
+
     datasets = [
-    "upsampled_by2"
+    "01_hoi_maus_2020_incomplete",
+    "06_hoi_wt_stem750_fm",
+    "12_chemical_fix_cryopreparation"
 ]
     train_paths = get_paths("train", datasets=datasets, testset=testset)
     val_paths = get_paths("val", datasets=datasets, testset=testset)
-    
+
     print("Start training with:")
     print(len(train_paths), "tomograms for training")
     print(len(val_paths), "tomograms for validation")
 
-    #adjustable parameters
-    patch_shape = [1, 256, 256] #2D
-    model_name = "2D-vesicle-DA-rizzoli-v3"
-    
-    model_root = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/models_v2/checkpoints/"
-    checkpoint_path = os.path.join(model_root, teacher_model)
+    patch_shape = [48, 256, 256]
+    model_name=f"3D-AZ-model-v1"
 
-    mean_teacher_adaptation(
+    #checking for 2D training
+    if training_2D:
+        patch_shape = [1, 256, 256]
+        model_name=f"2D-AZ-model-v1"
+    
+    batch_size = 4
+    check = False
+
+    supervised_training(
         name=model_name,
-        unsupervised_train_paths=train_paths,
-        unsupervised_val_paths=val_paths,
-        raw_key="raw",
-        patch_shape=patch_shape,
-        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/DA_models",
-        source_checkpoint=checkpoint_path,
-        confidence_threshold=0.75,
-        n_iterations=int(5e4),
+        train_paths=train_paths,
+        val_paths=val_paths,
+        label_key=f"/labels/{key}",
+        patch_shape=patch_shape, batch_size=batch_size,
+        sampler = torch_em.data.sampler.MinInstanceSampler(min_num_instances=1),
+        n_samples_train=None, n_samples_val=25,
+        check=check,
+        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/AZ_models",
+        n_iterations=int(5e3),
+        ignore_label= ignore_label,
+        label_transform=torch_em.transform.label.labels_to_binary,
+        out_channels = 1,
     )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--teacher_model", required=True, help="Name of teacher model")
+    parser.add_argument("-k", "--key", required=True, help="Key ID that will be used by model in training")
+    parser.add_argument("-m", "--mask", type=int, default=None, help="Mask ID that will be ignored by model in training")
+    parser.add_argument("-2D", "--training_2D", action='store_true', help="Set to True for 2D training")
     parser.add_argument("-t", "--testset", action='store_false', help="Set to False if no testset should be created")
     args = parser.parse_args()
-    
-    vesicle_domain_adaptation(args.teacher_model, args.testset)
+    train(args.key, args.mask, args.training_2D, args.testset)
 
 
 if __name__ == "__main__":

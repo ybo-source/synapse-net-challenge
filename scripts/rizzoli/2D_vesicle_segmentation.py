@@ -78,7 +78,7 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
         boundaries = []
         for z in range(input_volume.shape[0]):
             slice_ = input_volume[z, :, :]
-            segmented_slice, prediction_slice = segment_vesicles(input_volume=slice_, model=model, verbose=False, tiling=tiling, return_predictions=True, scale= [2,2], exclude_boundary=not include_boundary)
+            segmented_slice, prediction_slice = segment_vesicles(input_volume=slice_, model=model, verbose=False, tiling=tiling, return_predictions=True, exclude_boundary=not include_boundary)
             processed_slices.append(segmented_slice)
             foreground_pred_slice, boundaries_pred_slice = prediction_slice[:2]
             foreground.append(foreground_pred_slice)
