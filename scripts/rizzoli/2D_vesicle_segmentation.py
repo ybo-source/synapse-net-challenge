@@ -6,6 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 import torch
 import torch_em
+import numpy as np
 
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
 from synaptic_reconstruction.inference.util import parse_tiling
@@ -73,13 +74,18 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
 
     def process_slices(input_volume):
         processed_slices = []
+        foreground = []
+        boundaries = []
         for z in range(input_volume.shape[0]):
             slice_ = input_volume[z, :, :]
-            segmented_slice = segment_vesicles(input_volume=slice_, model=model, verbose=False, tiling=tiling, exclude_boundary=not include_boundary)
+            segmented_slice, prediction_slice = segment_vesicles(input_volume=slice_, model=model, verbose=False, tiling=tiling, return_predictions=True, exclude_boundary=not include_boundary)
             processed_slices.append(segmented_slice)
-        return processed_slices
+            foreground_pred_slice, boundaries_pred_slice = prediction_slice[:2]
+            foreground.append(foreground_pred_slice)
+            boundaries.append(boundaries_pred_slice)
+        return processed_slices, foreground, boundaries
 
-    segmentation = process_slices(input)
+    segmentation, foreground, boundaries = process_slices(input)
 
     seg_output = _require_output_folders(output_path)
     file_name = Path(input_path).stem
@@ -100,6 +106,8 @@ def run_vesicle_segmentation(input_path, output_path, model_path, tile_shape, ha
             print("Skipping", input_path, "because", key, "exists")
         else:
             f.create_dataset(key, data=segmentation, compression="gzip")
+            f.create_dataset(f"prediction_{key_label}/foreground", data = foreground, compression="gzip")
+            f.create_dataset(f"prediction_{key_label}/boundaries", data = boundaries, compression="gzip")
         
         
 
