@@ -1,11 +1,13 @@
 import os
+from glob import glob
+from pathlib import Path
 
 from elf.io import open_file
 from micro_sam.sam_annotator import annotator_3d, image_folder_annotator
 
 
 def run_volume_annotation(ds, name):
-    checkpoint_path = "./checkpoints/compartment_model/best.pt"
+    checkpoint_path = "./checkpoints/compartment_model_v2/best.pt"
 
     tomogram_path = f"./output/{ds}/tomograms/{name}.h5"
     embedding_path = f"./output/{ds}/embeddings/{name}.zarr"
@@ -25,16 +27,40 @@ def run_image_annotation():
     )
 
 
+def annotate_cryo():
+    ds = "cryo"
+    name = "vesicles-33K-L1"
+    run_volume_annotation(ds, name)
+
+
+def _series_annotation(ds):
+    # name = "upSTEM750_36859_J2_TS_SP_001_rec_2kb1dawbp_crop"
+    images = glob(f"./output/{ds}/tomograms/*.h5")
+    for image in images:
+        name = Path(image).stem
+        seg_path = f"./output/{ds}/segmentations/{name}.tif"
+        print("Run segmentation for:", ds, name)
+        if os.path.exists(seg_path):
+            print("Skipping", ds, name, "because it is already segmented.")
+            continue
+        run_volume_annotation(ds, name)
+
+
+def annotate_05():
+    ds = "05_stem750_sv_training"
+    _series_annotation(ds)
+
+
+def annotate_06():
+    ds = "06_hoi_wt_stem750_fm"
+    _series_annotation(ds)
+
+
 def main():
-    run_image_annotation()
-
-    # ds = "09_stem750_66k"
-    # name = "36859_J1_66K_TS_PS_05_rec_2kb1dawbp_crop"
-
-    # ds = "cryo"
-    # name = "vesicles-64K-LAM12"
-
-    # run_annotation(ds, name)
+    # run_image_annotation()
+    # annotate_cryo()
+    # annotate_05()
+    annotate_06()
 
 
 if __name__ == "__main__":

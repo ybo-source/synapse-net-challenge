@@ -7,8 +7,10 @@ import numpy as np
 
 from elf.io import open_file
 from scipy.ndimage import distance_transform_edt, binary_closing, binary_erosion
+from scipy.ndimage import maximum_filter1d
 from skimage.measure import label, regionprops
 from skimage.segmentation import watershed, find_boundaries
+from skimage.transform import resize
 from tqdm import trange, tqdm
 
 
@@ -69,7 +71,37 @@ def make_instances(boundaries, apply_closing=True):
     return seg
 
 
-def extract_vesicles(raw_file, seg_file, correction_file, apply_closing=True, output_path=None):
+def postprocess_vesicles(seg):
+    seg = label(seg)
+
+    ids, sizes = np.unique(seg, return_counts=True)
+    min_size = 100
+    filter_ids = ids[sizes < min_size]
+    seg[np.isin(seg, filter_ids)] = 0
+
+    # Apply per vesicle closing.
+    props = regionprops(seg)
+    for prop in tqdm(props, desc="Closing vesicles."):
+        bb = prop.bbox
+        bb = tuple(slice(start, stop) for start, stop in zip(bb[:3], bb[3:]))
+        mask = seg[bb] == prop.label
+        mask_closed = binary_closing(mask, iterations=3)
+        mask = np.logical_or(mask, mask_closed)
+        seg[bb][mask] = prop.label
+
+    return seg
+
+
+def load_and_postprocess_mask(mask_file, full_shape):
+    mask = imageio.imread(mask_file)
+    mask = mask > 0
+    mask = maximum_filter1d(mask, size=4, axis=0, mode="constant")
+    mask = resize(mask, full_shape, order=0, anti_aliasing=False, preserve_range=True)
+    assert mask.shape == full_shape
+    return mask.astype("uint8")
+
+
+def extract_vesicles(raw_file, seg_file, correction_file, apply_closing=True, output_path=None, mask_file=None):
     with open_file(raw_file, "r") as f:
         raw = f["data"][:]
     with open_file(seg_file, "r") as f:
@@ -94,41 +126,55 @@ def extract_vesicles(raw_file, seg_file, correction_file, apply_closing=True, ou
         v.add_labels(seg)
         napari.run()
     else:
-        # TODO size filter the vesicles
+        # Postprocess the vesicle segmentation before saving it.
+        seg = postprocess_vesicles(seg)
+
+        # Load and post-process the compartment mask.
+        if mask_file is None:
+            mask = None
+        else:
+            mask = load_and_postprocess_mask(mask_file, seg.shape)
+
         with open_file(output_path, "a") as f:
             f.create_dataset("raw", data=raw, compression="gzip")
             f.create_dataset("labels/vesicles", data=seg, compression="gzip")
             f.create_dataset("labels/vescile_boundaries", data=boundaries, compression="gzip")
+            if mask is not None:
+                f.create_dataset("labels/mask", data=mask, compression="gzip")
 
 
 def process_33K_L1(output_root):
     raw_file = "/home/pape/Work/data/fernandez-busnadiego/tomos_anotated_18924/33K/L1_ts_002_newstack_rec_deconv_bin4_260224.mrc"  # noqa
     seg_file = "/home/pape/Work/data/fernandez-busnadiego/tomos_anotated_18924/33K/L1_ts_002_SV_bin4_2622024.mrc"  # noqa
     correction_file = "vesicles-33K-L1.tif"
+    mask_file = "vesicles-33K-L1_mask.tif"
 
     fname = Path(correction_file).stem
     output_path = None if output_root is None else os.path.join(output_root, f"{fname}.h5")
-    extract_vesicles(raw_file, seg_file, correction_file, output_path=output_path)
+    extract_vesicles(raw_file, seg_file, correction_file, output_path=output_path, mask_file=mask_file)
 
 
 def process_64K_LAM12(output_root):
     raw_file = "/home/pape/Work/data/fernandez-busnadiego/tomos_anotated_18924/64K/Lam12_ts_006_newstack_rec_deconv_bin4_250823.mrc"  # noqa
     seg_file = "/home/pape/Work/data/fernandez-busnadiego/tomos_anotated_18924/64K/Lam12_ts_006_SV_bin4_250823.mrc"  # noqa
     correction_file = "vesicles-64K-LAM12.tif"
+    mask_file = "vesicles-64K-LAM12_mask.tif"
 
     fname = Path(correction_file).stem
     output_path = None if output_root is None else os.path.join(output_root, f"{fname}.h5")
-    extract_vesicles(raw_file, seg_file, correction_file, apply_closing=False, output_path=output_path)
+    extract_vesicles(
+        raw_file, seg_file, correction_file, apply_closing=False, output_path=output_path, mask_file=mask_file
+    )
 
 
 def main():
-    output_root = None
-    # output_root = "/home/pape/Work/data/fernandez-busnadiego/vesicle_gt/v1"
+    # output_root = None
+    output_root = "/home/pape/Work/data/fernandez-busnadiego/vesicle_gt/v2"
 
     if output_root is not None and not os.path.exists(output_root):
         os.makedirs(output_root, exist_ok=True)
 
-    # process_33K_L1(output_root)
+    process_33K_L1(output_root)
     process_64K_LAM12(output_root)
 
 

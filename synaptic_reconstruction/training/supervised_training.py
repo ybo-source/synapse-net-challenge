@@ -110,8 +110,12 @@ def get_supervised_loader(
     """
 
     # Check for 2D or 3D training
-    z, y, x = patch_shape
-    ndim = 2 if z == 1 else 3
+    try:
+        z, y, x = patch_shape
+        ndim = 2 if z == 1 else 3
+    except ValueError:
+        y, x = patch_shape
+        ndim = 2
     print("ndim is: ", ndim)
 
     if label_transform is not None:  # A specific label transform was passed, do nothing.
@@ -176,6 +180,7 @@ def supervised_training(
     ignore_label: Optional[int] = None,
     label_transform: Optional[callable] = None,
     out_channels: int = 2,
+    mask_channel: bool = False,
     **loader_kwargs,
 ):
     """Run supervised segmentation training.
@@ -212,6 +217,8 @@ def supervised_training(
         label_transform: Label transform that is applied to the segmentation to compute the targets.
             If no label transform is passed (the default) a boundary transform is used.
         out_channels: The number of output channels of the UNet.
+        mask_channel: Whether the last channels in the labels should be used for masking the loss.
+            This can be used to implement more complex masking operations and is not compatible with `ignore_label`.
         loader_kwargs: Additional keyword arguments for the dataloader.
     """
     train_loader = get_supervised_loader(train_paths, raw_key, label_key, patch_shape, batch_size,
@@ -230,8 +237,11 @@ def supervised_training(
         return
 
     # Check for 2D or 3D training
-    is_2d = False
-    z, y, x = patch_shape
+    try:
+        z, y, x = patch_shape
+    except ValueError:
+        y, x = patch_shape
+        z = 1
     is_2d = z == 1
 
     if is_2d:
@@ -239,18 +249,28 @@ def supervised_training(
     else:
         model = get_3d_model(out_channels=out_channels)
 
+    loss, metric = None, None
     # No ignore label -> we can use default loss.
-    if ignore_label is None:
-        loss = None
+    if ignore_label is None and not mask_channel:
+        pass
     # If we have an ignore label the loss and metric have to be modified
     # so that the ignore mask is not used in the gradient calculation.
-    else:
+    if ignore_label is not None:
         loss = torch_em.loss.LossWrapper(
             loss=torch_em.loss.DiceLoss(),
             transform=torch_em.loss.wrapper.MaskIgnoreLabel(
                 ignore_label=ignore_label, masking_method="multiply",
             )
         )
+        metric = loss
+    elif mask_channel:
+        loss = torch_em.loss.LossWrapper(
+            loss=torch_em.loss.DiceLoss(),
+            transform=torch_em.loss.wrapper.ApplyAndRemoveMask()
+        )
+        metric = loss
+    else:
+        raise ValueError
 
     trainer = torch_em.default_segmentation_trainer(
         name=name,
@@ -263,5 +283,6 @@ def supervised_training(
         compile_model=False,
         save_root=save_root,
         loss=loss,
+        metric=metric,
     )
     trainer.fit(n_iterations)
