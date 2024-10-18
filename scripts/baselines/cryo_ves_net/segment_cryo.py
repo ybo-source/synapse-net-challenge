@@ -11,7 +11,12 @@ def main():
         "vesicles-33K-L1": (14.6, 14.6, 14.6),
         "vesicles-64K-LAM12": (7.56, 7.56, 7.56),
     }
-    apply_cryo_vesnet(input_folder, output_folder, pattern="*.h5", input_key="raw", resolution=resolution)
+    apply_cryo_vesnet(
+        input_folder, output_folder,
+        pattern="*.h5", input_key="raw",
+        mask_folder=input_folder, mask_key="/labels/mask",
+        resolution=resolution
+    )
 
 
 if __name__ == "__main__":
