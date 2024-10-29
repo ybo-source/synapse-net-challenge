@@ -16,13 +16,63 @@ from skimage.measure import regionprops
 from tqdm import tqdm
 
 
+# FIXME how to bring the data to the IMOD axis convention?
+def _to_imod_order(data):
+    # data = np.swapaxes(data, 0, -1)
+    # data = np.fliplr(data)
+    # data = np.swapaxes(data, 0, -1)
+    return data
+
+
+def write_segmentation_to_imod(
+    mrc_path: str,
+    segmentation_path: str,
+    output_path: str,
+) -> None:
+    """Write a segmentation to a mod file as contours.
+
+    Args:
+        mrc_path: a
+        segmentation_path: a
+        output_path: a
+    """
+    cmd = "imodauto"
+    cmd_path = shutil.which(cmd)
+    assert cmd_path is not None, f"Could not find the {cmd} imod command."
+
+    assert os.path.exists(mrc_path)
+    with mrcfile.open(mrc_path, mode="r+") as f:
+        voxel_size = f.voxel_size
+
+    with tempfile.NamedTemporaryFile(suffix=".mrc") as f:
+        tmp_path = f.name
+
+        seg = (imageio.imread(segmentation_path) > 0).astype("uint8")
+        seg_ = _to_imod_order(seg)
+
+        # import napari
+        # v = napari.Viewer()
+        # v.add_image(seg)
+        # v.add_labels(seg_)
+        # napari.run()
+
+        mrcfile.new(tmp_path, data=seg_, overwrite=True)
+        with mrcfile.open(tmp_path, mode="r+") as f:
+            f.voxel_size = voxel_size
+            f.update_header_from_data()
+
+        cmd_list = [cmd, "-E", "1", "-u", tmp_path, output_path]
+        run(cmd_list)
+
+
 def convert_segmentation_to_spheres(
     segmentation: np.ndarray,
     verbose: bool = False,
     num_workers: Optional[int] = None,
     resolution: Optional[Tuple[float, float, float]] = None,
     radius_factor: float = 1.0,
-):
+    estimate_radius_2d: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
     """Extract spheres parameterized by center and radius from a segmentation.
 
     Args:
@@ -31,6 +81,9 @@ def convert_segmentation_to_spheres(
         num_workers: Number of workers to use for parallelization.
         resolution: The physical resolution of the data.
         radius_factor: Factor for increasing the radius to account for too small exported spheres.
+        estimate_radius_2d: If true the distance to boundary for determining the centroid and computing
+            the radius will be computed only in 2d rather than in 3d. This can lead to better results
+            in case of deformation across the depth axis.
 
     Returns:
         np.array: the center coordinates
@@ -45,10 +98,14 @@ def convert_segmentation_to_spheres(
         bbox = prop.bbox
         bb = np.s_[bbox[0]:bbox[3], bbox[1]:bbox[4], bbox[2]:bbox[5]]
         mask = segmentation[bb] == seg_id
-        seg_radii = distance_transform_edt(mask, sampling=resolution)
 
-        max_coord = np.unravel_index(np.argmax(seg_radii), mask.shape)
-        radius = seg_radii[max_coord] * radius_factor
+        if estimate_radius_2d:
+            dists = np.array([distance_transform_edt(ma, sampling=resolution[1:]) for ma in mask])
+        else:
+            dists = distance_transform_edt(mask, sampling=resolution)
+
+        max_coord = np.unravel_index(np.argmax(dists), mask.shape)
+        radius = dists[max_coord] * radius_factor
 
         offset = np.array(bbox[:3])
         coord = np.array(max_coord) + offset
@@ -72,7 +129,7 @@ def write_points_to_imod(
     min_radius: Union[float, int],
     output_path: str,
     color: Optional[Tuple[int, int, int]] = None,
-):
+) -> None:
     """Write point annotations to a .mod file for IMOD.
 
     Args:
@@ -120,7 +177,8 @@ def write_segmentation_to_imod_as_points(
     output_path: str,
     min_radius: Union[int, float],
     radius_factor: float = 1.0,
-):
+    estimate_radius_2d: bool = True,
+) -> None:
     """Write segmentation results to .mod file with imod point annotations.
 
     This approximates each segmented object as a sphere.
@@ -131,6 +189,9 @@ def write_segmentation_to_imod_as_points(
         output_path: Where to save the .mod file.
         min_radius: Minimum radius for export.
         radius_factor: Factor for increasing the radius to account for too small exported spheres.
+        estimate_radius_2d: If true the distance to boundary for determining the centroid and computing
+            the radius will be computed only in 2d rather than in 3d. This can lead to better results
+            in case of deformation across the depth axis.
     """
 
     # Read the resolution information from the mrcfile.
@@ -142,7 +203,9 @@ def write_segmentation_to_imod_as_points(
 
     # Extract the center coordinates and radii from the segmentation.
     segmentation = imageio.imread(segmentation_path)
-    coordinates, radii = convert_segmentation_to_spheres(segmentation, resolution=resolution, radius_factor=radius_factor)
+    coordinates, radii = convert_segmentation_to_spheres(
+        segmentation, resolution=resolution, radius_factor=radius_factor, estimate_radius_2d=estimate_radius_2d
+    )
 
     # Write the point annotations to imod.
     write_points_to_imod(coordinates, radii, segmentation.shape, min_radius, output_path)
@@ -169,7 +232,7 @@ def export_helper(
     output_root: str,
     export_function: callable,
     force: bool = False,
-):
+) -> None:
     """
     Helper function to run imod export for files in a directory.
 

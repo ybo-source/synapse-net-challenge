@@ -105,6 +105,7 @@ def segment_compartments(
     verbose: bool = True,
     return_predictions: bool = False,
     scale: Optional[List[float]] = None,
+    mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Segment synaptic compartments in an input volume.
