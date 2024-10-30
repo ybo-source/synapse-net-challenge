@@ -13,8 +13,8 @@ from tqdm import tqdm
 
 from train_structure_segmentation import get_train_val_test_split
 
-ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
-# ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
+# ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
+ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
 MODEL_PATH = "/mnt/lustre-emmy-hdd/projects/nim00007/models/synaptic-reconstruction/vesicle-DA-inner_ear-v2"
 OUTPUT_ROOT = "./predictions"
 
