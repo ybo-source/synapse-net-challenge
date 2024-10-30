@@ -13,8 +13,8 @@ from tqdm import tqdm
 
 from train_structure_segmentation import get_train_val_test_split
 
-# ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
-ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
+ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
+# ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
 MODEL_PATH = "/mnt/lustre-emmy-hdd/projects/nim00007/models/synaptic-reconstruction/vesicle-DA-inner_ear-v2"
 OUTPUT_ROOT = "./predictions"
 
@@ -193,17 +193,39 @@ def segment_train_domain():
 def segment_vesicle_pools():
     paths = sorted(glob(os.path.join(ROOT, "other_tomograms/01_vesicle_pools", "*.h5")))
     run_vesicle_segmentation(paths, MODEL_PATH, "vesicle_pools")
+
     name = "vesicle_pools"
-    for prefix in ("Src", "Adapted"):
+    prefixes = ("Src", "Adapted")
+    label_names = ["ribbons", "presynapse", "membrane"]
+
+    for prefix in prefixes:
         postprocess_structures(paths, name, prefix=prefix, is_nested=False)
+
+        save_path = f"./results/{name}_{prefix}.csv"
+        results = evaluate(paths, name, prefix=prefix, save_path=save_path, label_names=label_names)
+        print("Results for", name, prefix, ":")
+        print(results)
+
+    # visualize(paths, name, label_names=label_names, prefixes=prefixes)
 
 
 def segment_rat():
     paths = sorted(glob(os.path.join(ROOT, "other_tomograms/03_ratten_tomos", "*.h5")))
     run_vesicle_segmentation(paths, MODEL_PATH, "rat")
+
     name = "rat"
-    for prefix in ("Src", "Adapted"):
+    prefixes = ("Src", "Adapted")
+    label_names = ["ribbons", "presynapse", "membrane"]
+
+    for prefix in prefixes:
         postprocess_structures(paths, name, prefix=prefix, is_nested=False)
+
+        save_path = f"./results/{name}_{prefix}.csv"
+        results = evaluate(paths, name, prefix=prefix, save_path=save_path, label_names=label_names)
+        print("Results for", name, prefix, ":")
+        print(results)
+
+    # visualize(paths, name, label_names=label_names, prefixes=prefixes)
 
 
 def main():
