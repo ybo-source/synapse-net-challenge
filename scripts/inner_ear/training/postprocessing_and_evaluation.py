@@ -13,8 +13,8 @@ from tqdm import tqdm
 
 from train_structure_segmentation import get_train_val_test_split
 
-# ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
-ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
+ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
+# ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
 MODEL_PATH = "/mnt/lustre-emmy-hdd/projects/nim00007/models/synaptic-reconstruction/vesicle-DA-inner_ear-v2"
 OUTPUT_ROOT = "./predictions"
 
@@ -133,7 +133,11 @@ def visualize(input_paths, name, is_nested=False, label_names=None, prefixes=Non
         for name, seg in labels.items():
             v.add_labels(seg, name=f"labels/{name}", visible=False)
         for name, seg in predictions.items():
-            v.add_labels(seg, name=name)
+            if name == "ribbon":
+                cmap = {1: "orange"}
+            else:
+                cmap = {1: "green"}
+            v.add_labels(seg, name=name, colormap=cmap)
         v.title = fname
         napari.run()
 
@@ -183,7 +187,7 @@ def segment_train_domain():
     name = "train_domain"
     run_vesicle_segmentation(paths, MODEL_PATH, name, is_nested=True)
     postprocess_structures(paths, name, is_nested=True)
-    # visualize(paths, name, is_nested=True)
+    visualize(paths, name, is_nested=True)
     results = evaluate(paths, name, is_nested=True, save_path="./results/train_domain_postprocessed.csv")
     print(results)
     print("Ribbon segmentation:", results["ribbon"].mean(), "+-", results["ribbon"].std())
@@ -229,9 +233,9 @@ def segment_rat():
 
 
 def main():
-    # segment_train_domain()
-    segment_vesicle_pools()
-    segment_rat()
+    segment_train_domain()
+    # segment_vesicle_pools()
+    # segment_rat()
 
 
 if __name__ == "__main__":
