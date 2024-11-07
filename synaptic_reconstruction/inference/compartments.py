@@ -117,6 +117,7 @@ def segment_compartments(
     return_predictions: bool = False,
     scale: Optional[List[float]] = None,
     mask: Optional[np.ndarray] = None,
+    n_slices_exclude: int = 5,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Segment synaptic compartments in an input volume.
@@ -129,6 +130,7 @@ def segment_compartments(
         verbose: Whether to print timing information.
         return_predictions: Whether to return the predictions (foreground, boundaries) alongside the segmentation.
         scale: The scale factor to use for rescaling the input volume before prediction.
+        n_slices_exclude:
 
     Returns:
         The segmentation mask as a numpy array, or a tuple containing the segmentation mask
@@ -156,7 +158,7 @@ def segment_compartments(
     if input_volume.ndim == 2:
         seg = _segment_compartments_2d(pred)
     else:
-        seg = _segment_compartments_3d(pred)
+        seg = _segment_compartments_3d(pred, n_slices_exclude=n_slices_exclude)
     if verbose:
         print("Run segmentation in", time.time() - t0, "s")
     seg = scaler.rescale_output(seg, is_segmentation=True)

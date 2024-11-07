@@ -388,7 +388,7 @@ def get_default_tiling():
             tile = {"x": 352, "y": 352, "z": 48}
         else:
             # TODO determine tilings for smaller VRAM
-            raise NotImplementedError
+            raise NotImplementedError(f"Estimating the tile size for a GPU with {vram} GB is not yet supported.")
 
         print(f"Determined tile size: {tile}")
         tiling = {"tile": tile, "halo": halo}

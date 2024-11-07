@@ -4,11 +4,11 @@ from glob import glob
 import h5py
 from tqdm import tqdm
 
-from synaptic_reconstruction.inference.utils import _Scaler
+from synaptic_reconstruction.inference.util import _Scaler
 from synaptic_reconstruction.inference.compartments import segment_compartments
 
-INPUT_ROOT = ""
-MODEL_PATH = ""
+INPUT_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/ground_truth/04Dataset_for_vesicle_eval"  # noqa
+MODEL_PATH = "/mnt/lustre-emmy-hdd/projects/nim00007/compartment_models/compartment_model_3d.pt"
 OUTPUT = "./predictions"
 
 
@@ -17,10 +17,12 @@ def segment_volume(input_path, model_path):
         raw = f["raw"][:]
 
     scale = (0.25, 0.25, 0.25)
-    scaler = _Scaler(scale)
+    scaler = _Scaler(scale, verbose=False)
     raw = scaler.scale_input(raw)
 
-    seg = segment_compartments(raw, model_path, verbose=False)
+    n_slices_exclude = 4
+    seg = segment_compartments(raw, model_path, verbose=False, n_slices_exclude=n_slices_exclude)
+    raw, seg = raw[n_slices_exclude:-n_slices_exclude], seg[n_slices_exclude:-n_slices_exclude]
 
     return raw, seg
 
