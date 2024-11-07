@@ -455,7 +455,11 @@ def apply_size_filter(
     if min_size == 0:
         return segmentation
     t0 = time.time()
-    ids, sizes = parallel.unique(segmentation, return_counts=True, block_shape=block_shape, verbose=verbose)
+    if segmentation.ndim == 2 and len(block_shape) == 3:
+        block_shape_ = block_shape[1:]
+    else:
+        block_shape_ = block_shape
+    ids, sizes = parallel.unique(segmentation, return_counts=True, block_shape=block_shape_, verbose=verbose)
     filter_ids = ids[sizes < min_size]
     segmentation[np.isin(segmentation, filter_ids)] = 0
     if verbose:

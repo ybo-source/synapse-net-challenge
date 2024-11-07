@@ -2,99 +2,110 @@ import time
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import vigra
 import torch
 
-from scipy.ndimage import distance_transform_edt, binary_closing
+import elf.segmentation as eseg
+import nifty
+from elf.tracking.tracking_utils import compute_edges_from_overlap
+from scipy.ndimage import distance_transform_edt
 from skimage.measure import label, regionprops
 from skimage.segmentation import watershed
-from skimage.morphology import remove_small_holes
 
-from synaptic_reconstruction.inference.util import get_prediction, _Scaler
+from synaptic_reconstruction.inference.util import apply_size_filter, get_prediction, _Scaler
 
 
-def _segment_compartments(
+def _multicut(ws, prediction, beta, n_threads):
+    rag = eseg.features.compute_rag(ws, n_threads=n_threads)
+    edge_features = eseg.features.compute_boundary_mean_and_length(rag, prediction, n_threads=n_threads)
+    edge_probs, edge_sizes = edge_features[:, 0], edge_features[:, 1]
+    edge_costs = eseg.multicut.compute_edge_costs(edge_probs, edge_sizes=edge_sizes, beta=beta)
+    node_labels = eseg.multicut.multicut_kernighan_lin(rag, edge_costs)
+    seg = eseg.features.project_node_labels_to_pixels(rag, node_labels, n_threads)
+    return seg
+
+
+def _segment_compartments_2d(
     prediction,
-    boundary_threshold=0.4,  # Threshold for the boundary distance computation.
-    large_seed_distance=30,  # The distance threshold for computing large seeds (= components).
-    small_seed_distance=4,   # The distance threshold for small seeds that will be filtered in the result.
-    verbose=False,
+    distances=None,
+    boundary_threshold=0.4,
+    beta=0.6,
+    n_threads=1,
+    run_multicut=True,
+    min_size=500,
 ):
-    t0 = time.time()
+    if distances is None:
+        distances = distance_transform_edt(prediction < boundary_threshold).astype("float32")
 
-    # Compute the boundary distances.
-    distances = distance_transform_edt(prediction < boundary_threshold)
+    # replace with skimage?
+    maxima = vigra.analysis.localMaxima(distances, marker=np.nan, allowAtBorder=True, allowPlateaus=True)
+    maxima = label(np.isnan(maxima))
 
-    # Compute the large seeds. These are the seeds for the compartments to be kept.
-    seeds = label(distances > large_seed_distance)
+    hmap = distances
+    hmap = (hmap.max() - hmap)
+    hmap /= hmap.max()
+    hmap_ws = hmap + prediction
+    ws = watershed(hmap_ws, markers=maxima)
 
-    # Compute additional small seeds. These are added so that the large seeds don't
-    # flood over boundaries, but will be filtered from the segmentation result.
-    ndim = distances.ndim
-    if ndim == 2:
-        small_seeds = label(distances > small_seed_distance)
-    elif ndim == 3:  # In the 3d case we compute individual seeds per slice.
-        small_seeds = np.zeros_like(seeds)
-        offset = 0
-        for z in range(small_seeds.shape[0]):
-            this_seeds = label(distances[z] > small_seed_distance)
-            this_seeds[this_seeds != 0] += offset
-            offset = this_seeds.max()
-            small_seeds[z] = this_seeds
-    else:
-        raise RuntimeError
+    hmap_mc = 0.8 * prediction + 0.2 * hmap
+    seg = _multicut(ws, hmap_mc, beta, n_threads)
+    seg = apply_size_filter(seg, min_size)
+    return seg
 
-    # We only keep small seeds that don't intersect with a large seed.
-    props = regionprops(small_seeds, seeds)
-    keep_seeds = [prop.label for prop in props if prop.max_intensity == 0]
-    keep_mask = np.isin(small_seeds, keep_seeds)
 
-    # Add up the small seeds we keep with the large seeds.
-    seed_offset = seeds.max()
-    seeds[keep_mask] = (small_seeds[keep_mask] + seed_offset)
+def _merge_segmentation_3d(seg_2d, beta=0.5, min_z_extent=10):
+    edges = compute_edges_from_overlap(seg_2d, verbose=False)
 
-    # Get the initial segmentation via watershed.
-    raw_segmentation = watershed(prediction, markers=seeds)
+    uv_ids = np.array([[edge["source"], edge["target"]] for edge in edges])
+    overlaps = np.array([edge["score"] for edge in edges])
 
-    # Thee are the large seed ids that we will keep.
-    keep_ids = list(range(1, seed_offset + 1))
+    n_nodes = int(seg_2d.max() + 1)
+    graph = nifty.graph.undirectedGraph(n_nodes)
+    graph.insertEdges(uv_ids)
 
-    # Structure lement for 2d dilation in 3d.
-    structure_element = np.ones((3, 3))  # 3x3 structure for XY plane
-    structure_3d = np.zeros((1, 3, 3))  # Only applied in the XY plane
-    structure_3d[0] = structure_element
+    costs = eseg.multicut.compute_edge_costs(overlaps)
+    # set background weights to be maximally repulsive
+    bg_edges = (uv_ids == 0).any(axis=1)
+    costs[bg_edges] = -8.0
 
-    # Iterate over the ids, only keep large seeds and remove holes in their respective masks.
-    props = regionprops(raw_segmentation)
-    segmentation = np.zeros_like(raw_segmentation)
-    for prop in props:
-        if prop.label not in keep_ids:
-            continue
+    node_labels = eseg.multicut.multicut_decomposition(graph, -1 * costs, beta=beta)
 
-        # Get bounding box and mask.
-        bb = tuple(slice(start, stop) for start, stop in zip(prop.bbox[:ndim], prop.bbox[ndim:]))
-        mask = raw_segmentation[bb] == prop.label
+    segmentation = nifty.tools.take(node_labels, seg_2d)
 
-        # Fill small holes and apply closing.
-        mask = remove_small_holes(mask, area_threshold=500)
-        mask = np.logical_or(binary_closing(mask, iterations=4), mask)
-        if ndim == 3:
-            mask = np.logical_or(binary_closing(mask, iterations=8, structure=structure_3d), mask)
-        segmentation[bb][mask] = prop.label
-
-    if verbose:
-        print("Segmentation time in", time.time() - t0, "s")
-
-    # For debugging / development.
-    # import napari
-    # v = napari.Viewer()
-    # v.add_image(prediction)
-    # v.add_image(distances)
-    # v.add_labels(seeds)
-    # v.add_labels(small_seeds)
-    # v.add_labels(segmentation)
-    # napari.run()
+    if min_z_extent is not None and min_z_extent > 0:
+        props = regionprops(segmentation)
+        filter_ids = []
+        for prop in props:
+            box = prop.bbox
+            z_extent = box[3] - box[0]
+            if z_extent < min_z_extent:
+                filter_ids.append(prop.label)
+        if filter_ids:
+            segmentation[np.isin(segmentation, filter_ids)] = 0
 
     return segmentation
+
+
+def _segment_compartments_3d(
+    prediction,
+    boundary_threshold=0.4,
+    n_slices_exclude=5,
+    min_z_extent=10,
+):
+    distances = distance_transform_edt(prediction < boundary_threshold).astype("float32")
+    seg_2d = np.zeros(prediction.shape, dtype="uint32")
+
+    offset = 0
+    for z in range(seg_2d.shape[0]):
+        if z < n_slices_exclude or z >= seg_2d.shape[0] - n_slices_exclude:
+            continue
+        seg_z = _segment_compartments_2d(prediction[z], distances=distances[z], run_multicut=True, min_size=500)
+        seg_z[seg_z != 0] += offset
+        offset = int(seg_z.max())
+        seg_2d[z] = seg_z
+
+    seg = _merge_segmentation_3d(seg_2d, min_z_extent)
+    return seg
 
 
 def segment_compartments(
@@ -141,7 +152,13 @@ def segment_compartments(
 
     # Run the compartment segmentation.
     # We may want to expose some of the parameters here.
-    seg = _segment_compartments(pred, verbose=verbose)
+    t0 = time.time()
+    if input_volume.ndim == 2:
+        seg = _segment_compartments_2d(pred)
+    else:
+        seg = _segment_compartments_3d(pred)
+    if verbose:
+        print("Run segmentation in", time.time() - t0, "s")
     seg = scaler.rescale_output(seg, is_segmentation=True)
 
     if return_predictions:
