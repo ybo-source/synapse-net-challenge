@@ -13,6 +13,7 @@ DATASETS = [
     "01_hoi_maus_2020_incomplete",
     "02_hcc_nanogold",
     "03_hog_cs1sy7",
+    "04",
     "05_stem750_sv_training",
     "07_hoi_s1sy7_tem250_ihgp",
     "10_tem_single_release",
@@ -30,8 +31,8 @@ def evaluate_dataset(ds_name):
         return results
 
     print("Evaluating ds", ds_name)
-    input_files = sorted(glob(os.path.join(INPUT_ROOT, ds_name, "*.h5")))
-    pred_files = sorted(glob(os.path.join(OUTPUT_ROOT, ds_name, "*.h5")))
+    input_files = sorted(glob(os.path.join(INPUT_ROOT, ds_name, "**/*.h5"), recursive=True))
+    pred_files = sorted(glob(os.path.join(OUTPUT_ROOT, ds_name, "**/*.h5"), recursive=True))
 
     results = {
         "dataset": [],
@@ -76,7 +77,7 @@ def main():
                           "07_hoi_s1sy7_tem250_ihgp",
                           "10_tem_single_release",
                           "11_tem_multiple_release"],
-        "STEM": ["05_stem750_sv_training"],
+        "STEM": ["04", "05_stem750_sv_training"],
         "Overall": DATASETS,
     }
 
