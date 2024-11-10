@@ -17,6 +17,9 @@ import torch_em
 import xarray
 
 from elf.io import open_file
+from scipy.ndimage import binary_closing
+from skimage.measure import regionprops
+from skimage.morphology import remove_small_holes
 from skimage.transform import rescale, resize
 from torch_em.util.prediction import predict_with_halo
 from tqdm import tqdm
@@ -465,3 +468,24 @@ def apply_size_filter(
     if verbose:
         print("Size filter in", time.time() - t0, "s")
     return segmentation
+
+
+def _postprocess_seg_3d(seg):
+    # Structure lement for 2d dilation in 3d.
+    structure_element = np.ones((3, 3))  # 3x3 structure for XY plane
+    structure_3d = np.zeros((1, 3, 3))  # Only applied in the XY plane
+    structure_3d[0] = structure_element
+
+    props = regionprops(seg)
+    for prop in props:
+        # Get bounding box and mask.
+        bb = tuple(slice(start, stop) for start, stop in zip(prop.bbox[:2], prop.bbox[2:]))
+        mask = seg[bb] == prop.label
+
+        # Fill small holes and apply closing.
+        mask = remove_small_holes(mask, area_threshold=1000)
+        mask = np.logical_or(binary_closing(mask, iterations=4), mask)
+        mask = np.logical_or(binary_closing(mask, iterations=8, structure=structure_3d), mask)
+        seg[bb][mask] = prop.label
+
+    return seg
