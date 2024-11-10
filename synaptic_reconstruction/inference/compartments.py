@@ -143,13 +143,13 @@ def segment_compartments(
     scaler = _Scaler(scale, verbose)
     input_volume = scaler.scale_input(input_volume)
 
-    # Run prediction.
+    # Run prediction. Support models with a single or multiple channels,
+    # assuming that the first channel is the boundary prediction.
     pred = get_prediction(input_volume, tiling=tiling, model_path=model_path, model=model, verbose=verbose)
 
     # Remove channel axis if necessary.
     if pred.ndim != input_volume.ndim:
         assert pred.ndim == input_volume.ndim + 1
-        assert pred.shape[0] == 1
         pred = pred[0]
 
     # Run the compartment segmentation.
