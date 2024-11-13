@@ -9,5 +9,8 @@ dependencies:
     - pyqt
     - magicgui
     - pytorch
+    - bioimageio.core
+    - kornia
+    - tensorboard
     - pip:
         - napari-skimage-regionprops

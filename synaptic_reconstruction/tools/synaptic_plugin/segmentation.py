@@ -1,20 +1,13 @@
-from typing import TYPE_CHECKING
-import h5py
-from magicgui import magic_factory, widgets
 import napari
 import napari.layers
 from napari.utils.notifications import show_info
-from napari import Viewer
-import numpy as np
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QSpinBox, QLineEdit, QGroupBox, QFormLayout, QFrame, QComboBox
-from superqt import QCollapsible
-from elf.io import open_file
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
+
 from .base_widget import BaseWidget
-import os
-from synaptic_reconstruction.inference.vesicles import segment_vesicles
+from synaptic_reconstruction.training.supervised_training import get_2d_model
 
 # Custom imports for model and prediction utilities
-from ..util import get_device, get_model_registry, run_prediction, _available_devices
+from ..util import run_segmentation, get_model_registry, _available_devices
 
 # if TYPE_CHECKING:
 #     import napari
@@ -28,6 +21,7 @@ class SegmentationWidget(BaseWidget):
         super().__init__()
         
         self.model = None
+        self.image = None
         self.viewer = napari.current_viewer()
         layout = QVBoxLayout()
         
@@ -137,18 +131,19 @@ class SegmentationWidget(BaseWidget):
         if model_key == "- choose -":
             show_info("Please choose a model.")
             return
+        # loading model
         
-
         model_registry = get_model_registry()
-        model_path = model_registry.fetch(model_key)
+        model_key = self.model_selector.currentText()
+        model_path = "/home/freckmann15/.cache/synapse-net/models/vesicles"  # model_registry.fetch(model_key)
+        # model = get_2d_model(out_channels=2)
+        # model = load_model_weights(model=model, model_path=model_path)
 
         if self.image is None:
             show_info("Please choose an image.")
             return
         
         # get tile shape and halo from the viewer
-        tile_shape = (self.tile_x_param.value(), self.tile_y_param.value())
-        halo = (self.halo_x_param.value(), self.halo_y_param.value())
         tiling = {
             "tile": {
                 "x": self.tile_x_param.value(),
@@ -161,13 +156,24 @@ class SegmentationWidget(BaseWidget):
                 "z": 1
                 }
             }
-        segmentation = segment_vesicles(self.image, model_path=model_path)  #tiling=tiling
+        tile_shape = (self.tile_x_param.value(), self.tile_y_param.value())
+        halo = (self.halo_x_param.value(), self.halo_y_param.value())
+        use_custom_tiling = False
+        for ts, h in zip(tile_shape, halo):
+            if ts != 0 or h != 0:  # if anything is changed from default
+                use_custom_tiling = True
+        if use_custom_tiling:
+            segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key, tiling=tiling)
+        else:
+            segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key)
+        # segmentation = np.random.randint(0, 256, size=self.image.shape, dtype=np.uint8)
+        self.viewer.add_image(segmentation, name="Segmentation", colormap="inferno", blending="additive")
         # Add predictions to Napari as separate layers
         # for i, pred in enumerate(segmentation):
         #     layer_name = f"Prediction {i+1}"
         #     self.viewer.add_image(pred, name=layer_name, colormap="inferno", blending="additive")
-        layer_kwargs = {"colormap": "inferno", "blending": "additive"}
-        return segmentation, layer_kwargs
+        # layer_kwargs = {"colormap": "inferno", "blending": "additive"}
+        # return segmentation, layer_kwargs
 
     def _create_settings_widget(self):
         setting_values = QWidget()
@@ -183,7 +189,7 @@ class SegmentationWidget(BaseWidget):
         setting_values.layout().addLayout(layout)
 
         # Create UI for the tile shape.
-        self.tile_x, self.tile_y = 256, 256  # defaults
+        self.tile_x, self.tile_y = 0, 0  # defaults
         self.tile_x_param, self.tile_y_param, layout = self._add_shape_param(
             ("tile_x", "tile_y"), (self.tile_x, self.tile_y), min_val=0, max_val=2048, step=16,
             # tooltip=get_tooltip("embedding", "tiling")
@@ -191,7 +197,7 @@ class SegmentationWidget(BaseWidget):
         setting_values.layout().addLayout(layout)
 
         # Create UI for the halo.
-        self.halo_x, self.halo_y = 32, 32  # defaults
+        self.halo_x, self.halo_y = 0, 0  # defaults
         self.halo_x_param, self.halo_y_param, layout = self._add_shape_param(
             ("halo_x", "halo_y"), (self.halo_x, self.halo_y), min_val=0, max_val=512,
             # tooltip=get_tooltip("embedding", "halo")

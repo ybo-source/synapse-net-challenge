@@ -7,6 +7,46 @@ import numpy as np
 import pooch
 import requests
 from torch_em.util.prediction import predict_with_halo
+from synaptic_reconstruction.inference.vesicles import segment_vesicles
+from synaptic_reconstruction.inference.mitochondria import segment_mitochondria
+
+
+def run_segmentation(image, model_path, model_key, tiling=None):
+    if model_key == "vesicles":
+        segmentation = segment_vesicles(image, model_path=model_path, tiling=tiling)
+    elif model_key == "mitochondria":
+        segmentation = segment_mitochondria(image, model_path=model_path, tiling=tiling)
+    return segmentation
+
+
+def load_model_weights(model, model_path):
+    # Load the entire checkpoint
+    checkpoint = torch.load(model_path, map_location=get_device())  # ["model_state"]
+    checkpoint_state_dict = checkpoint.get("state_dict", checkpoint)
+    # Filter out any non-model keys (e.g., training state, optimizer state)
+    model_state_dict = {k: v for k, v in checkpoint_state_dict.items() if k in model.state_dict()}
+    return model.load_state_dict(model_state_dict, strict=False).eval()
+    
+    # Extract the 'state_dict' from the checkpoint
+    state_dict = checkpoint.get('state_dict', checkpoint)
+    
+    # Filter out unnecessary keys from the state_dict
+    model_state_dict = model.state_dict()
+    filtered_state_dict = {k: v for k, v in state_dict.items() if k in model_state_dict}
+    
+    # Check for missing keys (optional)
+    missing_keys = set(model_state_dict.keys()) - set(filtered_state_dict.keys())
+    if missing_keys:
+        print(f"Warning: Missing keys in state_dict: {missing_keys}")
+    
+    # Check for unexpected keys (optional)
+    unexpected_keys = set(filtered_state_dict.keys()) - set(model_state_dict.keys())
+    if unexpected_keys:
+        print(f"Warning: Unexpected keys in state_dict: {unexpected_keys}")
+    
+    # Load the filtered state_dict into the model
+    model.load_state_dict(filtered_state_dict)
+    return model
 
 
 def download_and_organize_file(url, mode_type, app_name="synapse-net/models"):
@@ -30,23 +70,6 @@ def download_and_organize_file(url, mode_type, app_name="synapse-net/models"):
     os.rename(file_path, os.path.join(dir_name, mode_type, "best.pt"))
     return os.path.join(dir_name, mode_type, "best.pt")
     
-    
-    # # If file_path is a directory or has no extension, organize it into a folder with "best.pt"
-    # if os.path.isdir(file_path) or os.path.splitext(file_path)[1] == "":
-    #     # Create a directory for the file if needed
-    #     dir_path = file_path if os.path.isdir(file_path) else os.path.splitext(file_path)[0]
-    #     os.makedirs(dir_path, exist_ok=True)
-        
-    #     # Move the file into the directory with the name "best.pt"
-    #     new_file_path = os.path.join(dir_path, "best.pt")
-    #     if file_path != new_file_path:
-    #         os.rename(file_path, new_file_path)
-        
-    #     return dir_path
-    # else:
-    #     # Return the directory where the file resides
-    #     return os.path.dirname(file_path)
-
 
 def organize_file_path(path):
     # Check if path is a file or directory
