@@ -1,0 +1,22 @@
+name: synaptic_reconstruction
+display_name: Synaptic Reconstruction
+# see https://napari.org/stable/plugins/manifest.html for valid categories
+categories: ["Image Processing", "Annotation"]
+contributions:
+  commands:
+    - id: synaptic_reconstruction.segment
+      python_name: synaptic_reconstruction.tools.synaptic_plugin.segmentation:segmentation_widget
+      title: Segment
+    - id: synaptic_reconstruction.file_reader
+      title: Read ".mrc, .rec" files
+      python_name: synaptic_reconstruction.tools.file_reader_plugin.elf_reader:get_reader
+
+  readers:
+    - command: synaptic_reconstruction.file_reader
+      filename_patterns:
+      - '*.mrc'
+      accepts_directories: false
+
+  widgets:
+    - command: synaptic_reconstruction.segment
+      display_name: Segmentation 

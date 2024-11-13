@@ -8,5 +8,6 @@ dependencies:
     - pip
     - pyqt
     - magicgui
+    - pytorch
     - pip:
         - napari-skimage-regionprops
