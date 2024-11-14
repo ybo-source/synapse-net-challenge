@@ -13,25 +13,26 @@ from ..util import run_segmentation, get_model_registry, _available_devices
 class SegmentationWidget(BaseWidget):
     def __init__(self):
         super().__init__()
-        
+
         self.model = None
         self.image = None
         self.viewer = napari.current_viewer()
         layout = QVBoxLayout()
-        
+
         # Create the image selection dropdown
+        # FIXME: this does not work for layers that were added before the plugin
         self.image_selector_widget = self.create_image_selector()
-        
+
         # create buttons
-        self.predict_button = QPushButton('Run Prediction')
-        
+        self.predict_button = QPushButton('Run Segmentation')
+
         # Connect buttons to functions
         self.predict_button.clicked.connect(self.on_predict)
         # self.load_model_button.clicked.connect(self.on_load_model)
-        
+
         # create model selector
         self.model_selector_widget = self.load_model_widget()
-        
+
         # create advanced settings
         self.settings = self._create_settings_widget()
 
@@ -46,12 +47,12 @@ class SegmentationWidget(BaseWidget):
     def create_image_selector(self):
         selector_widget = QWidget()
         self.image_selector = QComboBox()
-        
+
         title_label = QLabel("Select Layer to segment:")
 
         # Populate initial options
         self.update_image_selector()
-        
+
         # Connect selection change to update self.image
         self.image_selector.currentIndexChanged.connect(self.update_image_data)
 
@@ -85,7 +86,7 @@ class SegmentationWidget(BaseWidget):
     def load_model_widget(self):
         model_widget = QWidget()
         title_label = QLabel("Select Model:")
-    
+
         models = list(get_model_registry().urls.keys())
         self.model = None  # set default model
         self.model_selector = QComboBox()
@@ -94,7 +95,7 @@ class SegmentationWidget(BaseWidget):
         layout = QVBoxLayout()
         layout.addWidget(title_label)
         layout.addWidget(self.model_selector)
-        
+
         # Set layout on the model widget
         model_widget.setLayout(layout)
         return model_widget
@@ -108,28 +109,28 @@ class SegmentationWidget(BaseWidget):
         if self.image is None:
             show_info("Please choose an image.")
             return
-        
+
         # loading model
         model_registry = get_model_registry()
         model_key = self.model_selector.currentText()
-        # model_path = "/home/freckmann15/.cache/synapse-net/models/vesicles"  # 
+        # model_path = "/home/freckmann15/.cache/synapse-net/models/vesicles"  #
         model_path = model_registry.fetch(model_key)
         # model = get_2d_model(out_channels=2)
         # model = load_model_weights(model=model, model_path=model_path)
-        
+
         # get tile shape and halo from the viewer
         tiling = {
             "tile": {
                 "x": self.tile_x_param.value(),
                 "y": self.tile_y_param.value(),
                 "z": 1
-                },
+            },
             "halo": {
                 "x": self.halo_x_param.value(),
                 "y": self.halo_y_param.value(),
                 "z": 1
-                }
             }
+        }
         tile_shape = (self.tile_x_param.value(), self.tile_y_param.value())
         halo = (self.halo_x_param.value(), self.halo_y_param.value())
         use_custom_tiling = False
@@ -140,8 +141,9 @@ class SegmentationWidget(BaseWidget):
             segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key, tiling=tiling)
         else:
             segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key)
+
         # Add the segmentation layer
-        self.viewer.add_image(segmentation, name="Segmentation "+f"{model_key}", colormap="inferno", blending="additive")
+        self.viewer.add_labels(segmentation, name=f"{model_key}-segmentation")
         show_info(f"Segmentation of {model_key} added to layers.")
         # alternatively return the segmentation and layer_kwargs
         # layer_kwargs = {"colormap": "inferno", "blending": "additive"}
@@ -157,7 +159,6 @@ class SegmentationWidget(BaseWidget):
         device_options = ["auto"] + _available_devices()
 
         self.device_dropdown, layout = self._add_choice_param("device", self.device, device_options)
-                                                            #   tooltip=get_tooltip("embedding", "device"))
         setting_values.layout().addLayout(layout)
 
         # Create UI for the tile shape.
@@ -175,7 +176,7 @@ class SegmentationWidget(BaseWidget):
             # tooltip=get_tooltip("embedding", "halo")
         )
         setting_values.layout().addLayout(layout)
-        
+
         settings = self._make_collapsible(widget=setting_values, title="Advanced Settings")
         return settings
 

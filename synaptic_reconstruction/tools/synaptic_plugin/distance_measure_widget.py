@@ -4,7 +4,6 @@ from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
 
 from .base_widget import BaseWidget
-from synaptic_reconstruction.training.supervised_training import get_2d_model
 
 # Custom imports for model and prediction utilities
 from synaptic_reconstruction import distance_measurements
@@ -14,24 +13,24 @@ from ..util import save_to_csv
 class DistanceMeasureWidget(BaseWidget):
     def __init__(self):
         super().__init__()
-        
+
         self.viewer = napari.current_viewer()
         layout = QVBoxLayout()
-        
+
         self.selectors = {}
         self.image_selector_name1 = "Segmentation 1"
         self.image_selector_name2 = "Segmentation 2"
         # Create the image selection dropdown
         self.segmentation1_selector_widget = self.create_image_selector(selector_name=self.image_selector_name1)
         self.segmentation2_selector_widget = self.create_image_selector(selector_name=self.image_selector_name2)
-        
+
         # create save path
         self.settings = self._create_settings_widget()
 
         # create buttons
         self.measure_pairwise_button = QPushButton('Measure Distance Pairwise')
         self.measure_segmentation_to_object_button = QPushButton('Measure Distance Segmentation to Object')
-        
+
         # Connect buttons to functions
         self.measure_pairwise_button.clicked.connect(self.on_measure_pairwise)
         self.measure_segmentation_to_object_button.clicked.connect(self.on_measure_segmentation_to_object)
@@ -43,9 +42,9 @@ class DistanceMeasureWidget(BaseWidget):
         layout.addWidget(self.settings)
         # layout.addWidget(self.measure_pairwise_button)
         layout.addWidget(self.measure_segmentation_to_object_button)
-        
+
         self.setLayout(layout)
-    
+
     def get_selected_layer_data(self, selector_name):
         """Return the data for the layer currently selected in a given selector."""
         if selector_name in self.selectors:
@@ -61,17 +60,21 @@ class DistanceMeasureWidget(BaseWidget):
             show_info("Please choose both segmentation layers.")
             return
         # get save_path
-        
-        distances, endpoints1, endpoints2, seg_ids, object_ids = distance_measurements.measure_segmentation_to_object_distances(
+
+        (distances,
+         endpoints1,
+         endpoints2,
+         seg_ids,
+         object_ids) = distance_measurements.measure_segmentation_to_object_distances(
             segmentation=segmentation1_data,
             segmented_object=segmentation2_data,
             distance_type="boundary",
-            #save_path=self.save_path
+            # save_path=self.save_path
         )
         if self.save_path is not None:
             file_path = save_to_csv(self.save_path, data=(distances, endpoints1, endpoints2, seg_ids, object_ids))
             show_info(f"Measurements saved to {file_path}")
-        
+
         show_info("Not implemented yet.")
         return
 
@@ -79,26 +82,26 @@ class DistanceMeasureWidget(BaseWidget):
         if self.image is None:
             show_info("Please choose a segmentation.")
             return
-        if self.save_path is None:  
+        if self.save_path is None:
             show_info("Please choose a save path.")
             return
         # get segmentation
         segmentation = self.image
         # run measurements
         show_info("Not implemented yet.")
-        return 
+        return
         distance_measurements.measure_pairwise_object_distances(
             segmentation=segmentation, distance_type="boundary",
             save_path=self.save_path
             )
         lines, properties = distance_measurements.create_distance_lines(
             measurement_path=self.save_path
-            )
-            
+        )
+
         # Add the lines layer
-        self.viewer.add_lines(lines, name="Distance Lines", visible=True, edge_width=2, edge_color="red", edge_blend="additive")
-        # Add the segmentation layer
-        # self.viewer.add_image(segmentation, name="Segmentation", colormap="inferno", blending="additive")
+        self.viewer.add_lines(
+            lines, name="Distance Lines", visible=True, edge_width=2, edge_color="red", edge_blend="additive"
+        )
 
         # layer_kwargs = {"colormap": "inferno", "blending": "additive"}
         # return segmentation, layer_kwargs
@@ -113,7 +116,7 @@ class DistanceMeasureWidget(BaseWidget):
 
         # Populate initial options
         self.update_selector(viewer, image_selector)
-        
+
         # Connect selection change to update image data in attribute_dict
         image_selector.currentIndexChanged.connect(
             lambda: self.update_image_data(viewer, image_selector, attribute_dict, selector_name)
@@ -137,7 +140,7 @@ class DistanceMeasureWidget(BaseWidget):
     def update_selector(self, viewer, selector):
         """Update a single selector with the current image layers in the viewer."""
         selector.clear()
-        image_layers = [layer.name for layer in viewer.layers] #if isinstance(layer, napari.layers.Image)
+        image_layers = [layer.name for layer in viewer.layers]  # if isinstance(layer, napari.layers.Image)
         selector.addItems(image_layers)
 
     def update_image_data(self, viewer, selector, attribute_dict, attribute_name):
@@ -157,19 +160,19 @@ class DistanceMeasureWidget(BaseWidget):
             name="Save Directory", select_type="directory", value=None
         )
         setting_values.layout().addLayout(layout)
-        
+
         settings = self._make_collapsible(widget=setting_values, title="Advanced Settings")
         return settings
 
     # def create_image_selector(self):
     #     selector_widget = QWidget()
     #     self.image_selector = QComboBox()
-        
+
     #     title_label = QLabel("Select Image Layer:")
 
     #     # Populate initial options
     #     self.update_image_selector()
-        
+
     #     # Connect selection change to update self.image
     #     self.image_selector.currentIndexChanged.connect(self.update_image_data)
 

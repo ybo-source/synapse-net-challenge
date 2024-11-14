@@ -11,17 +11,19 @@ contributions:
       python_name: synaptic_reconstruction.tools.synaptic_plugin.distance_measure_widget:get_distance_measure_widget
       title: Distance Measurement
     - id: synaptic_reconstruction.file_reader
-      title: Read ".mrc, .rec" files
-      python_name: synaptic_reconstruction.tools.file_reader_plugin.elf_reader:get_reader
+      title: Read volumetric data
+      python_name: synaptic_reconstruction.tools.volume_reader:get_reader
 
   readers:
     - command: synaptic_reconstruction.file_reader
       filename_patterns:
       - '*.mrc'
+      - '*.rec'
+      - '*.h5'
       accepts_directories: false
 
   widgets:
     - command: synaptic_reconstruction.segment
-      display_name: Segmentation 
+      display_name: Segmentation
     - command: synaptic_reconstruction.distance_measure
       display_name: Distance Measurement
