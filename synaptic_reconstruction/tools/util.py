@@ -11,6 +11,13 @@ from synaptic_reconstruction.inference.vesicles import segment_vesicles
 from synaptic_reconstruction.inference.mitochondria import segment_mitochondria
 
 
+def save_to_csv(file_path, data, delimiter="\t"):
+    if not file_path.endswith(".csv"):
+        file_path = os.path.join(file_path, "data.csv")
+    np.savetxt(file_path, data, delimiter=delimiter)
+    return file_path
+
+
 def run_segmentation(image, model_path, model_key, tiling=None):
     if model_key == "vesicles":
         segmentation = segment_vesicles(image, model_path=model_path, tiling=tiling)
@@ -26,27 +33,6 @@ def load_model_weights(model, model_path):
     # Filter out any non-model keys (e.g., training state, optimizer state)
     model_state_dict = {k: v for k, v in checkpoint_state_dict.items() if k in model.state_dict()}
     return model.load_state_dict(model_state_dict, strict=False).eval()
-    
-    # Extract the 'state_dict' from the checkpoint
-    state_dict = checkpoint.get('state_dict', checkpoint)
-    
-    # Filter out unnecessary keys from the state_dict
-    model_state_dict = model.state_dict()
-    filtered_state_dict = {k: v for k, v in state_dict.items() if k in model_state_dict}
-    
-    # Check for missing keys (optional)
-    missing_keys = set(model_state_dict.keys()) - set(filtered_state_dict.keys())
-    if missing_keys:
-        print(f"Warning: Missing keys in state_dict: {missing_keys}")
-    
-    # Check for unexpected keys (optional)
-    unexpected_keys = set(filtered_state_dict.keys()) - set(model_state_dict.keys())
-    if unexpected_keys:
-        print(f"Warning: Unexpected keys in state_dict: {unexpected_keys}")
-    
-    # Load the filtered state_dict into the model
-    model.load_state_dict(filtered_state_dict)
-    return model
 
 
 def download_and_organize_file(url, mode_type, app_name="synapse-net/models"):
@@ -128,13 +114,15 @@ def get_model_registry():
     registry = {
         "- choose -": None,
         "mitochondria": "xyz",
-        "vesicles": "sha256:ab66416f979473f2f8bfa1f6e461d4a29e2bc17901e95cc65751218143e16c83",
+        "vesicles": "sha256:e75714ea7bedd537d8eff822cb4c566b208dba1301fadf9d338a3914a353a331"
+            #"sha256:ab66416f979473f2f8bfa1f6e461d4a29e2bc17901e95cc65751218143e16c83",
             #"sha256:b17f6072fd6752a0caf32400a938cfe9f011941027d849014447123caad288e3",
     }
     urls = {
         "- choose -": None,
         "mitochondria": "https://github.com/computational-cell-analytics/synapse-net/releases/download/v0.0.1/mitochondria_model.zip",
-        "vesicles": "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt/download"
+        "vesicles": "https://owncloud.gwdg.de/index.php/s/7B0ILPf0A7VRt1G/download"
+        # "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt/download"
             #"https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt",
     }
     cache_dir = get_cache_dir()

@@ -5,8 +5,11 @@ categories: ["Image Processing", "Annotation"]
 contributions:
   commands:
     - id: synaptic_reconstruction.segment
-      python_name: synaptic_reconstruction.tools.synaptic_plugin.segmentation:segmentation_widget
+      python_name: synaptic_reconstruction.tools.synaptic_plugin.segmentation_widget:get_segmentation_widget
       title: Segment
+    - id: synaptic_reconstruction.distance_measure
+      python_name: synaptic_reconstruction.tools.synaptic_plugin.distance_measure_widget:get_distance_measure_widget
+      title: Distance Measurement
     - id: synaptic_reconstruction.file_reader
       title: Read ".mrc, .rec" files
       python_name: synaptic_reconstruction.tools.file_reader_plugin.elf_reader:get_reader
@@ -20,3 +23,5 @@ contributions:
   widgets:
     - command: synaptic_reconstruction.segment
       display_name: Segmentation 
+    - command: synaptic_reconstruction.distance_measure
+      display_name: Distance Measurement

@@ -9,13 +9,7 @@ from synaptic_reconstruction.training.supervised_training import get_2d_model
 # Custom imports for model and prediction utilities
 from ..util import run_segmentation, get_model_registry, _available_devices
 
-# if TYPE_CHECKING:
-#     import napari
 
-
-# def _make_collapsible(widget, title):
-#     parent_widget = QWidget()
-#     parent_widget.setLayout(QVBoxLayout())model_path
 class SegmentationWidget(BaseWidget):
     def __init__(self):
         super().__init__()
@@ -27,9 +21,8 @@ class SegmentationWidget(BaseWidget):
         
         # Create the image selection dropdown
         self.image_selector_widget = self.create_image_selector()
-
-        # Add your buttons here
-        # self.load_model_button = QPushButton('Load Model')
+        
+        # create buttons
         self.predict_button = QPushButton('Run Prediction')
         
         # Connect buttons to functions
@@ -54,7 +47,7 @@ class SegmentationWidget(BaseWidget):
         selector_widget = QWidget()
         self.image_selector = QComboBox()
         
-        title_label = QLabel("Select Image Layer:")
+        title_label = QLabel("Select Layer to segment:")
 
         # Populate initial options
         self.update_image_selector()
@@ -77,7 +70,8 @@ class SegmentationWidget(BaseWidget):
         self.image_selector.clear()
 
         # Add each image layer's name to the dropdown
-        image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, napari.layers.Image)]
+        # image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, napari.layers.Image)]
+        image_layers = [layer.name for layer in self.viewer.layers]
         self.image_selector.addItems(image_layers)
 
     def update_image_data(self):
@@ -105,43 +99,23 @@ class SegmentationWidget(BaseWidget):
         model_widget.setLayout(layout)
         return model_widget
 
-    # def on_load_model(self):
-    #     # Open file dialog to select a model
-    #     file_dialog = QFileDialog(self)
-    #     file_dialog.setFileMode(QFileDialog.ExistingFiles)
-    #     file_dialog.setNameFilter("Model (*.pt)")
-    #     file_dialog.setViewMode(QFileDialog.List)
-
-    #     if file_dialog.exec_():
-    #         file_paths = file_dialog.selectedFiles()
-    #         if file_paths:
-    #             # Assuming you load a single model path here
-    #             model_path = file_paths[0]
-    #             self.load_model(model_path)
-
-    # def load_model(self, model_path):
-    #     print("model path type and value", type(model_path), model_path)
-    #     # Load the model from the selected path
-    #     model = get_model(model_path)
-    #     self.model = model
-
     def on_predict(self):
         # Get the model and postprocessing settings.
         model_key = self.model_selector.currentText()
         if model_key == "- choose -":
             show_info("Please choose a model.")
             return
-        # loading model
-        
-        model_registry = get_model_registry()
-        model_key = self.model_selector.currentText()
-        model_path = "/home/freckmann15/.cache/synapse-net/models/vesicles"  # model_registry.fetch(model_key)
-        # model = get_2d_model(out_channels=2)
-        # model = load_model_weights(model=model, model_path=model_path)
-
         if self.image is None:
             show_info("Please choose an image.")
             return
+        
+        # loading model
+        model_registry = get_model_registry()
+        model_key = self.model_selector.currentText()
+        # model_path = "/home/freckmann15/.cache/synapse-net/models/vesicles"  # 
+        model_path = model_registry.fetch(model_key)
+        # model = get_2d_model(out_channels=2)
+        # model = load_model_weights(model=model, model_path=model_path)
         
         # get tile shape and halo from the viewer
         tiling = {
@@ -160,18 +134,16 @@ class SegmentationWidget(BaseWidget):
         halo = (self.halo_x_param.value(), self.halo_y_param.value())
         use_custom_tiling = False
         for ts, h in zip(tile_shape, halo):
-            if ts != 0 or h != 0:  # if anything is changed from default
+            if ts != 0 or h != 0:  # if anything changed from default
                 use_custom_tiling = True
         if use_custom_tiling:
             segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key, tiling=tiling)
         else:
             segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key)
-        # segmentation = np.random.randint(0, 256, size=self.image.shape, dtype=np.uint8)
-        self.viewer.add_image(segmentation, name="Segmentation", colormap="inferno", blending="additive")
-        # Add predictions to Napari as separate layers
-        # for i, pred in enumerate(segmentation):
-        #     layer_name = f"Prediction {i+1}"
-        #     self.viewer.add_image(pred, name=layer_name, colormap="inferno", blending="additive")
+        # Add the segmentation layer
+        self.viewer.add_image(segmentation, name="Segmentation "+f"{model_key}", colormap="inferno", blending="additive")
+        show_info(f"Segmentation of {model_key} added to layers.")
+        # alternatively return the segmentation and layer_kwargs
         # layer_kwargs = {"colormap": "inferno", "blending": "additive"}
         # return segmentation, layer_kwargs
 
@@ -208,5 +180,5 @@ class SegmentationWidget(BaseWidget):
         return settings
 
 
-def segmentation_widget():
+def get_segmentation_widget():
     return SegmentationWidget()
