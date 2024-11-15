@@ -15,13 +15,14 @@ class SegmentationWidget(BaseWidget):
         super().__init__()
 
         self.model = None
-        self.image = None
         self.viewer = napari.current_viewer()
         layout = QVBoxLayout()
 
         # Create the image selection dropdown
         # FIXME: this does not work for layers that were added before the plugin
-        self.image_selector_widget = self.create_image_selector()
+        # self.image_selector_widget = self.create_image_selector()
+        self.image_selector_name = "Image data"
+        self.image_selector_widget = self._create_layer_selector(self.image_selector_name, layer_type="Image")
 
         # create buttons
         self.predict_button = QPushButton('Run Segmentation')
@@ -44,44 +45,44 @@ class SegmentationWidget(BaseWidget):
 
         self.setLayout(layout)
 
-    def create_image_selector(self):
-        selector_widget = QWidget()
-        self.image_selector = QComboBox()
+    # def create_image_selector(self):
+    #     selector_widget = QWidget()
+    #     self.image_selector = QComboBox()
 
-        title_label = QLabel("Select Layer to segment:")
+    #     title_label = QLabel("Select Layer to segment:")
 
-        # Populate initial options
-        self.update_image_selector()
+    #     # Populate initial options
+    #     self.update_image_selector()
 
-        # Connect selection change to update self.image
-        self.image_selector.currentIndexChanged.connect(self.update_image_data)
+    #     # Connect selection change to update self.image
+    #     self.image_selector.currentIndexChanged.connect(self.update_image_data)
 
-        # Connect to Napari layer events to update the list
-        self.viewer.layers.events.inserted.connect(self.update_image_selector)
-        self.viewer.layers.events.removed.connect(self.update_image_selector)
+    #     # Connect to Napari layer events to update the list
+    #     self.viewer.layers.events.inserted.connect(self.update_image_selector)
+    #     self.viewer.layers.events.removed.connect(self.update_image_selector)
 
-        layout = QVBoxLayout()
-        layout.addWidget(title_label)
-        layout.addWidget(self.image_selector)
-        selector_widget.setLayout(layout)
-        return selector_widget
+    #     layout = QVBoxLayout()
+    #     layout.addWidget(title_label)
+    #     layout.addWidget(self.image_selector)
+    #     selector_widget.setLayout(layout)
+    #     return selector_widget
 
-    def update_image_selector(self, event=None):
-        """Update dropdown options with current image layers in the viewer."""
-        self.image_selector.clear()
+    # def update_image_selector(self, event=None):
+    #     """Update dropdown options with current image layers in the viewer."""
+    #     self.image_selector.clear()
 
-        # Add each image layer's name to the dropdown
-        # image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, napari.layers.Image)]
-        image_layers = [layer.name for layer in self.viewer.layers]
-        self.image_selector.addItems(image_layers)
+    #     # Add each image layer's name to the dropdown
+    #     # image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, napari.layers.Image)]
+    #     image_layers = [layer.name for layer in self.viewer.layers]
+    #     self.image_selector.addItems(image_layers)
 
-    def update_image_data(self):
-        """Update the self.image attribute with data from the selected layer."""
-        selected_layer_name = self.image_selector.currentText()
-        if selected_layer_name in self.viewer.layers:
-            self.image = self.viewer.layers[selected_layer_name].data
-        else:
-            self.image = None  # Reset if no valid selection
+    # def update_image_data(self):
+    #     """Update the self.image attribute with data from the selected layer."""
+    #     selected_layer_name = self.image_selector.currentText()
+    #     if selected_layer_name in self.viewer.layers:
+    #         self.image = self.viewer.layers[selected_layer_name].data
+    #     else:
+    #         self.image = None  # Reset if no valid selection
 
     def load_model_widget(self):
         model_widget = QWidget()
@@ -106,17 +107,17 @@ class SegmentationWidget(BaseWidget):
         if model_key == "- choose -":
             show_info("Please choose a model.")
             return
-        if self.image is None:
-            show_info("Please choose an image.")
-            return
 
         # loading model
         model_registry = get_model_registry()
         model_key = self.model_selector.currentText()
         # model_path = "/home/freckmann15/.cache/synapse-net/models/vesicles"  #
         model_path = model_registry.fetch(model_key)
-        # model = get_2d_model(out_channels=2)
-        # model = load_model_weights(model=model, model_path=model_path)
+        # get image data
+        image = self._get_layer_selector_data(self.image_selector_name)
+        if image is None:
+            show_info("Please choose an image.")
+            return
 
         # get tile shape and halo from the viewer
         tiling = {
@@ -138,9 +139,9 @@ class SegmentationWidget(BaseWidget):
             if ts != 0 or h != 0:  # if anything changed from default
                 use_custom_tiling = True
         if use_custom_tiling:
-            segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key, tiling=tiling)
+            segmentation = run_segmentation(image, model_path=model_path, model_key=model_key, tiling=tiling)
         else:
-            segmentation = run_segmentation(self.image, model_path=model_path, model_key=model_key)
+            segmentation = run_segmentation(image, model_path=model_path, model_key=model_key)
 
         # Add the segmentation layer
         self.viewer.add_labels(segmentation, name=f"{model_key}-segmentation")

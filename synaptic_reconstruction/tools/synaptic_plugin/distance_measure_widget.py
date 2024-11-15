@@ -17,12 +17,11 @@ class DistanceMeasureWidget(BaseWidget):
         self.viewer = napari.current_viewer()
         layout = QVBoxLayout()
 
-        self.selectors = {}
         self.image_selector_name1 = "Segmentation 1"
         self.image_selector_name2 = "Segmentation 2"
         # Create the image selection dropdown
-        self.segmentation1_selector_widget = self.create_image_selector(selector_name=self.image_selector_name1)
-        self.segmentation2_selector_widget = self.create_image_selector(selector_name=self.image_selector_name2)
+        self.segmentation1_selector_widget = self._create_layer_selector(self.image_selector_name1, layer_type="Labels")
+        self.segmentation2_selector_widget = self._create_layer_selector(self.image_selector_name2, layer_type="Labels")
 
         # create save path
         self.settings = self._create_settings_widget()
@@ -45,17 +44,26 @@ class DistanceMeasureWidget(BaseWidget):
 
         self.setLayout(layout)
 
-    def get_selected_layer_data(self, selector_name):
-        """Return the data for the layer currently selected in a given selector."""
-        if selector_name in self.selectors:
-            selected_layer_name = self.selectors[selector_name].currentText()
-            if selected_layer_name in self.viewer.layers:
-                return self.viewer.layers[selected_layer_name].data
-        return None  # Return None if layer not found
+    # def get_selected_layer_data(self, selector_name):
+    #     """Return the data for the layer currently selected in a given selector."""
+    #     if selector_name in self.layer_selectors:
+    #         selector_widget = self.layer_selectors[selector_name]
+            
+    #         # Retrieve the QComboBox from the QWidget's layout
+    #         image_selector = selector_widget.layout().itemAt(1).widget()
+            
+    #         if isinstance(image_selector, QComboBox):
+    #             selected_layer_name = image_selector.currentText()
+    #             if selected_layer_name in self.viewer.layers:
+    #                 return self.viewer.layers[selected_layer_name].data
+    #         # selected_layer_name = self.layer_selectors[selector_name].currentText()
+    #         # if selected_layer_name in self.viewer.layers:
+    #         #     return self.viewer.layers[selected_layer_name].data
+    #     return None  # Return None if layer not found
 
     def on_measure_segmentation_to_object(self):
-        segmentation1_data = self.get_selected_layer_data(self.image_selector_name1)
-        segmentation2_data = self.get_selected_layer_data(self.image_selector_name2)
+        segmentation1_data = self._get_layer_selector_data(self.image_selector_name1)
+        segmentation2_data = self._get_layer_selector_data(self.image_selector_name2)
         if segmentation1_data is None or segmentation2_data is None:
             show_info("Please choose both segmentation layers.")
             return
@@ -106,50 +114,50 @@ class DistanceMeasureWidget(BaseWidget):
         # layer_kwargs = {"colormap": "inferno", "blending": "additive"}
         # return segmentation, layer_kwargs
 
-    def create_image_selector(self, selector_name):
-        attribute_dict = {}
-        viewer = self.viewer
-        """Create an image selector widget for a specific layer attribute."""
-        selector_widget = QWidget()
-        image_selector = QComboBox()
-        title_label = QLabel(f"Select Layer for {selector_name}:")
+    # def create_image_selector(self, selector_name):
+    #     attribute_dict = {}
+    #     viewer = self.viewer
+    #     """Create an image selector widget for a specific layer attribute."""
+    #     selector_widget = QWidget()
+    #     image_selector = QComboBox()
+    #     title_label = QLabel(f"Select Layer for {selector_name}:")
 
-        # Populate initial options
-        self.update_selector(viewer, image_selector)
+    #     # Populate initial options
+    #     self.update_selector(viewer, image_selector)
 
-        # Connect selection change to update image data in attribute_dict
-        image_selector.currentIndexChanged.connect(
-            lambda: self.update_image_data(viewer, image_selector, attribute_dict, selector_name)
-        )
+    #     # Connect selection change to update image data in attribute_dict
+    #     image_selector.currentIndexChanged.connect(
+    #         lambda: self.update_image_data(viewer, image_selector, attribute_dict, selector_name)
+    #     )
 
-        # Update selector on layer events
-        viewer.layers.events.inserted.connect(lambda event: self.update_selector(viewer, image_selector))
-        viewer.layers.events.removed.connect(lambda event: self.update_selector(viewer, image_selector))
+    #     # Update selector on layer events
+    #     viewer.layers.events.inserted.connect(lambda event: self.update_selector(viewer, image_selector))
+    #     viewer.layers.events.removed.connect(lambda event: self.update_selector(viewer, image_selector))
 
-        # Store this combo box in the selectors dictionary
-        self.selectors[selector_name] = image_selector
+    #     # Store this combo box in the selectors dictionary
+    #     self.selectors[selector_name] = image_selector
 
-        # Set up layout
-        layout = QVBoxLayout()
-        layout.addWidget(title_label)
-        layout.addWidget(image_selector)
-        selector_widget.setLayout(layout)
+    #     # Set up layout
+    #     layout = QVBoxLayout()
+    #     layout.addWidget(title_label)
+    #     layout.addWidget(image_selector)
+    #     selector_widget.setLayout(layout)
 
-        return selector_widget
+    #     return selector_widget
 
-    def update_selector(self, viewer, selector):
-        """Update a single selector with the current image layers in the viewer."""
-        selector.clear()
-        image_layers = [layer.name for layer in viewer.layers]  # if isinstance(layer, napari.layers.Image)
-        selector.addItems(image_layers)
+    # def update_selector(self, viewer, selector):
+    #     """Update a single selector with the current image layers in the viewer."""
+    #     selector.clear()
+    #     image_layers = [layer.name for layer in viewer.layers]  # if isinstance(layer, napari.layers.Image)
+    #     selector.addItems(image_layers)
 
-    def update_image_data(self, viewer, selector, attribute_dict, attribute_name):
-        """Update the specified attribute in the attribute_dict with selected layer data."""
-        selected_layer_name = selector.currentText()
-        if selected_layer_name in viewer.layers:
-            attribute_dict[attribute_name] = viewer.layers[selected_layer_name].data
-        else:
-            attribute_dict[attribute_name] = None  # Reset if no valid selection
+    # def update_image_data(self, viewer, selector, attribute_dict, attribute_name):
+    #     """Update the specified attribute in the attribute_dict with selected layer data."""
+    #     selected_layer_name = selector.currentText()
+    #     if selected_layer_name in viewer.layers:
+    #         attribute_dict[attribute_name] = viewer.layers[selected_layer_name].data
+    #     else:
+    #         attribute_dict[attribute_name] = None  # Reset if no valid selection
 
     def _create_settings_widget(self):
         setting_values = QWidget()
