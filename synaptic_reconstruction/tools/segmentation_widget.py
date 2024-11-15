@@ -4,10 +4,7 @@ from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
 
 from .base_widget import BaseWidget
-from synaptic_reconstruction.training.supervised_training import get_2d_model
-
-# Custom imports for model and prediction utilities
-from ..util import run_segmentation, get_model_registry, _available_devices
+from .util import run_segmentation, get_model_registry, _available_devices
 
 
 class SegmentationWidget(BaseWidget):
@@ -23,7 +20,7 @@ class SegmentationWidget(BaseWidget):
         self.image_selector_widget = self._create_layer_selector(self.image_selector_name, layer_type="Image")
 
         # create buttons
-        self.predict_button = QPushButton('Run Segmentation')
+        self.predict_button = QPushButton("Run Segmentation")
 
         # Connect buttons to functions
         self.predict_button.clicked.connect(self.on_predict)
@@ -78,6 +75,7 @@ class SegmentationWidget(BaseWidget):
             show_info("Please choose an image.")
             return
 
+        # FIXME: don't hard-code tiling here, but figure it out centrally in the prediction function.
         # get tile shape and halo from the viewer
         tiling = {
             "tile": {
@@ -111,9 +109,6 @@ class SegmentationWidget(BaseWidget):
         # Add the segmentation layer
         self.viewer.add_labels(segmentation, name=f"{model_key}-segmentation")
         show_info(f"Segmentation of {model_key} added to layers.")
-        # alternatively return the segmentation and layer_kwargs
-        # layer_kwargs = {"colormap": "inferno", "blending": "additive"}
-        # return segmentation, layer_kwargs
 
     def _create_settings_widget(self):
         setting_values = QWidget()
@@ -142,7 +137,7 @@ class SegmentationWidget(BaseWidget):
             # tooltip=get_tooltip("embedding", "halo")
         )
         setting_values.layout().addLayout(layout)
-        
+
         self.scale_param, layout = self._add_float_param(
             "scale", 0.5, min_val=0.0, max_val=8.0,
         )
@@ -150,7 +145,3 @@ class SegmentationWidget(BaseWidget):
 
         settings = self._make_collapsible(widget=setting_values, title="Advanced Settings")
         return settings
-
-
-def get_segmentation_widget():
-    return SegmentationWidget()

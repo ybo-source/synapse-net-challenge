@@ -1,80 +1,18 @@
 import os
 import shutil
-from typing import Callable, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
+
 import torch_em
 import torch
 import numpy as np
 import pooch
 import requests
+
 from torch_em.util.prediction import predict_with_halo
-from synaptic_reconstruction.inference.vesicles import segment_vesicles
-from synaptic_reconstruction.inference.mitochondria import segment_mitochondria
-import csv
 
+from ..inference.vesicles import segment_vesicles
+from ..inference.mitochondria import segment_mitochondria
 
-# def save_to_csv(file_path, data, delimiter="\t"):
-#     if not file_path.endswith(".csv"):
-#         file_path = os.path.join(file_path, "data.csv")
-#     np.savetxt(file_path, data, delimiter=delimiter)
-#     return file_path
-# def save_to_csv(file_path, data, delimiter="\t", header=None):
-#     if not file_path.endswith(".csv"):
-#         file_path = os.path.join(file_path, "data.csv")
-
-#     # Check if the data is a tuple or list of arrays
-#     if isinstance(data, (tuple, list)):
-#         try:
-#             # Combine data into a single 2D array if possible
-#             data = np.column_stack(data)
-#         except ValueError:
-#             raise ValueError("The data elements cannot be combined into a 2D array. Ensure consistent shapes.")
-
-#     # Save the data to the file
-#     np.savetxt(file_path, data, delimiter=delimiter, header=header)
-#     return file_path
-def save_to_csv(file_path, data, delimiter="\t", header=None):
-    """
-    Save structured data to a CSV file.
-
-    Parameters:
-    - file_path (str): Path to save the CSV file.
-    - data (tuple): A tuple of arrays with mixed types (distances, endpoint1, endpoint2, seg_ids).
-    - delimiter (str): Delimiter for the CSV file (default is tab-delimited).
-    - header (list or None): List of column headers for the CSV file.
-    """
-    if not file_path.endswith(".csv"):
-        file_path = os.path.join(file_path, "data.csv")
-
-    # Ensure the directory exists
-    if not os.path.isdir(os.path.dirname(file_path)):
-        raise FileNotFoundError(f"Directory does not exist: {os.path.dirname(file_path)}")
-
-    # Unpack the data
-    distances, endpoint1, endpoint2, seg_ids = data
-
-    # Check consistency of data lengths
-    n = len(distances)
-    if not all(len(arr) == n for arr in [endpoint1, endpoint2, seg_ids]):
-        raise ValueError("All data components must have the same length.")
-
-    # Open the file and write the data
-    with open(file_path, mode='w', newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=delimiter)
-        
-        # Write the header if provided
-        if header:
-            writer.writerow(header)
-        
-        # Write the data rows
-        for i in range(n):
-            writer.writerow([
-                distances[i],
-                f"({endpoint1[i][0]}, {endpoint1[i][1]})",
-                f"({endpoint2[i][0]}, {endpoint2[i][1]})",
-                seg_ids[i]
-            ])
-
-    return file_path
 
 def run_segmentation(image, model_path, model_key, tiling=None, scale=1.0):
     if model_key == "vesicles":
@@ -97,24 +35,25 @@ def download_and_organize_file(url, mode_type, app_name="synapse-net/models"):
     """
     Download a file from a URL and organize it in the specified directory within Pooch's default cache location.
     If the file has no extension, it saves it as "best.pt" inside a new or existing folder.
-    
+
     Parameters:
         url (str): The URL of the file to download.
         app_name (str): The application name for Pooch's cache directory.
-        
+
     Returns:
         str: Path to the directory containing the file.
     """
     # Get Pooch's default cache directory for the application
     cache_dir = pooch.os_cache(app_name)
-    
+
     # Download the file using Pooch
     file_path = pooch.retrieve(url, path=cache_dir, known_hash=None)
     dir_name, file_name = os.path.split(file_path)
     os.rename(file_path, os.path.join(dir_name, mode_type, "best.pt"))
     return os.path.join(dir_name, mode_type, "best.pt")
-    
 
+
+# TODO: can we get rid of this? Looks unused and like a hack.
 def organize_file_path(path):
     # Check if path is a file or directory
     if os.path.isfile(path):
@@ -127,7 +66,7 @@ def organize_file_path(path):
             # Temporary rename to avoid conflict with directory name
             temp_file_path = os.path.join(dir_name, base_name + "_temp")
             os.rename(path, temp_file_path)
-            
+
             # Create a new directory with the original file name
             new_dir = os.path.join(dir_name, base_name)
             os.makedirs(new_dir, exist_ok=True)
@@ -135,7 +74,7 @@ def organize_file_path(path):
             # Move the file to the new directory and rename it to "best.pt"
             new_path = os.path.join(new_dir, "best.pt")
             shutil.move(temp_file_path, new_path)
-            
+
             print(f"Moved file to: {new_path}")
             return new_dir
         else:
@@ -149,16 +88,17 @@ def organize_file_path(path):
         return None
 
 
+# TODO: also get rid of this? Reimplements stuff from pooch
 def download_model(url, out, name=None):
     local_filename = url.split('/')[-1]
     # NOTE the stream=True parameter below
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
         with open(local_filename, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192): 
+            for chunk in r.iter_content(chunk_size=8192):
                 # If you have chunk encoded response uncomment if
                 # and set chunk_size parameter to None.
-                #if chunk: 
+                # if chunk:
                 f.write(chunk)
     return local_filename
 
@@ -173,15 +113,15 @@ def get_model_registry():
         "- choose -": None,
         "mitochondria": "xyz",
         "vesicles": "sha256:e75714ea7bedd537d8eff822cb4c566b208dba1301fadf9d338a3914a353a331"
-            #"sha256:ab66416f979473f2f8bfa1f6e461d4a29e2bc17901e95cc65751218143e16c83",
-            #"sha256:b17f6072fd6752a0caf32400a938cfe9f011941027d849014447123caad288e3",
+        # "sha256:ab66416f979473f2f8bfa1f6e461d4a29e2bc17901e95cc65751218143e16c83",
+        # "sha256:b17f6072fd6752a0caf32400a938cfe9f011941027d849014447123caad288e3",
     }
     urls = {
         "- choose -": None,
-        "mitochondria": "https://github.com/computational-cell-analytics/synapse-net/releases/download/v0.0.1/mitochondria_model.zip",
+        "mitochondria": "https://github.com/computational-cell-analytics/synapse-net/releases/download/v0.0.1/mitochondria_model.zip",  # noqa
         "vesicles": "https://owncloud.gwdg.de/index.php/s/7B0ILPf0A7VRt1G/download"
         # "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt/download"
-            #"https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt",
+        # "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt",
     }
     cache_dir = get_cache_dir()
     models = pooch.create(
@@ -270,6 +210,7 @@ def get_model(model_path: str, model_class=None):
         return None
 
 
+# TODO: this seems like an un-nessary wrapper, get rid of it?
 def run_prediction(
     input: np.ndarray,
     model: torch.nn.Module,

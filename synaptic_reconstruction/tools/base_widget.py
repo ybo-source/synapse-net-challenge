@@ -1,9 +1,12 @@
 from pathlib import Path
+
 import napari
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QSpinBox, QLineEdit, QGroupBox, QFormLayout, QFrame, QComboBox, QCheckBox
 import qtpy.QtWidgets as QtWidgets
+
+from qtpy.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QComboBox, QCheckBox
+)
 from superqt import QCollapsible
-from magicgui.widgets import create_widget
 
 
 class BaseWidget(QWidget):
@@ -15,7 +18,7 @@ class BaseWidget(QWidget):
     def _create_layer_selector(self, selector_name, layer_type="Image"):
         """
         Create a layer selector for an image or labels and store it in a dictionary.
-        
+
         Parameters:
         - selector_name (str): The name of the selector, used as a key in the dictionary.
         - layer_type (str): The type of layer to filter for ("Image" or "Labels").
@@ -34,24 +37,24 @@ class BaseWidget(QWidget):
         selector_widget = QtWidgets.QWidget()
         image_selector = QtWidgets.QComboBox()
         layer_label = QtWidgets.QLabel(f"{selector_name} Layer:")
-        
+
         # Populate initial options
         self._update_selector(selector=image_selector, layer_filter=layer_filter)
-        
+
         # Update selector on layer events
         self.viewer.layers.events.inserted.connect(lambda event: self._update_selector(image_selector, layer_filter))
         self.viewer.layers.events.removed.connect(lambda event: self._update_selector(image_selector, layer_filter))
 
         # Store the selector in the dictionary
         self.layer_selectors[selector_name] = selector_widget
-        
+
         # Set up layout
         layout = QVBoxLayout()
         layout.addWidget(layer_label)
         layout.addWidget(image_selector)
         selector_widget.setLayout(layout)
         return selector_widget
-    
+
     def _update_selector(self, selector, layer_filter):
         """Update a single selector with the current image layers in the viewer."""
         selector.clear()
@@ -62,10 +65,10 @@ class BaseWidget(QWidget):
         """Return the data for the layer currently selected in a given selector."""
         if selector_name in self.layer_selectors:
             selector_widget = self.layer_selectors[selector_name]
-            
+
             # Retrieve the QComboBox from the QWidget's layout
             image_selector = selector_widget.layout().itemAt(1).widget()
-            
+
             if isinstance(image_selector, QComboBox):
                 selected_layer_name = image_selector.currentText()
                 if selected_layer_name in self.viewer.layers:
@@ -176,7 +179,7 @@ class BaseWidget(QWidget):
         collapsible.addWidget(widget)
         parent_widget.layout().addWidget(collapsible)
         return parent_widget
-    
+
     def _add_boolean_param(self, name, value, title=None, tooltip=None):
         checkbox = QCheckBox(name if title is None else title)
         checkbox.setChecked(value)
