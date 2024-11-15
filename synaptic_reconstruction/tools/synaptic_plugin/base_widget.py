@@ -37,11 +37,6 @@ class BaseWidget(QWidget):
         # Populate initial options
         self._update_selector(selector=image_selector, layer_filter=layer_filter)
         
-        # # Connect selection change to update image data in attribute_dict
-        # image_selector.currentIndexChanged.connect(
-        #     lambda: self._update_layer_data(image_selector, selector_name)
-        # )
-        
         # Update selector on layer events
         self.viewer.layers.events.inserted.connect(lambda event: self._update_selector(image_selector, layer_filter))
         self.viewer.layers.events.removed.connect(lambda event: self._update_selector(image_selector, layer_filter))
@@ -61,14 +56,6 @@ class BaseWidget(QWidget):
         selector.clear()
         image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, layer_filter)]  # if isinstance(layer, napari.layers.Image)
         selector.addItems(image_layers)
-
-    # def _update_layer_data(self, selector, attribute_name):
-    #     """Update the specified attribute in the attribute_dict with selected layer data."""
-    #     selected_layer_name = selector.currentText()
-    #     if selected_layer_name in self.viewer.layers:
-    #         self.layer_selectors[attribute_name] = self.viewer.layers[selected_layer_name].data
-    #     else:
-    #         self.layer_selectors[attribute_name] = None  # Reset if no valid selection
 
     def _get_layer_selector_data(self, selector_name):
         """Return the data for the layer currently selected in a given selector."""

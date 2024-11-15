@@ -19,8 +19,6 @@ class SegmentationWidget(BaseWidget):
         layout = QVBoxLayout()
 
         # Create the image selection dropdown
-        # FIXME: this does not work for layers that were added before the plugin
-        # self.image_selector_widget = self.create_image_selector()
         self.image_selector_name = "Image data"
         self.image_selector_widget = self._create_layer_selector(self.image_selector_name, layer_type="Image")
 
@@ -44,45 +42,6 @@ class SegmentationWidget(BaseWidget):
         layout.addWidget(self.predict_button)
 
         self.setLayout(layout)
-
-    # def create_image_selector(self):
-    #     selector_widget = QWidget()
-    #     self.image_selector = QComboBox()
-
-    #     title_label = QLabel("Select Layer to segment:")
-
-    #     # Populate initial options
-    #     self.update_image_selector()
-
-    #     # Connect selection change to update self.image
-    #     self.image_selector.currentIndexChanged.connect(self.update_image_data)
-
-    #     # Connect to Napari layer events to update the list
-    #     self.viewer.layers.events.inserted.connect(self.update_image_selector)
-    #     self.viewer.layers.events.removed.connect(self.update_image_selector)
-
-    #     layout = QVBoxLayout()
-    #     layout.addWidget(title_label)
-    #     layout.addWidget(self.image_selector)
-    #     selector_widget.setLayout(layout)
-    #     return selector_widget
-
-    # def update_image_selector(self, event=None):
-    #     """Update dropdown options with current image layers in the viewer."""
-    #     self.image_selector.clear()
-
-    #     # Add each image layer's name to the dropdown
-    #     # image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, napari.layers.Image)]
-    #     image_layers = [layer.name for layer in self.viewer.layers]
-    #     self.image_selector.addItems(image_layers)
-
-    # def update_image_data(self):
-    #     """Update the self.image attribute with data from the selected layer."""
-    #     selected_layer_name = self.image_selector.currentText()
-    #     if selected_layer_name in self.viewer.layers:
-    #         self.image = self.viewer.layers[selected_layer_name].data
-    #     else:
-    #         self.image = None  # Reset if no valid selection
 
     def load_model_widget(self):
         model_widget = QWidget()
