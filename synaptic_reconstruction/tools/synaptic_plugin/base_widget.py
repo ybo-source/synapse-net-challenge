@@ -3,6 +3,7 @@ import napari
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QSpinBox, QLineEdit, QGroupBox, QFormLayout, QFrame, QComboBox, QCheckBox
 import qtpy.QtWidgets as QtWidgets
 from superqt import QCollapsible
+from magicgui.widgets import create_widget
 
 
 class BaseWidget(QWidget):
@@ -67,7 +68,6 @@ class BaseWidget(QWidget):
             
             if isinstance(image_selector, QComboBox):
                 selected_layer_name = image_selector.currentText()
-                print("selector_name", selector_name,  "selected_layer_name", selected_layer_name)
                 if selected_layer_name in self.viewer.layers:
                     return self.viewer.layers[selected_layer_name].data
         return None  # Return None if layer not found

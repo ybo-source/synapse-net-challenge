@@ -98,9 +98,15 @@ class SegmentationWidget(BaseWidget):
             if ts != 0 or h != 0:  # if anything changed from default
                 use_custom_tiling = True
         if use_custom_tiling:
-            segmentation = run_segmentation(image, model_path=model_path, model_key=model_key, tiling=tiling)
+            segmentation = run_segmentation(
+                image, model_path=model_path, model_key=model_key,
+                tiling=tiling, scale=self.scale_param.value()
+                )
         else:
-            segmentation = run_segmentation(image, model_path=model_path, model_key=model_key)
+            segmentation = run_segmentation(
+                image, model_path=model_path, model_key=model_key,
+                scale=self.scale_param.value()
+                )
 
         # Add the segmentation layer
         self.viewer.add_labels(segmentation, name=f"{model_key}-segmentation")
@@ -122,7 +128,7 @@ class SegmentationWidget(BaseWidget):
         setting_values.layout().addLayout(layout)
 
         # Create UI for the tile shape.
-        self.tile_x, self.tile_y = 0, 0  # defaults
+        self.tile_x, self.tile_y = 512, 512  # defaults
         self.tile_x_param, self.tile_y_param, layout = self._add_shape_param(
             ("tile_x", "tile_y"), (self.tile_x, self.tile_y), min_val=0, max_val=2048, step=16,
             # tooltip=get_tooltip("embedding", "tiling")
@@ -130,10 +136,15 @@ class SegmentationWidget(BaseWidget):
         setting_values.layout().addLayout(layout)
 
         # Create UI for the halo.
-        self.halo_x, self.halo_y = 0, 0  # defaults
+        self.halo_x, self.halo_y = 64, 64  # defaults
         self.halo_x_param, self.halo_y_param, layout = self._add_shape_param(
             ("halo_x", "halo_y"), (self.halo_x, self.halo_y), min_val=0, max_val=512,
             # tooltip=get_tooltip("embedding", "halo")
+        )
+        setting_values.layout().addLayout(layout)
+        
+        self.scale_param, layout = self._add_float_param(
+            "scale", 0.5, min_val=0.0, max_val=8.0,
         )
         setting_values.layout().addLayout(layout)
 

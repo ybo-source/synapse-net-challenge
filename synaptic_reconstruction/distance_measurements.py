@@ -158,16 +158,21 @@ def _compute_seg_object_distances(segmentation, segmented_object, resolution, ve
     n = len(seg_ids)
 
     distances = np.zeros(n)
-    endpoints1 = np.zeros((n, 3), dtype="int")
-    endpoints2 = np.zeros((n, 3), dtype="int")
+    ndim = segmentation.ndim
+    endpoints1 = np.zeros((n, ndim), dtype="int")
+    endpoints2 = np.zeros((n, ndim), dtype="int")
 
     object_ids = []
     # We use this so often, it should be refactored.
     props = regionprops(segmentation)
     for prop in tqdm(props, disable=not verbose):
         bb = prop.bbox
-        offset = np.array(bb[:3])
-        bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
+        offset = np.array(bb[:ndim])
+        # bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
+        if len(bb) == 4:  # 2D bounding box
+            bb = np.s_[bb[0]:bb[2], bb[1]:bb[3]]
+        elif len(bb) == 6:  # 3D bounding box
+            bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 
         label = prop.label
         mask = segmentation[bb] == label
