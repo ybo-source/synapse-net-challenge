@@ -1,0 +1,53 @@
+import os
+import sys
+import pandas as pd
+
+sys.path.append("../processing")
+
+from parse_table import get_data_root  # noqa
+
+
+def get_manual_assignments():
+    result_path = "../results/20240917_1/fully_manual_analysis_results.xlsx"
+    results = pd.read_excel(result_path)
+    return results
+
+
+def get_automatic_assignments(tomograms):
+    result_path = "../results/20240917_1/automatic_analysis_results.xlsx"
+    results = pd.read_excel(result_path)
+    results = results[results["tomogram"].isin(tomograms)]
+    return results
+
+
+def get_measurements_with_annotation():
+    manual_assignments = get_manual_assignments()
+    manual_tomograms = pd.unique(manual_assignments["tomogram"])
+    automatic_assignments = get_automatic_assignments(manual_tomograms)
+
+    tomograms = pd.unique(automatic_assignments["tomogram"])
+    manual_assignments = manual_assignments[manual_assignments["tomogram"].isin(tomograms)]
+    assert len(pd.unique(manual_assignments["tomogram"])) == len(pd.unique(automatic_assignments["tomogram"]))
+
+    return manual_assignments, automatic_assignments
+
+
+def get_all_measurements():
+    data_root = get_data_root()
+    val_table = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
+    val_table = pd.read_excel(val_table)
+
+    val_table = val_table[val_table["Kommentar 27-10-24"] == "passt"]
+    n_tomos = len(val_table)
+    assert n_tomos > 0
+    tomo_names = []
+    for _, row in val_table.iterrows():
+        name = "/".join([
+            row.Bedingung, f"Mouse {int(row.Maus)}",
+            row["Ribbon-Orientierung"].lower().rstrip("?"),
+            str(int(row["OwnCloud-Unterordner"]))]
+        )
+        tomo_names.append(name)
+
+    automatic_assignments = get_automatic_assignments(tomo_names)
+    return automatic_assignments

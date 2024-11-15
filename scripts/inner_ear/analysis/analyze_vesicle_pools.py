@@ -1,72 +1,104 @@
-import sys
-
-import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 
-sys.path.append("..")
-sys.path.append("../processing")
-
-from combine_measurements import combine_manual_results, combine_automatic_results  # noqa
-# from compare_pool_assignments import create_manual_assignment
-from parse_table import parse_table, get_data_root  # noqa
+from common import get_all_measurements, get_measurements_with_annotation
 
 
-def get_manual_assignments():
-    result_path = "../results/20240917_1/fully_manual_analysis_results.xlsx"
-    results = pd.read_excel(result_path)
-    return results
+def plot_pools(data, errors):
+    data_for_plot = pd.melt(data, id_vars="Pool", var_name="Method", value_name="Measurement")
+
+    # Plot using seaborn
+    plt.figure(figsize=(8, 6))
+    sns.barplot(data=data_for_plot, x="Pool", y="Measurement", hue="Method")
+
+    # FIXME
+    # error_for_plot = pd.melt(errors, id_vars="Pool", var_name="Method", value_name="Error")
+    # # Add error bars manually
+    # for i, bar in enumerate(plt.gca().patches):
+    #     # Get Standard Deviation for the current bar
+    #     err = error_for_plot.iloc[i % len(error_for_plot)]["Error"]
+    #     bar_x = bar.get_x() + bar.get_width() / 2
+    #     bar_y = bar.get_height()
+    #     plt.errorbar(bar_x, bar_y, yerr=err, fmt="none", c="black", capsize=4)
+
+    # Customize the chart
+    plt.title("Different measurements for vesicles per pool")
+    plt.xlabel("Vesicle Pools")
+    plt.ylabel("Vesicles per Tomogram")
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
+    plt.legend(title="Approaches")
+
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
 
 
-def get_automatic_assignments(tomograms):
-    result_path = "../results/20240917_1/automatic_analysis_results.xlsx"
-    results = pd.read_excel(result_path)
-    results = results[results["tomogram"].isin(tomograms)]
-    return results
-
-
-def plot_confusion_matrix(manual_assignments, automatic_assignments):
-    pass
-
-
+# TODO use the actual results without vesicle post-processing.
 def for_tomos_with_annotation():
-    manual_assignments = get_manual_assignments()
-    manual_tomograms = pd.unique(manual_assignments["tomogram"])
-    automatic_assignments = get_automatic_assignments(manual_tomograms)
+    manual_assignments, automatic_assignments = get_measurements_with_annotation()
 
-    tomograms = pd.unique(automatic_assignments["tomogram"])
-    manual_assignments = manual_assignments[manual_assignments["tomogram"].isin(tomograms)]
-    assert len(pd.unique(manual_assignments["tomogram"])) == len(pd.unique(automatic_assignments["tomogram"]))
+    manual_counts = manual_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
+    automatic_counts = automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
 
-    n_tomograms = len(tomograms)
-    pool_names, manual_pool_counts = np.unique(manual_assignments["pool"].values, return_counts=True)
-    _, automatic_pool_counts = np.unique(automatic_assignments["pool"].values, return_counts=True)
+    manual_stats = manual_counts.agg(["mean", "std"]).transpose().reset_index()
+    automatic_stats = automatic_counts.agg(["mean", "std"]).transpose().reset_index()
 
-    manual_pool_counts = manual_pool_counts.astype("float32")
-    manual_pool_counts /= n_tomograms
-    automatic_pool_counts = automatic_pool_counts.astype("float32")
-    automatic_pool_counts /= n_tomograms
+    data = pd.DataFrame({
+        "Pool": manual_stats["pool"],
+        "Manual": manual_stats["mean"],
+        "Semi-automatic": automatic_stats["mean"],
+        "Automatic": automatic_stats["mean"],
+    })
+    errors = pd.DataFrame({
+        "Pool": manual_stats["pool"],
+        "Manual": manual_stats["std"],
+        "Semi-automatic": automatic_stats["std"],
+        "Automatic": automatic_stats["std"],
+    })
 
-    print(pool_names)
-    print(manual_pool_counts)
-    print(automatic_pool_counts)
+    plot_pools(data, errors)
 
-    # TODO plot as a bar chart
-    # TODO save excel
-    # TODO add 'more automatic' results
-
-    breakpoint()
+    output_path = "./vesicle_pools_small.xlsx"
+    data.to_excel(output_path, index=False, sheet_name="Average")
+    with pd.ExcelWriter(output_path, engine="openpyxl", mode="a") as writer:
+        errors.to_excel(writer, sheet_name="StandardDeviation", index=False)
 
 
-# TODO
+# TODO use the actual results without vesicle post-processing.
 def for_all_tomos():
-    pass
+
+    automatic_assignments = get_all_measurements()
+    # TODO double check why this number is so different! (64 vs. 81)
+    # tomos = pd.unique(automatic_assignments["tomogram"])
+    # print(len(tomos), n_tomos)
+    # assert len(tomos) == n_tomos
+
+    automatic_counts = automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
+    automatic_stats = automatic_counts.agg(["mean", "std"]).transpose().reset_index()
+
+    data = pd.DataFrame({
+        "Pool": automatic_stats["pool"],
+        "Semi-automatic": automatic_stats["mean"],
+        "Automatic": automatic_stats["mean"],
+    })
+    errors = pd.DataFrame({
+        "Pool": automatic_stats["pool"],
+        "Semi-automatic": automatic_stats["std"],
+        "Automatic": automatic_stats["std"],
+    })
+
+    plot_pools(data, errors)
+
+    output_path = "./vesicle_pools_large.xlsx"
+    data.to_excel(output_path, index=False, sheet_name="Average")
+    with pd.ExcelWriter(output_path, engine="openpyxl", mode="a") as writer:
+        errors.to_excel(writer, sheet_name="StandardDeviation", index=False)
 
 
 def main():
-    # data_root = get_data_root()
-    # table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
-    # table = parse_table(table_path, data_root)
-    for_tomos_with_annotation()
+    # for_tomos_with_annotation()
+    for_all_tomos()
 
 
 if __name__ == "__main__":
