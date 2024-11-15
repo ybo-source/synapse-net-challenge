@@ -3,6 +3,7 @@ import napari
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QSpinBox, QLineEdit, QGroupBox, QFormLayout, QFrame, QComboBox, QCheckBox
 import qtpy.QtWidgets as QtWidgets
 from superqt import QCollapsible
+from magicgui.widgets import create_widget
 
 
 class BaseWidget(QWidget):
@@ -10,6 +11,66 @@ class BaseWidget(QWidget):
         super().__init__()
         self.viewer = napari.current_viewer()
         self.attribute_dict = {}
+
+    def _create_layer_selector(self, selector_name, layer_type="Image"):
+        """
+        Create a layer selector for an image or labels and store it in a dictionary.
+        
+        Parameters:
+        - selector_name (str): The name of the selector, used as a key in the dictionary.
+        - layer_type (str): The type of layer to filter for ("Image" or "Labels").
+        """
+        if not hasattr(self, "layer_selectors"):
+            self.layer_selectors = {}
+
+        # Determine the annotation type for the widget
+        if layer_type == "Image":
+            layer_filter = napari.layers.Image
+        elif layer_type == "Labels":
+            layer_filter = napari.layers.Labels
+        else:
+            raise ValueError("layer_type must be either 'Image' or 'Labels'.")
+
+        selector_widget = QtWidgets.QWidget()
+        image_selector = QtWidgets.QComboBox()
+        layer_label = QtWidgets.QLabel(f"{selector_name} Layer:")
+        
+        # Populate initial options
+        self._update_selector(selector=image_selector, layer_filter=layer_filter)
+        
+        # Update selector on layer events
+        self.viewer.layers.events.inserted.connect(lambda event: self._update_selector(image_selector, layer_filter))
+        self.viewer.layers.events.removed.connect(lambda event: self._update_selector(image_selector, layer_filter))
+
+        # Store the selector in the dictionary
+        self.layer_selectors[selector_name] = selector_widget
+        
+        # Set up layout
+        layout = QVBoxLayout()
+        layout.addWidget(layer_label)
+        layout.addWidget(image_selector)
+        selector_widget.setLayout(layout)
+        return selector_widget
+    
+    def _update_selector(self, selector, layer_filter):
+        """Update a single selector with the current image layers in the viewer."""
+        selector.clear()
+        image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, layer_filter)]  # if isinstance(layer, napari.layers.Image)
+        selector.addItems(image_layers)
+
+    def _get_layer_selector_data(self, selector_name):
+        """Return the data for the layer currently selected in a given selector."""
+        if selector_name in self.layer_selectors:
+            selector_widget = self.layer_selectors[selector_name]
+            
+            # Retrieve the QComboBox from the QWidget's layout
+            image_selector = selector_widget.layout().itemAt(1).widget()
+            
+            if isinstance(image_selector, QComboBox):
+                selected_layer_name = image_selector.currentText()
+                if selected_layer_name in self.viewer.layers:
+                    return self.viewer.layers[selected_layer_name].data
+        return None  # Return None if layer not found
 
     def _add_string_param(self, name, value, title=None, placeholder=None, layout=None, tooltip=None):
         if layout is None:

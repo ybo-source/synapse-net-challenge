@@ -9,20 +9,78 @@ import requests
 from torch_em.util.prediction import predict_with_halo
 from synaptic_reconstruction.inference.vesicles import segment_vesicles
 from synaptic_reconstruction.inference.mitochondria import segment_mitochondria
+import csv
 
 
-def save_to_csv(file_path, data, delimiter="\t"):
+# def save_to_csv(file_path, data, delimiter="\t"):
+#     if not file_path.endswith(".csv"):
+#         file_path = os.path.join(file_path, "data.csv")
+#     np.savetxt(file_path, data, delimiter=delimiter)
+#     return file_path
+# def save_to_csv(file_path, data, delimiter="\t", header=None):
+#     if not file_path.endswith(".csv"):
+#         file_path = os.path.join(file_path, "data.csv")
+
+#     # Check if the data is a tuple or list of arrays
+#     if isinstance(data, (tuple, list)):
+#         try:
+#             # Combine data into a single 2D array if possible
+#             data = np.column_stack(data)
+#         except ValueError:
+#             raise ValueError("The data elements cannot be combined into a 2D array. Ensure consistent shapes.")
+
+#     # Save the data to the file
+#     np.savetxt(file_path, data, delimiter=delimiter, header=header)
+#     return file_path
+def save_to_csv(file_path, data, delimiter="\t", header=None):
+    """
+    Save structured data to a CSV file.
+
+    Parameters:
+    - file_path (str): Path to save the CSV file.
+    - data (tuple): A tuple of arrays with mixed types (distances, endpoint1, endpoint2, seg_ids).
+    - delimiter (str): Delimiter for the CSV file (default is tab-delimited).
+    - header (list or None): List of column headers for the CSV file.
+    """
     if not file_path.endswith(".csv"):
         file_path = os.path.join(file_path, "data.csv")
-    np.savetxt(file_path, data, delimiter=delimiter)
+
+    # Ensure the directory exists
+    if not os.path.isdir(os.path.dirname(file_path)):
+        raise FileNotFoundError(f"Directory does not exist: {os.path.dirname(file_path)}")
+
+    # Unpack the data
+    distances, endpoint1, endpoint2, seg_ids = data
+
+    # Check consistency of data lengths
+    n = len(distances)
+    if not all(len(arr) == n for arr in [endpoint1, endpoint2, seg_ids]):
+        raise ValueError("All data components must have the same length.")
+
+    # Open the file and write the data
+    with open(file_path, mode='w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=delimiter)
+        
+        # Write the header if provided
+        if header:
+            writer.writerow(header)
+        
+        # Write the data rows
+        for i in range(n):
+            writer.writerow([
+                distances[i],
+                f"({endpoint1[i][0]}, {endpoint1[i][1]})",
+                f"({endpoint2[i][0]}, {endpoint2[i][1]})",
+                seg_ids[i]
+            ])
+
     return file_path
 
-
-def run_segmentation(image, model_path, model_key, tiling=None):
+def run_segmentation(image, model_path, model_key, tiling=None, scale=1.0):
     if model_key == "vesicles":
-        segmentation = segment_vesicles(image, model_path=model_path, tiling=tiling)
+        segmentation = segment_vesicles(image, model_path=model_path, tiling=tiling, scale=[scale])
     elif model_key == "mitochondria":
-        segmentation = segment_mitochondria(image, model_path=model_path, tiling=tiling)
+        segmentation = segment_mitochondria(image, model_path=model_path, tiling=tiling, scale=[scale])
     return segmentation
 
 
