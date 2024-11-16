@@ -13,7 +13,7 @@ setup(
     license="MIT",
     entry_points={
         "console_scripts": [
-            # TODO add segmentation CLI
+            "synapse_net.run_segmentation = synaptic_reconstruction:tools.cli:segmentation_cli"
         ],
         "napari.manifest": [
             "synaptic_reconstruction = synaptic_reconstruction:napari.yaml",
