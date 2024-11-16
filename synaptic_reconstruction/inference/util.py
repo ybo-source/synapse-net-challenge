@@ -255,21 +255,23 @@ def _get_file_paths(input_path, ext=".mrc"):
 
 
 def _load_input(img_path, extra_files, i):
-    # Load the input data data
-    with open_file(img_path, "r") as f:
+    # Load the input data.
+    if os.path.splitext(img_path)[-1] == ".tif":
+        input_volume = imageio.imread(img_path)
 
-        # Try to automatically derive the key with the raw data.
-        keys = list(f.keys())
-        if len(keys) == 1:
-            key = keys[0]
-        elif "data" in keys:
-            key = "data"
-        elif "raw" in keys:
-            key = "raw"
+    else:
+        with open_file(img_path, "r") as f:
+            # Try to automatically derive the key with the raw data.
+            keys = list(f.keys())
+            if len(keys) == 1:
+                key = keys[0]
+            elif "data" in keys:
+                key = "data"
+            elif "raw" in keys:
+                key = "raw"
+            input_volume = f[key][:]
 
-        input_volume = f[key][:]
-    assert input_volume.ndim == 3
-
+    assert input_volume.ndim in (2, 3)
     # For now we assume this is always tif.
     if extra_files is not None:
         extra_input = imageio.imread(extra_files[i])

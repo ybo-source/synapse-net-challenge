@@ -1,10 +1,11 @@
 import argparse
 from functools import partial
 
-from .util import run_segmentation
+from .util import run_segmentation, get_model
 from ..inference.util import inference_helper, parse_tiling
 
 
+# TODO: handle kwargs
 def segmentation_cli():
     parser = argparse.ArgumentParser(description="Run segmentation.")
     parser.add_argument(
@@ -16,7 +17,7 @@ def segmentation_cli():
         help="The filepath to directory where the segmentations will be saved."
     )
     parser.add_argument(
-        "--model_path", "-m", required=True, help="The filepath to the vesicle model."
+        "--model", "-m", required=True, help="The model type."
     )
     parser.add_argument(
         "--mask_path", help="The filepath to a tif file with a mask that will be used to restrict the segmentation."
@@ -40,10 +41,11 @@ def segmentation_cli():
     )
     args = parser.parse_args()
 
-    # TODO: preload the model!
+    model = get_model(args.model)
     tiling = parse_tiling(args.tile_shape, args.halo)
+
     segmentation_function = partial(
-        run_segmentation, model_path=args.model_path, verbose=False, tiling=tiling,
+        run_segmentation, model=model, model_type=args.model, verbose=False, tiling=tiling,
     )
     inference_helper(
         args.input_path, args.output_path, segmentation_function,
