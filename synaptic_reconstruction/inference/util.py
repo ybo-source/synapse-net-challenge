@@ -472,7 +472,7 @@ def apply_size_filter(
     return segmentation
 
 
-def _postprocess_seg_3d(seg):
+def _postprocess_seg_3d(seg, area_threshold=1000, iterations=4, iterations_3d=8):
     # Structure lement for 2d dilation in 3d.
     structure_element = np.ones((3, 3))  # 3x3 structure for XY plane
     structure_3d = np.zeros((1, 3, 3))  # Only applied in the XY plane
@@ -485,9 +485,9 @@ def _postprocess_seg_3d(seg):
         mask = seg[bb] == prop.label
 
         # Fill small holes and apply closing.
-        mask = remove_small_holes(mask, area_threshold=1000)
-        mask = np.logical_or(binary_closing(mask, iterations=4), mask)
-        mask = np.logical_or(binary_closing(mask, iterations=8, structure=structure_3d), mask)
+        mask = remove_small_holes(mask, area_threshold=area_threshold)
+        mask = np.logical_or(binary_closing(mask, iterations=iterations), mask)
+        mask = np.logical_or(binary_closing(mask, iterations=iterations_3d, structure=structure_3d), mask)
         seg[bb][mask] = prop.label
 
     return seg
