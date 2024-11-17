@@ -52,7 +52,7 @@ def _load_segmentation(seg_path, tomo_shape):
     return seg
 
 
-def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_shape):
+def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_shape, use_corrected_vesicles=True):
     os.makedirs(save_folder, exist_ok=True)
 
     vesicles = None
@@ -61,9 +61,10 @@ def compute_distances(segmentation_paths, save_folder, resolution, force, tomo_s
         vesicle_path = segmentation_paths["vesicles"]
 
         if vesicles is None:
-            vesicle_pool_path = os.path.join(os.path.split(save_folder)[0], "vesicle_pools.tif")
-            if os.path.exists(vesicle_pool_path):
-                vesicle_path = vesicle_pool_path
+            if use_corrected_vesicles:
+                vesicle_pool_path = os.path.join(os.path.split(save_folder)[0], "vesicle_pools.tif")
+                if os.path.exists(vesicle_pool_path):
+                    vesicle_path = vesicle_pool_path
             return _load_segmentation(vesicle_path, tomo_shape)
 
         else:
@@ -394,14 +395,22 @@ def analyze_folder(folder, version, n_ribbons, force, use_corrected_vesicles):
     with open_file(data_path, "r") as f:
         tomo_shape = f["data"].shape
 
-    out_distance_folder = os.path.join(output_folder, "distances")
+    if use_corrected_vesicles:
+        out_distance_folder = os.path.join(output_folder, "distances")
+    else:
+        out_distance_folder = os.path.join(output_folder, "distances_uncorrected")
     distance_paths, skip = compute_distances(
         segmentation_paths, out_distance_folder, resolution, force=force, tomo_shape=tomo_shape,
+        use_corrected_vesicles=use_corrected_vesicles
     )
     if skip:
         return
 
     if force or not os.path.exists(result_path):
+
+        if not use_corrected_vesicles:
+            pool_correction_path = None
+
         analyze_distances(
             segmentation_paths, distance_paths, resolution, result_path, tomo_shape,
             pool_correction_path=pool_correction_path
