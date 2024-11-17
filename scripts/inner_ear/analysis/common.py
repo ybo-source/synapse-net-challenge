@@ -1,5 +1,6 @@
 import os
 import sys
+
 import pandas as pd
 
 sys.path.append("../processing")
@@ -13,8 +14,15 @@ def get_manual_assignments():
     return results
 
 
-def get_automatic_assignments(tomograms):
+def get_semi_automatic_assignments(tomograms):
     result_path = "../results/20240917_1/automatic_analysis_results.xlsx"
+    results = pd.read_excel(result_path)
+    results = results[results["tomogram"].isin(tomograms)]
+    return results
+
+
+def get_automatic_assignments(tomograms):
+    result_path = "../results/fully_automatic_analysis_results.xlsx"
     results = pd.read_excel(result_path)
     results = results[results["tomogram"].isin(tomograms)]
     return results
@@ -23,13 +31,18 @@ def get_automatic_assignments(tomograms):
 def get_measurements_with_annotation():
     manual_assignments = get_manual_assignments()
     manual_tomograms = pd.unique(manual_assignments["tomogram"])
-    automatic_assignments = get_automatic_assignments(manual_tomograms)
+    semi_automatic_assignments = get_semi_automatic_assignments(manual_tomograms)
 
-    tomograms = pd.unique(automatic_assignments["tomogram"])
+    tomograms = pd.unique(semi_automatic_assignments["tomogram"])
     manual_assignments = manual_assignments[manual_assignments["tomogram"].isin(tomograms)]
-    assert len(pd.unique(manual_assignments["tomogram"])) == len(pd.unique(automatic_assignments["tomogram"]))
+    assert len(pd.unique(manual_assignments["tomogram"])) == len(pd.unique(semi_automatic_assignments["tomogram"]))
 
-    return manual_assignments, automatic_assignments
+    automatic_assignments = get_automatic_assignments(tomograms)
+    filtered_tomograms = pd.unique(manual_assignments["tomogram"])
+    assert len(filtered_tomograms) == len(pd.unique(automatic_assignments["tomogram"]))
+
+    print("Tomograms with manual annotations:", len(filtered_tomograms))
+    return manual_assignments, semi_automatic_assignments, automatic_assignments
 
 
 def get_all_measurements():
@@ -39,6 +52,7 @@ def get_all_measurements():
 
     val_table = val_table[val_table["Kommentar 27-10-24"] == "passt"]
     n_tomos = len(val_table)
+    print("All tomograms:", n_tomos)
     assert n_tomos > 0
     tomo_names = []
     for _, row in val_table.iterrows():
@@ -49,5 +63,19 @@ def get_all_measurements():
         )
         tomo_names.append(name)
 
+    semi_automatic_assignments = get_semi_automatic_assignments(tomo_names)
+    filtered_tomo_names = pd.unique(semi_automatic_assignments["tomogram"]).tolist()
+
     automatic_assignments = get_automatic_assignments(tomo_names)
-    return automatic_assignments
+    assert len(filtered_tomo_names) == len(pd.unique(automatic_assignments["tomogram"]))
+
+    return semi_automatic_assignments, automatic_assignments
+
+
+def main():
+    get_measurements_with_annotation()
+    get_all_measurements()
+
+
+if __name__ == "__main__":
+    main()

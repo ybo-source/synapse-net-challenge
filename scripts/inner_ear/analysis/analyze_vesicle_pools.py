@@ -34,63 +34,61 @@ def plot_pools(data, errors):
     plt.show()
 
 
-# TODO use the actual results without vesicle post-processing.
 def for_tomos_with_annotation():
-    manual_assignments, automatic_assignments = get_measurements_with_annotation()
+    manual_assignments, semi_automatic_assignments, automatic_assignments = get_measurements_with_annotation()
 
     manual_counts = manual_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
+    semi_automatic_counts = semi_automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
     automatic_counts = automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
 
     manual_stats = manual_counts.agg(["mean", "std"]).transpose().reset_index()
+    semi_automatic_stats = semi_automatic_counts.agg(["mean", "std"]).transpose().reset_index()
     automatic_stats = automatic_counts.agg(["mean", "std"]).transpose().reset_index()
 
     data = pd.DataFrame({
         "Pool": manual_stats["pool"],
-        "Manual": manual_stats["mean"],
-        "Semi-automatic": automatic_stats["mean"],
+        "Semi-automatic": semi_automatic_stats["mean"],
         "Automatic": automatic_stats["mean"],
+        "Manual": manual_stats["mean"],
     })
     errors = pd.DataFrame({
         "Pool": manual_stats["pool"],
-        "Manual": manual_stats["std"],
-        "Semi-automatic": automatic_stats["std"],
+        "Semi-automatic": semi_automatic_stats["std"],
         "Automatic": automatic_stats["std"],
+        "Manual": manual_stats["std"],
     })
 
     plot_pools(data, errors)
 
-    output_path = "./vesicle_pools_small.xlsx"
+    output_path = "./results/vesicle_pools_with_manual_annotations.xlsx"
     data.to_excel(output_path, index=False, sheet_name="Average")
     with pd.ExcelWriter(output_path, engine="openpyxl", mode="a") as writer:
         errors.to_excel(writer, sheet_name="StandardDeviation", index=False)
 
 
-# TODO use the actual results without vesicle post-processing.
 def for_all_tomos():
-
-    automatic_assignments = get_all_measurements()
-    # TODO double check why this number is so different! (64 vs. 81)
-    # tomos = pd.unique(automatic_assignments["tomogram"])
-    # print(len(tomos), n_tomos)
-    # assert len(tomos) == n_tomos
+    semi_automatic_assignments, automatic_assignments = get_all_measurements()
 
     automatic_counts = automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
     automatic_stats = automatic_counts.agg(["mean", "std"]).transpose().reset_index()
 
+    semi_automatic_counts = semi_automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
+    semi_automatic_stats = semi_automatic_counts.agg(["mean", "std"]).transpose().reset_index()
+
     data = pd.DataFrame({
         "Pool": automatic_stats["pool"],
-        "Semi-automatic": automatic_stats["mean"],
+        "Semi-automatic": semi_automatic_stats["mean"],
         "Automatic": automatic_stats["mean"],
     })
     errors = pd.DataFrame({
         "Pool": automatic_stats["pool"],
-        "Semi-automatic": automatic_stats["std"],
+        "Semi-automatic": semi_automatic_stats["std"],
         "Automatic": automatic_stats["std"],
     })
 
     plot_pools(data, errors)
 
-    output_path = "./vesicle_pools_large.xlsx"
+    output_path = "./results/vesicle_pools_all_tomograms.xlsx"
     data.to_excel(output_path, index=False, sheet_name="Average")
     with pd.ExcelWriter(output_path, engine="openpyxl", mode="a") as writer:
         errors.to_excel(writer, sheet_name="StandardDeviation", index=False)
