@@ -1,6 +1,6 @@
 import os
 import multiprocessing as mp
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -61,8 +61,9 @@ def _compute_boundary_distances(segmentation, resolution, n_threads):
     n = len(seg_ids)
 
     pairwise_distances = np.zeros((n, n))
-    end_points1 = np.zeros((n, n, 3), dtype="int")
-    end_points2 = np.zeros((n, n, 3), dtype="int")
+    ndim = segmentation.ndim
+    end_points1 = np.zeros((n, n, ndim), dtype="int")
+    end_points2 = np.zeros((n, n, ndim), dtype="int")
 
     properties = regionprops(segmentation)
     properties = {prop.label: prop for prop in properties}
@@ -80,8 +81,11 @@ def _compute_boundary_distances(segmentation, resolution, n_threads):
             prop = properties[ngb_id]
 
             bb = prop.bbox
-            offset = np.array(bb[:3])
-            bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
+            offset = np.array(bb[:ndim])
+            if ndim == 2:
+                bb = np.s_[bb[0]:bb[2], bb[1]:bb[3]]
+            else:
+                bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 
             mask = segmentation[bb] == ngb_id
             ngb_dist, ngb_index = distances[bb].copy(), indices[(slice(None),) + bb]
@@ -168,10 +172,9 @@ def _compute_seg_object_distances(segmentation, segmented_object, resolution, ve
     for prop in tqdm(props, disable=not verbose):
         bb = prop.bbox
         offset = np.array(bb[:ndim])
-        # bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
-        if len(bb) == 4:  # 2D bounding box
+        if ndim == 2:
             bb = np.s_[bb[0]:bb[2], bb[1]:bb[3]]
-        elif len(bb) == 6:  # 3D bounding box
+        else:
             bb = np.s_[bb[0]:bb[3], bb[1]:bb[4], bb[2]:bb[5]]
 
         label = prop.label
@@ -296,7 +299,7 @@ def create_pairwise_distance_lines(
     distances: np.ndarray,
     endpoints1: np.ndarray,
     endpoints2: np.ndarray,
-    seg_ids: np.ndarray,
+    seg_ids: List[List[int]],
     n_neighbors: Optional[int] = None,
     pairs: Optional[np.ndarray] = None,
     bb: Optional[Tuple[slice]] = None,
@@ -323,9 +326,7 @@ def create_pairwise_distance_lines(
     if pairs is None and n_neighbors is not None:
         pairs = _extract_nearest_neighbors(distances, seg_ids, n_neighbors, remove_duplicates=remove_duplicates)
     elif pairs is None:
-        pairs = [
-            [id1, id2] for id1 in seg_ids for id2 in seg_ids if id1 < id2
-        ]
+        pairs = [[id1, id2] for id1 in seg_ids for id2 in seg_ids if id1 < id2]
 
     assert pairs is not None
     pair_indices = (
