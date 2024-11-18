@@ -169,6 +169,15 @@ class BaseWidget(QWidget):
             title=title[1] if title is not None else title, tooltip=tooltip
         )
         layout.addLayout(y_layout)
+        
+        if len(names) == 3:
+            z_layout = QVBoxLayout()
+            z_param, _ = self._add_int_param(
+                names[2], values[2], min_val=min_val, max_val=max_val, layout=z_layout, step=step,
+                title=title[2] if title is not None else title, tooltip=tooltip
+            )
+            layout.addLayout(z_layout)
+            return x_param, y_param, z_param, layout
 
         return x_param, y_param, layout
 

@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 import torch
 import numpy as np
 import pooch
+import warnings
 
 from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
@@ -23,6 +24,11 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     device = get_device(device)
     model_registry = get_model_registry()
     model_path = model_registry.fetch(model_type)
+    warnings.filterwarnings(
+        "ignore",
+        message="You are using `torch.load` with `weights_only=False`",
+        category=FutureWarning
+    )
     model = torch.load(model_path)
     model.to(device)
     return model
@@ -152,3 +158,32 @@ def _available_devices():
         else:
             available_devices.append(device)
     return available_devices
+
+
+def get_current_tiling(tiling: dict, default_tiling: dict, image_shape):
+    # get tiling values from qt objects
+    for k, v in tiling.items():
+        for k2, v2 in v.items():
+            tiling[k][k2] = v2.value()
+    # check if user inputs tiling/halo or not
+    if default_tiling == tiling:
+        if len(image_shape) == 2:
+            # if its 2d image expand x,y and set z to 1
+            tiling = {
+                "tile": {
+                    "x": 512,
+                    "y": 512,
+                    "z": 1
+                },
+                "halo": {
+                    "x": 64,
+                    "y": 64,
+                    "z": 1
+                }
+            }
+    elif len(image_shape) == 2:
+        # if its a 2d image set z to 1
+        tiling["tile"]["z"] = 1
+        tiling["halo"]["z"] = 1
+        
+    return tiling
