@@ -35,7 +35,7 @@ def _sato_filter(raw, sigma, max_window=16):
 def edge_filter(
     data: np.ndarray,
     sigma: float,
-    method: str = "sobel",
+    method: str = "sato",
     per_slice: bool = True,
     n_threads: Optional[int] = None,
 ) -> np.ndarray:
@@ -60,11 +60,11 @@ def edge_filter(
     if method in FILTERS[1:] and vigra is None:
         raise ValueError(f"Filter {method} requires vigra.")
 
-    if per_slice and data.ndim == 2:
+    if per_slice and data.ndim == 3:
         n_threads = mp.cpu_count() if n_threads is None else n_threads
         filter_func = partial(edge_filter, sigma=sigma, method=method, per_slice=False)
         with futures.ThreadPoolExecutor(n_threads) as tp:
-            edge_map = tp.map(filter_func, data)
+            edge_map = list(tp.map(filter_func, data))
         edge_map = np.stack(edge_map)
         return edge_map
 
