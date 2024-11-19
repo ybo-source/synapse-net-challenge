@@ -3,7 +3,8 @@ from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
 
 from .base_widget import BaseWidget
-from .util import run_segmentation, get_model, get_model_registry, _available_devices, get_device, get_current_tiling
+from .util import (run_segmentation, get_model, get_model_registry, _available_devices, get_device, 
+                   get_current_tiling, compute_average_voxel_size)
 from synaptic_reconstruction.inference.util import get_default_tiling
 import copy
 
@@ -71,7 +72,15 @@ class SegmentationWidget(BaseWidget):
         self.tiling = get_current_tiling(self.tiling, self.default_tiling, image.shape)
         
         # TODO: Use scale derived from the image resolution.
+        # get avg image shape from training of the selected model
+        metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
+        if hasattr(metadata, "voxel_size"):
+            voxel_size = metadata["voxel_size"]
+            avg_voxel_size = compute_average_voxel_size(voxel_size)
+            print("avg voxel size", avg_voxel_size)
+            
         scale = [self.scale_param.value()]
+
         segmentation = run_segmentation(
             image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
         )
@@ -115,8 +124,9 @@ class SegmentationWidget(BaseWidget):
 
         # TODO: create funciton to determine appropriate scale based on avg image size during training and
         # current image size
-        # with mrcfile.open("...") as f:
-        # print(f.voxel_size))
+        
+        # calculate scale: read voxcel size from layer metadata
+        self.viewer
         self.scale_param, layout = self._add_float_param(
             "scale", 0.5, min_val=0.0, max_val=8.0,
         )

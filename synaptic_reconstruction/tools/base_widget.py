@@ -61,7 +61,7 @@ class BaseWidget(QWidget):
         image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, layer_filter)]  # if isinstance(layer, napari.layers.Image)
         selector.addItems(image_layers)
 
-    def _get_layer_selector_data(self, selector_name):
+    def _get_layer_selector_data(self, selector_name, return_metadata=False):
         """Return the data for the layer currently selected in a given selector."""
         if selector_name in self.layer_selectors:
             selector_widget = self.layer_selectors[selector_name]
@@ -72,7 +72,10 @@ class BaseWidget(QWidget):
             if isinstance(image_selector, QComboBox):
                 selected_layer_name = image_selector.currentText()
                 if selected_layer_name in self.viewer.layers:
-                    return self.viewer.layers[selected_layer_name].data
+                    if return_metadata:
+                        return self.viewer.layers[selected_layer_name].metadata
+                    else:
+                        return self.viewer.layers[selected_layer_name].data
         return None  # Return None if layer not found
 
     def _add_string_param(self, name, value, title=None, placeholder=None, layout=None, tooltip=None):

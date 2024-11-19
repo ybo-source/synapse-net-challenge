@@ -1,6 +1,7 @@
 import os
 
 from typing import Callable, List, Optional, Sequence, Union
+import mrcfile
 from napari.types import LayerData
 
 from elf.io import open_file, is_dataset
@@ -22,7 +23,17 @@ def get_reader(path: PathOrPaths) -> Optional[ReaderFunction]:
 def _read_mrc(path, fname):
     with open_file(path, mode="r") as f:
         data = f["data"][:]
-    layer_attributes = {"name": fname, "colormap": "gray"}
+    
+    metadata = {
+        "file_path": path
+    }
+    read_voxel_size(path, metadata)
+    layer_attributes = {
+        "name": fname,
+        "colormap": "gray",
+        "metadata": metadata
+    }
+
     return [(data, layer_attributes)]
 
 
@@ -61,3 +72,20 @@ def read_image_volume(path: PathOrPaths) -> List[LayerData]:
     except Exception as e:
         print(f"Failed to read file: {e}")
         return
+
+
+def read_voxel_size(input_path: str, layer_attributes: dict) -> None:
+    with mrcfile.open(input_path) as mrc:
+        try:
+            voxel_size = mrc.voxel_size
+            layer_attributes["voxel_size"] = {
+                "x": voxel_size.x,
+                "y": voxel_size.y,
+                "z": voxel_size.z,
+            }
+        except Exception as e:
+            print(f"Failed to read voxel size: {e}")
+        # return mrc.voxel_size
+
+# if __name__ == "__main__":
+#     read_image_volume("/home/freckmann15/data/mitochondria/fidi_orig/20240722_WT/36859_J1_66K_TS_PS_01_rec_2kb1dawbp_crop_raw.mrc")
