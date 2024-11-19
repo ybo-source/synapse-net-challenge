@@ -164,6 +164,8 @@ def get_current_tiling(tiling: dict, default_tiling: dict, image_shape):
     # get tiling values from qt objects
     for k, v in tiling.items():
         for k2, v2 in v.items():
+            if isinstance(v2, int):
+                continue
             tiling[k][k2] = v2.value()
     # check if user inputs tiling/halo or not
     if default_tiling == tiling:
@@ -185,5 +187,34 @@ def get_current_tiling(tiling: dict, default_tiling: dict, image_shape):
         # if its a 2d image set z to 1
         tiling["tile"]["z"] = 1
         tiling["halo"]["z"] = 1
-        
+
     return tiling
+
+
+def compute_average_voxel_size(voxel_size: dict) -> float:
+    """
+    Computes the average voxel size dynamically based on available dimensions.
+    
+    Args:
+        voxel_size (dict): Dictionary containing voxel dimensions (e.g., x, y, z).
+        
+    Returns:
+        float: Average voxel size.
+    """
+    # Extract all dimension values
+    dimensions = [voxel_size[key] for key in voxel_size if key in ["x", "y", "z"]]
+    
+    # Compute the average
+    return sum(dimensions) / len(dimensions)
+
+
+def compute_scale_from_voxel_size(voxel_size: dict, training_voxel_size) -> [float]:
+    scale = [
+        voxel_size["x"] / training_voxel_size["x"],
+        voxel_size["y"] / training_voxel_size["y"],
+    ]
+    if len(voxel_size) == 3:
+        scale.append(
+            voxel_size["z"] / training_voxel_size["z"]
+        )
+    return scale

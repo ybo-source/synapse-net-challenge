@@ -4,7 +4,7 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
 
 from .base_widget import BaseWidget
 from .util import (run_segmentation, get_model, get_model_registry, _available_devices, get_device, 
-                   get_current_tiling, compute_average_voxel_size)
+                   get_current_tiling, compute_scale_from_voxel_size)
 from synaptic_reconstruction.inference.util import get_default_tiling
 import copy
 
@@ -73,14 +73,27 @@ class SegmentationWidget(BaseWidget):
         
         # TODO: Use scale derived from the image resolution.
         # get avg image shape from training of the selected model
+        # wichmann data avg voxel size = 17.53
+        training_voxel_size = {
+            "x": 17.48,
+            "y": 17.48,
+            "z": 17.48
+        }
         metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
-        if hasattr(metadata, "voxel_size"):
+        if "voxel_size" in metadata.keys():
             voxel_size = metadata["voxel_size"]
-            avg_voxel_size = compute_average_voxel_size(voxel_size)
-            print("avg voxel size", avg_voxel_size)
-            
-        scale = [self.scale_param.value()]
 
+        if self.scale_param.value() != 1.0:  # changed from default
+            scale = []
+            for k in range(len(image.shape)):
+                scale.append(self.scale_param.value())
+        elif voxel_size:
+            # calculate scale so voxel_size is the same as in training
+            scale = compute_scale_from_voxel_size(voxel_size, training_voxel_size)
+        else:
+            scale = None
+        print("scale", scale)
+        
         segmentation = run_segmentation(
             image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
         )
@@ -128,7 +141,7 @@ class SegmentationWidget(BaseWidget):
         # calculate scale: read voxcel size from layer metadata
         self.viewer
         self.scale_param, layout = self._add_float_param(
-            "scale", 0.5, min_val=0.0, max_val=8.0,
+            "scale", 1.0, min_val=0.0, max_val=8.0,
         )
         setting_values.layout().addLayout(layout)
 

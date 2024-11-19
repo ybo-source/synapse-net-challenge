@@ -28,6 +28,7 @@ def _read_mrc(path, fname):
         "file_path": path
     }
     read_voxel_size(path, metadata)
+    print(metadata)
     layer_attributes = {
         "name": fname,
         "colormap": "gray",
