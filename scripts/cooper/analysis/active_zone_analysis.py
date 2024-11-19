@@ -9,7 +9,7 @@ from skimage.measure import label
 from synaptic_reconstruction.ground_truth.shape_refinement import edge_filter
 from tqdm import tqdm
 
-ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/20241102_TOMO_DATA_Imig2014/final_Imig2014_seg_manComp"  # noqa
+ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/20241102_TOMO_DATA_Imig2014/final_Imig2014_seg_autoComp"  # noqa
 
 OUTPUT_AZ = "./boundary_az"
 
