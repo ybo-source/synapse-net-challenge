@@ -10,6 +10,13 @@ from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
 
 
+_TRAINING_VOXEL_SIZE = {
+            "x": 17.48,
+            "y": 17.48,
+            "z": 17.48
+        }
+
+
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
