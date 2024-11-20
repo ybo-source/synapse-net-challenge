@@ -94,8 +94,7 @@ def for_all_tomos():
         errors.to_excel(writer, sheet_name="StandardDeviation", index=False)
 
 
-# TODO: export the vesicle diameters
-# TODO: export the ribbon and pd stats
+# TODO: export the ribbon and pd stats (first need to discuss this with Fid)
 def main():
     # for_tomos_with_annotation()
     for_all_tomos()
