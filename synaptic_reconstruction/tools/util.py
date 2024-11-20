@@ -10,13 +10,6 @@ from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
 
 
-_TRAINING_VOXEL_SIZE = {
-            "x": 17.48,
-            "y": 17.48,
-            "z": 17.48
-        }
-
-
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
@@ -86,12 +79,12 @@ def get_cache_dir():
 
 def get_model_training_resolution(model_type):
     resolutions = {
-        "active_zone": 1.44,
-        "compartments": 3.47,
+        "active_zone": {"x": 1.44, "y": 1.44, "z": 1.44},
+        "compartments": {"x": 3.47, "y": 3.47, "z": 3.47},
         "mitochondria": 1.0,  # FIXME: this is a dummy value, we need to determine the real one
-        "vesicles_2d": 1.35,
-        "vesicles_3d": 1.35,
-        "vesicles_cryo": 0.88,
+        "vesicles_2d": {"x": 1.35, "y": 1.35},
+        "vesicles_3d": {"x": 1.35, "y": 1.35, "z": 1.35},
+        "vesicles_cryo": {"x": 1.35, "y": 1.35, "z": 0.88},
     }
     return resolutions[model_type]
 
@@ -233,8 +226,9 @@ def compute_average_voxel_size(voxel_size: dict) -> float:
 
 def compute_scale_from_voxel_size(
     voxel_size: dict,
-    training_voxel_size=_TRAINING_VOXEL_SIZE
+    model_type: str
 ) -> List[float]:
+    training_voxel_size = get_model_training_resolution(model_type)
     scale = [
         voxel_size["x"] / training_voxel_size["x"],
         voxel_size["y"] / training_voxel_size["y"],

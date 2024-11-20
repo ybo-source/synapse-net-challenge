@@ -105,11 +105,7 @@ class DistanceMeasureWidget(BaseWidget):
         resolution = segmentation.shape
         print("on_measure_seg_to_object resolution", resolution)
         # get image metadata
-        scale = None
-        if "Image data" in self.viewer.layers:
-            if "voxel_size" in self.viewer.layers["Image data"].metadata.keys():
-                voxel_size = self.viewer.layers["Image data"].metadata["voxel_size"]
-                scale = compute_scale_from_voxel_size(voxel_size)
+
         (distances,
          endpoints1,
          endpoints2,
@@ -122,7 +118,6 @@ class DistanceMeasureWidget(BaseWidget):
             endpoints1=endpoints1,
             endpoints2=endpoints2,
             seg_ids=seg_ids,
-            scale=scale
         )
         table_data = self._to_table_data(distances, seg_ids, endpoints1, endpoints2)
         self._add_lines_and_table(lines, properties, table_data, name="distances")
@@ -134,12 +129,7 @@ class DistanceMeasureWidget(BaseWidget):
             return
         resolution = segmentation.shape
         # get image metadata
-        scale = None
-        if "Image data" in self.viewer.layers:
-            print("image data in viewer layers")
-            if "voxel_size" in self.viewer.layers["Image data"].metadata.keys():
-                voxel_size = self.viewer.layers["Image data"].metadata["voxel_size"]
-                scale = compute_scale_from_voxel_size(voxel_size)
+
         (distances,
          endpoints1,
          endpoints2,
@@ -148,7 +138,6 @@ class DistanceMeasureWidget(BaseWidget):
         )
         lines, properties = distance_measurements.create_pairwise_distance_lines(
             distances=distances, endpoints1=endpoints1, endpoints2=endpoints2, seg_ids=seg_ids.tolist(),
-            scale=scale
         )
         table_data = self._to_table_data(
             distances=properties["distance"],

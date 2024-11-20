@@ -74,16 +74,9 @@ class SegmentationWidget(BaseWidget):
         # TODO: Use scale derived from the image resolution.
         # get avg image shape from training of the selected model
         # wichmann data avg voxel size = 17.53
-        training_voxel_size = {
-            "x": 17.48,
-            "y": 17.48,
-            "z": 17.48
-        }
+
         metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
-        if "voxel_size" in metadata.keys():
-            voxel_size = metadata["voxel_size"]
-        else:
-            voxel_size = None
+        voxel_size = metadata.get("voxel_size", None)
 
         if self.scale_param.value() != 1.0:  # changed from default
             scale = []
@@ -91,7 +84,7 @@ class SegmentationWidget(BaseWidget):
                 scale.append(self.scale_param.value())
         elif voxel_size:
             # calculate scale so voxel_size is the same as in training
-            scale = compute_scale_from_voxel_size(voxel_size)
+            scale = compute_scale_from_voxel_size(voxel_size, model_type)
         else:
             scale = None
         print(f"Rescaled the image by {scale} to optimize for the selected model.")

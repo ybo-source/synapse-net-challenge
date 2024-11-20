@@ -75,17 +75,19 @@ def read_image_volume(path: PathOrPaths) -> List[LayerData]:
 
 
 def read_voxel_size(input_path: str, layer_attributes: dict) -> None:
-    with mrcfile.open(input_path) as mrc:
+    """_summary_
+
+    Args:
+        input_path (str): _description_
+        layer_attributes (dict): _description_
+    """
+    with mrcfile.open(input_path, permissive=True) as mrc:
         try:
             voxel_size = mrc.voxel_size
             layer_attributes["voxel_size"] = {
-                "x": voxel_size.x,
-                "y": voxel_size.y,
-                "z": voxel_size.z,
+                "x": voxel_size.x / 10,
+                "y": voxel_size.y / 10,
+                "z": voxel_size.z / 10,
             }
         except Exception as e:
             print(f"Failed to read voxel size: {e}")
-        # return mrc.voxel_size
-
-# if __name__ == "__main__":
-#     read_image_volume("/home/freckmann15/data/mitochondria/fidi_orig/20240722_WT/36859_J1_66K_TS_PS_01_rec_2kb1dawbp_crop_raw.mrc")
