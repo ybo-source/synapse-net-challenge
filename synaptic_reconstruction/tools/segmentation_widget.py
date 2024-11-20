@@ -82,6 +82,8 @@ class SegmentationWidget(BaseWidget):
         metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
         if "voxel_size" in metadata.keys():
             voxel_size = metadata["voxel_size"]
+        else:
+            voxel_size = None
 
         if self.scale_param.value() != 1.0:  # changed from default
             scale = []
@@ -89,7 +91,7 @@ class SegmentationWidget(BaseWidget):
                 scale.append(self.scale_param.value())
         elif voxel_size:
             # calculate scale so voxel_size is the same as in training
-            scale = compute_scale_from_voxel_size(voxel_size, training_voxel_size)
+            scale = compute_scale_from_voxel_size(voxel_size)
         else:
             scale = None
         print("scale", scale)

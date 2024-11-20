@@ -10,6 +10,7 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 
 from .base_widget import BaseWidget
 from .. import distance_measurements
+from .util import compute_scale_from_voxel_size
 
 try:
     from napari_skimage_regionprops import add_table
@@ -101,33 +102,57 @@ class DistanceMeasureWidget(BaseWidget):
     def on_measure_seg_to_object(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
         object_data = self._get_layer_selector_data(self.image_selector_name2)
-
+        segmentation = self._get_layer_selector_data(self.image_selector_name1)
+        resolution = segmentation.shape
+        print("on_measure_seg_to_object resolution", resolution)
+        # get image metadata
+        scale = None
+        if "Image data" in self.viewer.layers:
+            if "voxel_size" in self.viewer.layers["Image data"].metadata.keys():
+                voxel_size = self.viewer.layers["Image data"].metadata["voxel_size"]
+                scale = compute_scale_from_voxel_size(voxel_size)
+        print("on_measure_seg_to_object resolution", scale)
         (distances,
          endpoints1,
          endpoints2,
          seg_ids) = distance_measurements.measure_segmentation_to_object_distances(
             segmentation=segmentation, segmented_object=object_data, distance_type="boundary",
+            resolution=resolution
         )
         lines, properties = distance_measurements.create_object_distance_lines(
             distances=distances,
             endpoints1=endpoints1,
             endpoints2=endpoints2,
-            seg_ids=seg_ids
+            seg_ids=seg_ids,
+            scale=scale
         )
         table_data = self._to_table_data(distances, seg_ids, endpoints1, endpoints2)
         self._add_lines_and_table(lines, properties, table_data, name="distances")
 
     def on_measure_pairwise(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
-
+        if segmentation is None:
+            show_info("Please choose a segmentation.")
+            return
+        resolution = segmentation.shape
+        # get image metadata
+        scale = None
+        if "Image data" in self.viewer.layers:
+            print("image data in viewer layers")
+            if "voxel_size" in self.viewer.layers["Image data"].metadata.keys():
+                voxel_size = self.viewer.layers["Image data"].metadata["voxel_size"]
+                scale = compute_scale_from_voxel_size(voxel_size)
+        print("on_measure_seg_to_object resolution", resolution)
+        print("on_measure_seg_to_object scale", scale)
         (distances,
          endpoints1,
          endpoints2,
          seg_ids) = distance_measurements.measure_pairwise_object_distances(
-            segmentation=segmentation, distance_type="boundary"
+            segmentation=segmentation, distance_type="boundary", resolution=resolution
         )
         lines, properties = distance_measurements.create_pairwise_distance_lines(
-            distances=distances, endpoints1=endpoints1, endpoints2=endpoints2, seg_ids=seg_ids.tolist()
+            distances=distances, endpoints1=endpoints1, endpoints2=endpoints2, seg_ids=seg_ids.tolist(),
+            scale=scale
         )
         table_data = self._to_table_data(
             distances=properties["distance"],

@@ -10,6 +10,12 @@ from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
 
 
+_TRAINING_VOXEL_SIZE = {
+            "x": 17.48,
+            "y": 17.48,
+            "z": 17.48
+        }
+
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
@@ -80,13 +86,15 @@ def get_cache_dir():
 def get_model_registry():
     registry = {
         "mitochondria": "xyz",
-        "vesicles": "sha256:e75714ea7bedd537d8eff822cb4c566b208dba1301fadf9d338a3914a353a331"
+        "vesicles": "sha256:e75714ea7bedd537d8eff822cb4c566b208dba1301fadf9d338a3914a353a331",
+        "vesicles_3D": "sha256:747980911d58f62f02f10f3a59f00ed90cd0663ba1fe9261bce32b6431e001fc"
         # "sha256:ab66416f979473f2f8bfa1f6e461d4a29e2bc17901e95cc65751218143e16c83",
         # "sha256:b17f6072fd6752a0caf32400a938cfe9f011941027d849014447123caad288e3",
     }
     urls = {
         "mitochondria": "https://github.com/computational-cell-analytics/synapse-net/releases/download/v0.0.1/mitochondria_model.zip",  # noqa
-        "vesicles": "https://owncloud.gwdg.de/index.php/s/7B0ILPf0A7VRt1G/download"
+        "vesicles": "https://owncloud.gwdg.de/index.php/s/7B0ILPf0A7VRt1G/download",
+        "vesicles_3D": "https://owncloud.gwdg.de/index.php/s/yk4lbJBQtRU1aPn/download"
         # "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt/download"
         # "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt",
     }
@@ -208,7 +216,10 @@ def compute_average_voxel_size(voxel_size: dict) -> float:
     return sum(dimensions) / len(dimensions)
 
 
-def compute_scale_from_voxel_size(voxel_size: dict, training_voxel_size) -> [float]:
+def compute_scale_from_voxel_size(
+    voxel_size: dict,
+    training_voxel_size=_TRAINING_VOXEL_SIZE
+) -> List[float]:
     scale = [
         voxel_size["x"] / training_voxel_size["x"],
         voxel_size["y"] / training_voxel_size["y"],
