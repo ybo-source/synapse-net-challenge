@@ -51,7 +51,7 @@ def run_segmentation(
     Returns:
         The segmentation.
     """
-    if model_type == "vesicles":
+    if model_type.startswith("vesicles"):
         segmentation = segment_vesicles(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
     elif model_type == "mitochondria":
         segmentation = segment_mitochondria(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
@@ -71,18 +71,34 @@ def get_cache_dir():
     return cache_dir
 
 
+def get_model_training_resolution(model_type):
+    resolutions = {
+        "active_zone": 1.44,
+        "compartments": 3.47,
+        "mitochondria": 1.0,  # FIXME: this is a dummy value, we need to determine the real one
+        "vesicles_2d": 1.35,
+        "vesicles_3d": 1.35,
+        "vesicles_cryo": 0.88,
+    }
+    return resolutions[model_type]
+
+
 def get_model_registry():
     registry = {
-        "mitochondria": "xyz",
-        "vesicles": "sha256:e75714ea7bedd537d8eff822cb4c566b208dba1301fadf9d338a3914a353a331"
-        # "sha256:ab66416f979473f2f8bfa1f6e461d4a29e2bc17901e95cc65751218143e16c83",
-        # "sha256:b17f6072fd6752a0caf32400a938cfe9f011941027d849014447123caad288e3",
+        "active_zone": "a18f29168aed72edec0f5c2cb1aa9a4baa227812db6082a6538fd38d9f43afb0",
+        "compartments": "527983720f9eb215c45c4f4493851fd6551810361eda7b79f185a0d304274ee1",
+        "mitochondria": "24625018a5968b36f39fa9d73b121a32e8f66d0f2c0540d3df2e1e39b3d58186",
+        "vesicles_2d": "eb0b74f7000a0e6a25b626078e76a9452019f2d1ea6cf2033073656f4f055df1",
+        "vesicles_3d": "b329ec1f57f305099c984fbb3d7f6ae4b0ff51ec2fa0fa586df52dad6b84cf29",
+        "vesicles_cryo": "782f5a21c3cda82c4e4eaeccc754774d5aaed5929f8496eb018aad7daf91661b",
     }
     urls = {
-        "mitochondria": "https://github.com/computational-cell-analytics/synapse-net/releases/download/v0.0.1/mitochondria_model.zip",  # noqa
-        "vesicles": "https://owncloud.gwdg.de/index.php/s/7B0ILPf0A7VRt1G/download"
-        # "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt/download"
-        # "https://owncloud.gwdg.de/index.php/s/tiyODdXOlSBNJIt",
+        "active_zone": "https://owncloud.gwdg.de/index.php/s/zvuY342CyQebPsX/download",
+        "compartments": "https://owncloud.gwdg.de/index.php/s/DnFDeTmDDmZrDDX/download",
+        "mitochondria": "https://owncloud.gwdg.de/index.php/s/1T542uvzfuruahD/download",
+        "vesicles_2d": "https://owncloud.gwdg.de/index.php/s/d72QIvdX6LsgXip/download",
+        "vesicles_3d": "https://owncloud.gwdg.de/index.php/s/A425mkAOSqePDhx/download",
+        "vesicles_cryo": "https://owncloud.gwdg.de/index.php/s/e2lVdxjCJuZkLJm/download",
     }
     cache_dir = get_cache_dir()
     models = pooch.create(
