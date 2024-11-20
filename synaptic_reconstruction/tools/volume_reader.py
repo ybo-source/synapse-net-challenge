@@ -75,11 +75,13 @@ def read_image_volume(path: PathOrPaths) -> List[LayerData]:
 
 
 def read_voxel_size(input_path: str, layer_attributes: dict) -> None:
-    """_summary_
+    """Read voxel size from mrc/rec file and store it in layer_attributes.
+    The original unit of voxel size is Angstrom and we convert it to nanometers 
+    by dividing it by ten. 
 
     Args:
-        input_path (str): _description_
-        layer_attributes (dict): _description_
+        input_path (str): path to mrc/rec file
+        layer_attributes (dict): napari layer attributes to store voxel size to
     """
     with mrcfile.open(input_path, permissive=True) as mrc:
         try:
