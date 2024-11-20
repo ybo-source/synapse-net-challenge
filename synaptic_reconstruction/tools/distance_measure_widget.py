@@ -102,9 +102,14 @@ class DistanceMeasureWidget(BaseWidget):
     def on_measure_seg_to_object(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
         object_data = self._get_layer_selector_data(self.image_selector_name2)
-        resolution = segmentation.shape
-        print("on_measure_seg_to_object resolution", resolution)
-        # get image metadata
+        # get metadata from layer if available
+        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        resolution = metadata.get("voxel_size", None)
+        if resolution is not None:
+            resolution = [v for v in resolution.values()]
+        # if user input is present override metadata
+        if self.voxel_size_param.value() != 0.0:  # changed from default
+            resolution = [self.voxel_size_param.value() for _ in range(len(segmentation.shape))]
 
         (distances,
          endpoints1,
@@ -127,8 +132,14 @@ class DistanceMeasureWidget(BaseWidget):
         if segmentation is None:
             show_info("Please choose a segmentation.")
             return
-        resolution = segmentation.shape
-        # get image metadata
+        # get metadata from layer if available
+        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        resolution = metadata.get("voxel_size", None)
+        if resolution is not None:
+            resolution = [v for v in resolution.values()]
+        # if user input is present override metadata
+        if self.voxel_size_param.value() != 0.0:  # changed from default
+            resolution = [self.voxel_size_param.value() for _ in range(len(segmentation.shape))]
 
         (distances,
          endpoints1,
@@ -150,6 +161,11 @@ class DistanceMeasureWidget(BaseWidget):
         setting_values.setLayout(QVBoxLayout())
 
         self.save_path, layout = self._add_path_param(name="Save Table", select_type="file", value="")
+        setting_values.layout().addLayout(layout)
+        
+        self.voxel_size_param, layout = self._add_float_param(
+            "voxel_size", 0.0, min_val=0.0, max_val=100.0,
+        )
         setting_values.layout().addLayout(layout)
 
         settings = self._make_collapsible(widget=setting_values, title="Advanced Settings")

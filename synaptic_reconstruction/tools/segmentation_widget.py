@@ -77,24 +77,29 @@ class SegmentationWidget(BaseWidget):
 
         metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
         voxel_size = metadata.get("voxel_size", None)
+        scale = None
 
-        if self.scale_param.value() != 1.0:  # changed from default
-            scale = []
-            for k in range(len(image.shape)):
-                scale.append(self.scale_param.value())
-        elif voxel_size:
+        if self.voxel_size_param.value() != 0.0:  # changed from default
+            voxel_size = {}
+            # override voxel size with user input
+            if len(image.shape) == 3:
+                voxel_size["x"] = self.voxel_size_param.value()
+                voxel_size["y"] = self.voxel_size_param.value()
+                voxel_size["z"] = self.voxel_size_param.value()
+            else:
+                voxel_size["x"] = self.voxel_size_param.value()
+                voxel_size["y"] = self.voxel_size_param.value()
+        if voxel_size:
             # calculate scale so voxel_size is the same as in training
             scale = compute_scale_from_voxel_size(voxel_size, model_type)
-        else:
-            scale = None
-        print(f"Rescaled the image by {scale} to optimize for the selected model.")
+            print(f"Rescaled the image by {scale} to optimize for the selected model.")
         
         segmentation = run_segmentation(
             image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
         )
 
         # Add the segmentation layer
-        self.viewer.add_labels(segmentation, name=f"{model_type}-segmentation")
+        self.viewer.add_labels(segmentation, name=f"{model_type}-segmentation", metadata=metadata)
         show_info(f"Segmentation of {model_type} added to layers.")
 
     def _create_settings_widget(self):
@@ -130,11 +135,9 @@ class SegmentationWidget(BaseWidget):
         )
         setting_values.layout().addLayout(layout)
 
-        
-        # calculate scale: read voxcel size from layer metadata
-        self.viewer
-        self.scale_param, layout = self._add_float_param(
-            "scale", 1.0, min_val=0.0, max_val=8.0,
+        # read voxel size from layer metadata
+        self.voxel_size_param, layout = self._add_float_param(
+            "voxel_size", 0.0, min_val=0.0, max_val=100.0,
         )
         setting_values.layout().addLayout(layout)
 

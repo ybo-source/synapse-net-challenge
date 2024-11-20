@@ -81,7 +81,7 @@ def get_model_training_resolution(model_type):
     resolutions = {
         "active_zone": {"x": 1.44, "y": 1.44, "z": 1.44},
         "compartments": {"x": 3.47, "y": 3.47, "z": 3.47},
-        "mitochondria": 1.0,  # FIXME: this is a dummy value, we need to determine the real one
+        "mitochondria": {"x": 1.0, "y": 1.0, "z": 1.0},  # FIXME: this is a dummy value, we need to determine the real one
         "vesicles_2d": {"x": 1.35, "y": 1.35},
         "vesicles_3d": {"x": 1.35, "y": 1.35, "z": 1.35},
         "vesicles_cryo": {"x": 1.35, "y": 1.35, "z": 0.88},
