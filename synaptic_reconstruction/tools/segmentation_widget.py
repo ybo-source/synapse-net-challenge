@@ -94,7 +94,7 @@ class SegmentationWidget(BaseWidget):
             scale = compute_scale_from_voxel_size(voxel_size)
         else:
             scale = None
-        print("scale", scale)
+        print(f"Rescaled the image by {scale} to optimize for the selected model.")
         
         segmentation = run_segmentation(
             image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
@@ -137,8 +137,6 @@ class SegmentationWidget(BaseWidget):
         )
         setting_values.layout().addLayout(layout)
 
-        # TODO: create funciton to determine appropriate scale based on avg image size during training and
-        # current image size
         
         # calculate scale: read voxcel size from layer metadata
         self.viewer

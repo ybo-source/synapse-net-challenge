@@ -102,7 +102,6 @@ class DistanceMeasureWidget(BaseWidget):
     def on_measure_seg_to_object(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
         object_data = self._get_layer_selector_data(self.image_selector_name2)
-        segmentation = self._get_layer_selector_data(self.image_selector_name1)
         resolution = segmentation.shape
         print("on_measure_seg_to_object resolution", resolution)
         # get image metadata
@@ -111,7 +110,6 @@ class DistanceMeasureWidget(BaseWidget):
             if "voxel_size" in self.viewer.layers["Image data"].metadata.keys():
                 voxel_size = self.viewer.layers["Image data"].metadata["voxel_size"]
                 scale = compute_scale_from_voxel_size(voxel_size)
-        print("on_measure_seg_to_object resolution", scale)
         (distances,
          endpoints1,
          endpoints2,
@@ -142,8 +140,6 @@ class DistanceMeasureWidget(BaseWidget):
             if "voxel_size" in self.viewer.layers["Image data"].metadata.keys():
                 voxel_size = self.viewer.layers["Image data"].metadata["voxel_size"]
                 scale = compute_scale_from_voxel_size(voxel_size)
-        print("on_measure_seg_to_object resolution", resolution)
-        print("on_measure_seg_to_object scale", scale)
         (distances,
          endpoints1,
          endpoints2,
