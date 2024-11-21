@@ -23,11 +23,11 @@ def get_reader(path: PathOrPaths) -> Optional[ReaderFunction]:
 def _read_mrc(path, fname):
     with open_file(path, mode="r") as f:
         data = f["data"][:]
-    
+    voxel_size = read_voxel_size(path)
     metadata = {
-        "file_path": path
+        "file_path": path,
+        "voxel_size": voxel_size
     }
-    read_voxel_size(path, metadata)
     layer_attributes = {
         "name": fname,
         "colormap": "gray",
@@ -74,22 +74,24 @@ def read_image_volume(path: PathOrPaths) -> List[LayerData]:
         return
 
 
-def read_voxel_size(input_path: str, layer_attributes: dict) -> None:
+def read_voxel_size(input_path: str) -> dict | None:
     """Read voxel size from mrc/rec file and store it in layer_attributes.
-    The original unit of voxel size is Angstrom and we convert it to nanometers 
-    by dividing it by ten. 
+    The original unit of voxel size is Angstrom and we convert it to nanometers
+    by dividing it by ten.
 
     Args:
         input_path (str): path to mrc/rec file
         layer_attributes (dict): napari layer attributes to store voxel size to
     """
+    new_voxel_size = None
     with mrcfile.open(input_path, permissive=True) as mrc:
         try:
             voxel_size = mrc.voxel_size
-            layer_attributes["voxel_size"] = {
+            new_voxel_size = {
                 "x": voxel_size.x / 10,
                 "y": voxel_size.y / 10,
                 "z": voxel_size.z / 10,
             }
         except Exception as e:
             print(f"Failed to read voxel size: {e}")
+    return new_voxel_size

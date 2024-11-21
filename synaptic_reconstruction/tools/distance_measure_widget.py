@@ -10,7 +10,6 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 
 from .base_widget import BaseWidget
 from .. import distance_measurements
-from .util import compute_scale_from_voxel_size
 
 try:
     from napari_skimage_regionprops import add_table
@@ -109,7 +108,7 @@ class DistanceMeasureWidget(BaseWidget):
             resolution = [v for v in resolution.values()]
         # if user input is present override metadata
         if self.voxel_size_param.value() != 0.0:  # changed from default
-            resolution = [self.voxel_size_param.value() for _ in range(len(segmentation.shape))]
+            resolution = segmentation.ndim * [self.voxel_size_param.value()]
 
         (distances,
          endpoints1,
@@ -139,7 +138,7 @@ class DistanceMeasureWidget(BaseWidget):
             resolution = [v for v in resolution.values()]
         # if user input is present override metadata
         if self.voxel_size_param.value() != 0.0:  # changed from default
-            resolution = [self.voxel_size_param.value() for _ in range(len(segmentation.shape))]
+            resolution = segmentation.ndim * [self.voxel_size_param.value()]
 
         (distances,
          endpoints1,
@@ -162,7 +161,7 @@ class DistanceMeasureWidget(BaseWidget):
 
         self.save_path, layout = self._add_path_param(name="Save Table", select_type="file", value="")
         setting_values.layout().addLayout(layout)
-        
+
         self.voxel_size_param, layout = self._add_float_param(
             "voxel_size", 0.0, min_val=0.0, max_val=100.0,
         )

@@ -3,7 +3,7 @@ from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
 
 from .base_widget import BaseWidget
-from .util import (run_segmentation, get_model, get_model_registry, _available_devices, get_device, 
+from .util import (run_segmentation, get_model, get_model_registry, _available_devices, get_device,
                    get_current_tiling, compute_scale_from_voxel_size)
 from synaptic_reconstruction.inference.util import get_default_tiling
 import copy
@@ -69,8 +69,8 @@ class SegmentationWidget(BaseWidget):
             return
 
         # load current tiling
-        self.tiling = get_current_tiling(self.tiling, self.default_tiling, image.shape)
-        
+        self.tiling = get_current_tiling(self.tiling, self.default_tiling, model_type)
+
         # TODO: Use scale derived from the image resolution.
         # get avg image shape from training of the selected model
         # wichmann data avg voxel size = 17.53
@@ -92,8 +92,8 @@ class SegmentationWidget(BaseWidget):
         if voxel_size:
             # calculate scale so voxel_size is the same as in training
             scale = compute_scale_from_voxel_size(voxel_size, model_type)
-            print(f"Rescaled the image by {scale} to optimize for the selected model.")
-        
+            show_info(f"Rescaled the image by {scale} to optimize for the selected model.")
+
         segmentation = run_segmentation(
             image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
         )

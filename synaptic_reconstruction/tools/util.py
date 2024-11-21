@@ -176,7 +176,7 @@ def _available_devices():
     return available_devices
 
 
-def get_current_tiling(tiling: dict, default_tiling: dict, image_shape):
+def get_current_tiling(tiling: dict, default_tiling: dict, model_type: str):
     # get tiling values from qt objects
     for k, v in tiling.items():
         for k2, v2 in v.items():
@@ -185,8 +185,8 @@ def get_current_tiling(tiling: dict, default_tiling: dict, image_shape):
             tiling[k][k2] = v2.value()
     # check if user inputs tiling/halo or not
     if default_tiling == tiling:
-        if len(image_shape) == 2:
-            # if its 2d image expand x,y and set z to 1
+        if "2d" in model_type:
+            # if its a 2d model expand x,y and set z to 1
             tiling = {
                 "tile": {
                     "x": 512,
@@ -199,29 +199,12 @@ def get_current_tiling(tiling: dict, default_tiling: dict, image_shape):
                     "z": 1
                 }
             }
-    elif len(image_shape) == 2:
-        # if its a 2d image set z to 1
+    elif "2d" in model_type:
+        # if its a 2d model set z to 1
         tiling["tile"]["z"] = 1
         tiling["halo"]["z"] = 1
 
     return tiling
-
-
-def compute_average_voxel_size(voxel_size: dict) -> float:
-    """
-    Computes the average voxel size dynamically based on available dimensions.
-    
-    Args:
-        voxel_size (dict): Dictionary containing voxel dimensions (e.g., x, y, z).
-        
-    Returns:
-        float: Average voxel size.
-    """
-    # Extract all dimension values
-    dimensions = [voxel_size[key] for key in voxel_size if key in ["x", "y", "z"]]
-    
-    # Compute the average
-    return sum(dimensions) / len(dimensions)
 
 
 def compute_scale_from_voxel_size(
@@ -233,7 +216,7 @@ def compute_scale_from_voxel_size(
         voxel_size["x"] / training_voxel_size["x"],
         voxel_size["y"] / training_voxel_size["y"],
     ]
-    if len(voxel_size) == 3:
+    if len(voxel_size) == 3 and len(training_voxel_size) == 3:
         scale.append(
             voxel_size["z"] / training_voxel_size["z"]
         )
