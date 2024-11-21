@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 import torch
 import numpy as np
 import pooch
+import warnings
 
 from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
@@ -23,6 +24,11 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     device = get_device(device)
     model_registry = get_model_registry()
     model_path = model_registry.fetch(model_type)
+    warnings.filterwarnings(
+        "ignore",
+        message="You are using `torch.load` with `weights_only=False`",
+        category=FutureWarning
+    )
     model = torch.load(model_path)
     model.to(device)
     return model
@@ -73,12 +79,12 @@ def get_cache_dir():
 
 def get_model_training_resolution(model_type):
     resolutions = {
-        "active_zone": 1.44,
-        "compartments": 3.47,
-        "mitochondria": 1.0,  # FIXME: this is a dummy value, we need to determine the real one
-        "vesicles_2d": 1.35,
-        "vesicles_3d": 1.35,
-        "vesicles_cryo": 0.88,
+        "active_zone": {"x": 1.44, "y": 1.44, "z": 1.44},
+        "compartments": {"x": 3.47, "y": 3.47, "z": 3.47},
+        "mitochondria": {"x": 1.0, "y": 1.0, "z": 1.0},  # FIXME: this is a dummy value, we need to determine the real one
+        "vesicles_2d": {"x": 1.35, "y": 1.35},
+        "vesicles_3d": {"x": 1.35, "y": 1.35, "z": 1.35},
+        "vesicles_cryo": {"x": 1.35, "y": 1.35, "z": 0.88},
     }
     return resolutions[model_type]
 
@@ -168,3 +174,50 @@ def _available_devices():
         else:
             available_devices.append(device)
     return available_devices
+
+
+def get_current_tiling(tiling: dict, default_tiling: dict, model_type: str):
+    # get tiling values from qt objects
+    for k, v in tiling.items():
+        for k2, v2 in v.items():
+            if isinstance(v2, int):
+                continue
+            tiling[k][k2] = v2.value()
+    # check if user inputs tiling/halo or not
+    if default_tiling == tiling:
+        if "2d" in model_type:
+            # if its a 2d model expand x,y and set z to 1
+            tiling = {
+                "tile": {
+                    "x": 512,
+                    "y": 512,
+                    "z": 1
+                },
+                "halo": {
+                    "x": 64,
+                    "y": 64,
+                    "z": 1
+                }
+            }
+    elif "2d" in model_type:
+        # if its a 2d model set z to 1
+        tiling["tile"]["z"] = 1
+        tiling["halo"]["z"] = 1
+
+    return tiling
+
+
+def compute_scale_from_voxel_size(
+    voxel_size: dict,
+    model_type: str
+) -> List[float]:
+    training_voxel_size = get_model_training_resolution(model_type)
+    scale = [
+        voxel_size["x"] / training_voxel_size["x"],
+        voxel_size["y"] / training_voxel_size["y"],
+    ]
+    if len(voxel_size) == 3 and len(training_voxel_size) == 3:
+        scale.append(
+            voxel_size["z"] / training_voxel_size["z"]
+        )
+    return scale
