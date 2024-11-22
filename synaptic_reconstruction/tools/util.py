@@ -10,6 +10,22 @@ from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
 
 
+def _save_table(save_path, data):
+    ext = os.path.splitext(save_path)[1]
+    if ext == "":  # No file extension given, By default we save to CSV.
+        file_path = f"{save_path}.csv"
+        data.to_csv(file_path, index=False)
+    elif ext == ".csv":  # Extension was specified as csv
+        file_path = save_path
+        data.to_csv(file_path, index=False)
+    elif ext == ".xlsx":  # We also support excel.
+        file_path = save_path
+        data.to_excel(file_path, index=False)
+    else:
+        raise ValueError("Invalid extension for table: {ext}. We support .csv or .xlsx.")
+    return file_path
+
+
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 

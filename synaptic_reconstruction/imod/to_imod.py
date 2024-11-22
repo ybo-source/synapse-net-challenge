@@ -94,21 +94,44 @@ def convert_segmentation_to_spheres(
 
     def coords_and_rads(prop):
         seg_id = prop.label
-
         bbox = prop.bbox
-        bb = np.s_[bbox[0]:bbox[3], bbox[1]:bbox[4], bbox[2]:bbox[5]]
-        mask = segmentation[bb] == seg_id
+        
+        # Handle 2D bounding box
+        if len(bbox) == 4:
+            bb = np.s_[bbox[0]:bbox[2], bbox[1]:bbox[3]]
+            mask = segmentation[bb] == seg_id
+            if resolution:
+                dists = distance_transform_edt(mask, sampling=resolution[:2])
+            else:
+                dists = distance_transform_edt(mask)
+            max_coord = np.unravel_index(np.argmax(dists), mask.shape)
+            radius = dists[max_coord] * radius_factor
 
-        if estimate_radius_2d:
-            dists = np.array([distance_transform_edt(ma, sampling=resolution[1:]) for ma in mask])
+            offset = np.array(bbox[:2])
+            coord = np.array(max_coord) + offset
+
+        # Handle 3D bounding box
+        elif len(bbox) == 6:
+            bb = np.s_[bbox[0]:bbox[3], bbox[1]:bbox[4], bbox[2]:bbox[5]]
+            mask = segmentation[bb] == seg_id
+
+            if estimate_radius_2d:
+                if resolution:
+                    dists = np.array([distance_transform_edt(ma, sampling=resolution[:2]) for ma in mask])
+                else:
+                    dists = np.array([distance_transform_edt(ma, sampling=resolution) for ma in mask])
+                dists = np.array([distance_transform_edt(ma, sampling=resolution[1:]) for ma in mask])
+            else:
+                dists = distance_transform_edt(mask, sampling=resolution)
+
+            max_coord = np.unravel_index(np.argmax(dists), mask.shape)
+            radius = dists[max_coord] * radius_factor
+
+            offset = np.array(bbox[:3])
+            coord = np.array(max_coord) + offset
         else:
-            dists = distance_transform_edt(mask, sampling=resolution)
+            raise ValueError(f"Unsupported bounding box dimensions: {len(bbox)}")
 
-        max_coord = np.unravel_index(np.argmax(dists), mask.shape)
-        radius = dists[max_coord] * radius_factor
-
-        offset = np.array(bbox[:3])
-        coord = np.array(max_coord) + offset
         return coord, radius
 
     with futures.ThreadPoolExecutor(num_workers) as tp:
