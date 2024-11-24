@@ -6,6 +6,7 @@ from ..inference.util import inference_helper, parse_tiling
 
 
 # TODO: handle kwargs
+# TODO: add custom model path
 def segmentation_cli():
     parser = argparse.ArgumentParser(description="Run segmentation.")
     parser.add_argument(
@@ -16,6 +17,7 @@ def segmentation_cli():
         "--output_path", "-o", required=True,
         help="The filepath to directory where the segmentations will be saved."
     )
+    # TODO: list the availabel models here by parsing the keys of the model registry
     parser.add_argument(
         "--model", "-m", required=True, help="The model type."
     )
