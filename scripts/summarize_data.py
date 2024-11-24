@@ -65,31 +65,38 @@ def summarize_vesicle_train_data():
     for condition in conditions:
         ctab = vesicle_train[vesicle_train.condition == condition]
         n_tomos = len(ctab)
-        n_vesicles = ctab["vesicle_count"].sum()
+        n_vesicles_all = ctab["vesicle_count_all"].sum()
+        n_vesicles_imod = ctab["vesicle_count_imod"].sum()
         print(condition)
         print("Tomograms:", n_tomos)
-        print("Vesicles:", n_vesicles)
+        print("All-Vesicles:", n_vesicles_all)
+        print("Vesicles-From-Manual:", n_vesicles_imod)
         print()
         condition_summary["Condition"].append(condition)
         condition_summary["Tomograms"].append(n_tomos)
-        condition_summary["Vesicles"].append(n_vesicles)
+        condition_summary["Vesicles"].append(n_vesicles_all)
     condition_summary = pd.DataFrame(condition_summary)
+    print()
+    print()
 
     print("Total:")
     print("Tomograms:", len(vesicle_train))
-    print("Vesicles:", vesicle_train["vesicle_count"].sum())
+    print("All-Vesicles:", vesicle_train["vesicle_count_all"].sum())
+    print("Vesicles-From-Manual:", vesicle_train["vesicle_count_imod"].sum())
     print()
 
     train_tomos = vesicle_train[vesicle_train.used_for == "train/val"]
     print("Training:")
     print("Tomograms:", len(train_tomos))
-    print("Vesicles:", train_tomos["vesicle_count"].sum())
+    print("All-Vesicles:", train_tomos["vesicle_count_all"].sum())
+    print("Vesicles-From-Manual:", train_tomos["vesicle_count_imod"].sum())
     print()
 
     test_tomos = vesicle_train[vesicle_train.used_for == "test"]
     print("Test:")
     print("Tomograms:", len(test_tomos))
-    print("Vesicles:", test_tomos["vesicle_count"].sum())
+    print("All-Vesicles:", test_tomos["vesicle_count_all"].sum())
+    print("Vesicles-From-Manual:", test_tomos["vesicle_count_imod"].sum())
 
     pie_chart(condition_summary, "Tomograms", "Tomograms per Condition")
     pie_chart(condition_summary, "Vesicles", "Vesicles per Condition")
@@ -148,7 +155,7 @@ def summarize_compartment_train():
 
 
 # training_resolutions()
-# summarize_vesicle_train_data()
+summarize_vesicle_train_data()
 # summarize_vesicle_da()
-summarize_az_train()
-summarize_compartment_train()
+# summarize_az_train()
+# summarize_compartment_train()

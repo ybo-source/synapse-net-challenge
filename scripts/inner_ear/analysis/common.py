@@ -1,4 +1,4 @@
-import os
+# import os
 import sys
 
 import pandas as pd
@@ -46,11 +46,13 @@ def get_measurements_with_annotation():
 
 
 def get_all_measurements():
-    data_root = get_data_root()
-    val_table = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
+    # data_root = get_data_root()
+    # val_table = os.path.join(data_root, "Electron-Microscopy-Susi", "Validierungs-Tabelle-v3.xlsx")
+
+    val_table = "/home/pape/Desktop/sfb1286/mboc_synapse/misc/Validierungs-Tabelle-v3-passt.xlsx"
     val_table = pd.read_excel(val_table)
 
-    val_table = val_table[val_table["Kommentar 27-10-24"] == "passt"]
+    val_table = val_table[val_table["Kommentar 22.11.24"] == "passt"]
     n_tomos = len(val_table)
     print("All tomograms:", n_tomos)
     assert n_tomos > 0
