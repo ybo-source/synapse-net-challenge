@@ -29,6 +29,20 @@ def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]
     return model
 
 
+def get_model_path(model_type: str) -> str:
+    """Get the local path to a given model.
+
+    Args:
+        The model type.
+
+    Returns:
+        The local path to the model.
+    """
+    model_registry = get_model_registry()
+    model_path = model_registry.fetch(model_type)
+    return model_path
+
+
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
@@ -42,19 +56,12 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     """
     if device is None:
         device = get_device(device)
-    model_registry = get_model_registry()
-    model_path = model_registry.fetch(model_type)
-    warnings.filterwarnings(
-        "ignore",
-        message="You are using `torch.load` with `weights_only=False`",
-        category=FutureWarning
-    )
-    model = torch.load(model_path)
+    model_path = get_model_path(model_type)
+    model = torch.load(model_path, weights_only=True)
     model.to(device)
     return model
 
 
-# TODO: distinguish between 2d and 3d vesicle model segmentation
 def run_segmentation(
     image: np.ndarray,
     model: torch.nn.Module,
@@ -67,12 +74,15 @@ def run_segmentation(
     """Run synaptic structure segmentation.
 
     Args:
-        image: ...
-        model: ...
-        model_type: ...
-        tiling: ...
-        scale: ...
-        verbose: ...
+        image: The input image or image volume.
+        model: The segmentation model.
+        model_type: The model type. This will determine which segmentation
+            post-processing is used.
+        tiling: The tiling settings for inference.
+        scale: A scale factor for resizing the input before applying the model.
+            The output will be scaled back to the initial size.
+        verbose: Whether to print detailed information about the prediction and segmentation.
+        kwargs: Optional parameter for the segmentation function.
 
     Returns:
         The segmentation.
@@ -259,7 +269,7 @@ def _clean_filepath(filepath):
     # Remove 'file://' prefix if present
     if filepath.startswith("file://"):
         filepath = filepath[7:]
-    
+
     # Remove escape sequences and newlines
     filepath = re.sub(r'\\.', '', filepath)
     filepath = filepath.replace('\n', '').replace('\r', '')
