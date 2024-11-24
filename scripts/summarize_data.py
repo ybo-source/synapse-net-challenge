@@ -151,4 +151,4 @@ def summarize_compartment_train():
 # summarize_vesicle_train_data()
 # summarize_vesicle_da()
 summarize_az_train()
-# summarize_compartment_train()
+summarize_compartment_train()

@@ -14,7 +14,7 @@ stem = "STEM"
 
 def aggregate_vesicle_train_data(roots, test_tomograms, conditions, resolutions):
     tomo_names = []
-    tomo_vesicles = []
+    tomo_vesicles_all, tomo_vesicles_imod = [], []
     tomo_condition = []
     tomo_resolution = []
     tomo_train = []
@@ -43,14 +43,19 @@ def aggregate_vesicle_train_data(roots, test_tomograms, conditions, resolutions)
                 except KeyError:
                     tomo_name = fname
 
-                n_label_sets = len(f["labels"])
-                if n_label_sets > 2:
-                    print(tomo_path, "contains the following labels:", list(f["labels"].keys()))
-                seg = f["labels/vesicles"][:]
-                n_vesicles = len(np.unique(seg)) - 1
+                if "labels/vesicles/combined_vesicles" in f:
+                    all_vesicles = f["labels/vesicles/combined_vesicles"][:]
+                    imod_vesicles = f["labels/vesicles/masked_vesicles"][:]
+                    n_vesicles_all = len(np.unique(all_vesicles)) - 1
+                    n_vesicles_imod = len(np.unique(imod_vesicles)) - 2
+                else:
+                    vesicles = f["labels/vesicles"][:]
+                    n_vesicles_all = len(np.unique(vesicles)) - 1
+                    n_vesicles_imod = n_vesicles_all
 
             tomo_names.append(tomo_name)
-            tomo_vesicles.append(n_vesicles)
+            tomo_vesicles_all.append(n_vesicles_all)
+            tomo_vesicles_imod.append(n_vesicles_imod)
             tomo_condition.append(this_condition)
             tomo_resolution.append(this_resolution)
             tomo_train.append("test" if fname in this_test_tomograms else "train/val")
@@ -60,7 +65,8 @@ def aggregate_vesicle_train_data(roots, test_tomograms, conditions, resolutions)
         "condition": tomo_condition,
         "resolution": tomo_resolution,
         "used_for": tomo_train,
-        "vesicle_count": tomo_vesicles,
+        "vesicle_count_all": tomo_vesicles_all,
+        "vesicle_count_imod": tomo_vesicles_imod,
     })
 
     os.makedirs("data_summary", exist_ok=True)
@@ -70,15 +76,15 @@ def aggregate_vesicle_train_data(roots, test_tomograms, conditions, resolutions)
 def vesicle_train_data():
     roots = {
         "01": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/01_hoi_maus_2020_incomplete",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/01_hoi_maus_2020_incomplete",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/01_hoi_maus_2020_incomplete",  # noqa
         },
         "02": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/02_hcc_nanogold",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/02_hcc_nanogold",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/02_hcc_nanogold",  # noqa
         },
         "03": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/03_hog_cs1sy7",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/03_hog_cs1sy7",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/03_hog_cs1sy7",  # noqa
         },
         "04": {
@@ -86,27 +92,27 @@ def vesicle_train_data():
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/ground_truth/04Dataset_for_vesicle_eval/",  # noqa
         },
         "05": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/05_stem750_sv_training",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/05_stem750_sv_training",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/05_stem750_sv_training",  # noqa
         },
         "07": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/07_hoi_s1sy7_tem250_ihgp",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/07_hoi_s1sy7_tem250_ihgp",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/07_hoi_s1sy7_tem250_ihgp",  # noqa
         },
         "09": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/09_stem750_66k",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/09_stem750_66k",  # noqa
             "test": "",
         },
         "10": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/10_tem_single_release",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/10_tem_single_release",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/10_tem_single_release",  # noqa
         },
         "11": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/11_tem_multiple_release",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/11_tem_multiple_release",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/11_tem_multiple_release",  # noqa
         },
         "12": {
-            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer/12_chemical_fix_cryopreparation",  # noqa
+            "train": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/12_chemical_fix_cryopreparation",  # noqa
             "test": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2/testsets/12_chemical_fix_cryopreparation",  # noqa
         },
     }
@@ -397,6 +403,11 @@ def vesicle_domain_adaptation_data():
             "MF_05649_P-09175-E_06.h5", "MF_05646_C-09175-B_001B.h5", "MF_05649_P-09175-E_07.h5",
             "MF_05649_G-09175-C_001.h5", "MF_05646_C-09175-B_002.h5", "MF_05649_G-09175-C_04.h5",
             "MF_05649_P-09175-E_05.h5", "MF_05646_C-09175-B_000.h5", "MF_05646_C-09175-B_001.h5"
+        ],
+        "frog": [
+            "block10U3A_three.h5", "block30UB_one_two.h5", "block30UB_two.h5", "block10U3A_one.h5",
+            "block184B_one.h5", "block30UB_three.h5", "block10U3A_two.h5", "block30UB_four.h5",
+            "block30UB_one.h5", "block10U3A_five.h5",
         ]
     }
 
@@ -439,13 +450,42 @@ def vesicle_domain_adaptation_data():
     aggregate_da(roots, train_tomograms, test_tomograms, resolutions)
 
 
+def get_n_images_frog():
+    root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/rizzoli/extracted/upsampled_by2"
+    tomos = ["block10U3A_three.h5", "block30UB_one_two.h5", "block30UB_two.h5", "block10U3A_one.h5",
+             "block184B_one.h5", "block30UB_three.h5", "block10U3A_two.h5", "block30UB_four.h5",
+             "block30UB_one.h5", "block10U3A_five.h5"]
+
+    n_images = 0
+    for tomo in tomos:
+        path = os.path.join(root, tomo)
+        with h5py.File(path, "r") as f:
+            n_images += f["raw"].shape[0]
+    print(n_images)
+
+
+def get_image_sizes_tem_2d():
+    root = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/2D_data/maus_2020_tem2d_wt_unt_div14_exported_scaled/good_for_DAtraining/maus_2020_tem2d_wt_unt_div14_exported_scaled"  # noqa
+    tomos = [
+        "MF_05649_P-09175-E_06.h5", "MF_05646_C-09175-B_001B.h5", "MF_05649_P-09175-E_07.h5",
+        "MF_05649_G-09175-C_001.h5", "MF_05646_C-09175-B_002.h5", "MF_05649_G-09175-C_04.h5",
+        "MF_05649_P-09175-E_05.h5", "MF_05646_C-09175-B_000.h5", "MF_05646_C-09175-B_001.h5"
+    ]
+    for tomo in tomos:
+        path = os.path.join(root, tomo)
+        with h5py.File(path, "r") as f:
+            print(f["raw"].shape)
+
+
 def main():
     # active_zone_train_data()
     # compartment_train_data()
     # mito_train_data()
-    # vesicle_train_data()
+    vesicle_train_data()
 
-    vesicle_domain_adaptation_data()
+    # vesicle_domain_adaptation_data()
+    # get_n_images_frog()
+    # get_image_sizes_tem_2d()
 
 
 main()
