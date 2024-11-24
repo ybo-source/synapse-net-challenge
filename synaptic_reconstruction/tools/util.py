@@ -5,7 +5,6 @@ from typing import Dict, List, Optional, Union
 import torch
 import numpy as np
 import pooch
-import warnings
 
 from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
@@ -16,12 +15,7 @@ def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]
     if device is None:
         device = get_device(device)
     try:
-        warnings.filterwarnings(
-            "ignore",
-            message="You are using `torch.load` with `weights_only=False`",
-            category=FutureWarning
-        )
-        model = torch.load(model_path, map_location=torch.device(device))
+        model = torch.load(model_path, map_location=torch.device(device), weights_only=False)
     except Exception as e:
         print(e)
         print("model path", model_path)
@@ -57,7 +51,7 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     if device is None:
         device = get_device(device)
     model_path = get_model_path(model_type)
-    model = torch.load(model_path, weights_only=True)
+    model = torch.load(model_path, weights_only=False)
     model.to(device)
     return model
 
