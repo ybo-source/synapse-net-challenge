@@ -98,15 +98,11 @@ class SegmentationWidget(BaseWidget):
                 voxel_size["y"] = self.voxel_size_param.value()
         if voxel_size:
             if model_type == "custom":
-                show_info(f"INFO: Scaling image not avaialable for custom model.")
+                show_info("INFO: The image is not rescaled for a custom model.")
             else:
                 # calculate scale so voxel_size is the same as in training
                 scale = compute_scale_from_voxel_size(voxel_size, model_type)
                 show_info(f"INFO: Rescaled the image by {scale} to optimize for the selected model.")
-
-        if model_type == "custom":
-            # choose appropriate segmentation
-            model_type = self.model_target_selector.currentText()
 
         segmentation = run_segmentation(
             image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
@@ -158,13 +154,6 @@ class SegmentationWidget(BaseWidget):
         self.checkpoint_param, layout = self._add_string_param(
             name="checkpoint", value="", title="Load Custom Model",
             placeholder="path/to/checkpoint.pt",
-        )
-        setting_values.layout().addLayout(layout)
-        
-        self.model_target_selector, layout = self._add_choice_param(
-            name="Model Target", value="vesicles", options=[
-                "vesicles", "mitochondria", "active_zone", "compartments", "inner_ear_structures"
-                ]
         )
         setting_values.layout().addLayout(layout)
 
