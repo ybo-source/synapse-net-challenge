@@ -101,33 +101,53 @@ class DistanceMeasureWidget(BaseWidget):
     def on_measure_seg_to_object(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
         object_data = self._get_layer_selector_data(self.image_selector_name2)
+        # get metadata from layer if available
+        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        resolution = metadata.get("voxel_size", None)
+        if resolution is not None:
+            resolution = [v for v in resolution.values()]
+        # if user input is present override metadata
+        if self.voxel_size_param.value() != 0.0:  # changed from default
+            resolution = segmentation.ndim * [self.voxel_size_param.value()]
 
         (distances,
          endpoints1,
          endpoints2,
          seg_ids) = distance_measurements.measure_segmentation_to_object_distances(
             segmentation=segmentation, segmented_object=object_data, distance_type="boundary",
+            resolution=resolution
         )
         lines, properties = distance_measurements.create_object_distance_lines(
             distances=distances,
             endpoints1=endpoints1,
             endpoints2=endpoints2,
-            seg_ids=seg_ids
+            seg_ids=seg_ids,
         )
         table_data = self._to_table_data(distances, seg_ids, endpoints1, endpoints2)
         self._add_lines_and_table(lines, properties, table_data, name="distances")
 
     def on_measure_pairwise(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
+        if segmentation is None:
+            show_info("Please choose a segmentation.")
+            return
+        # get metadata from layer if available
+        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        resolution = metadata.get("voxel_size", None)
+        if resolution is not None:
+            resolution = [v for v in resolution.values()]
+        # if user input is present override metadata
+        if self.voxel_size_param.value() != 0.0:  # changed from default
+            resolution = segmentation.ndim * [self.voxel_size_param.value()]
 
         (distances,
          endpoints1,
          endpoints2,
          seg_ids) = distance_measurements.measure_pairwise_object_distances(
-            segmentation=segmentation, distance_type="boundary"
+            segmentation=segmentation, distance_type="boundary", resolution=resolution
         )
         lines, properties = distance_measurements.create_pairwise_distance_lines(
-            distances=distances, endpoints1=endpoints1, endpoints2=endpoints2, seg_ids=seg_ids.tolist()
+            distances=distances, endpoints1=endpoints1, endpoints2=endpoints2, seg_ids=seg_ids.tolist(),
         )
         table_data = self._to_table_data(
             distances=properties["distance"],
@@ -140,6 +160,11 @@ class DistanceMeasureWidget(BaseWidget):
         setting_values.setLayout(QVBoxLayout())
 
         self.save_path, layout = self._add_path_param(name="Save Table", select_type="file", value="")
+        setting_values.layout().addLayout(layout)
+
+        self.voxel_size_param, layout = self._add_float_param(
+            "voxel_size", 0.0, min_val=0.0, max_val=100.0,
+        )
         setting_values.layout().addLayout(layout)
 
         settings = self._make_collapsible(widget=setting_values, title="Advanced Settings")
