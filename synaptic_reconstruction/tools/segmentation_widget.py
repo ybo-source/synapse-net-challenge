@@ -4,7 +4,7 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
 
 from .base_widget import BaseWidget
 from .util import (run_segmentation, get_model, get_model_registry, _available_devices, get_device,
-                   get_current_tiling, compute_scale_from_voxel_size)
+                   get_current_tiling, compute_scale_from_voxel_size, load_custom_model)
 from synaptic_reconstruction.inference.util import get_default_tiling
 import copy
 
@@ -54,26 +54,33 @@ class SegmentationWidget(BaseWidget):
     def on_predict(self):
         # Get the model and postprocessing settings.
         model_type = self.model_selector.currentText()
-        if model_type == "- choose -":
-            show_info("Please choose a model.")
+        custom_model_path = self.checkpoint_param.text()
+        if model_type == "- choose -" and custom_model_path is None:
+            show_info("INFO: Please choose a model.")
             return
 
-        # Load the model.
         device = get_device(self.device_dropdown.currentText())
-        model = get_model(model_type, device)
+
+        # Load the model. Override if user chose custom model
+        if custom_model_path:
+            model = load_custom_model(custom_model_path, device)
+            if model:
+                show_info(f"INFO: Using custom model from path: {custom_model_path}")
+                model_type = "custom"
+            else:
+                show_info(f"ERROR: Failed to load custom model from path: {custom_model_path}")
+                return
+        else:
+            model = get_model(model_type, device)
 
         # Get the image data.
         image = self._get_layer_selector_data(self.image_selector_name)
         if image is None:
-            show_info("Please choose an image.")
+            show_info("INFO: Please choose an image.")
             return
 
         # load current tiling
         self.tiling = get_current_tiling(self.tiling, self.default_tiling, model_type)
-
-        # TODO: Use scale derived from the image resolution.
-        # get avg image shape from training of the selected model
-        # wichmann data avg voxel size = 17.53
 
         metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
         voxel_size = metadata.get("voxel_size", None)
@@ -90,9 +97,12 @@ class SegmentationWidget(BaseWidget):
                 voxel_size["x"] = self.voxel_size_param.value()
                 voxel_size["y"] = self.voxel_size_param.value()
         if voxel_size:
-            # calculate scale so voxel_size is the same as in training
-            scale = compute_scale_from_voxel_size(voxel_size, model_type)
-            show_info(f"Rescaled the image by {scale} to optimize for the selected model.")
+            if model_type == "custom":
+                show_info("INFO: The image is not rescaled for a custom model.")
+            else:
+                # calculate scale so voxel_size is the same as in training
+                scale = compute_scale_from_voxel_size(voxel_size, model_type)
+                show_info(f"INFO: Rescaled the image by {scale} to optimize for the selected model.")
 
         segmentation = run_segmentation(
             image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
@@ -100,7 +110,7 @@ class SegmentationWidget(BaseWidget):
 
         # Add the segmentation layer
         self.viewer.add_labels(segmentation, name=f"{model_type}-segmentation", metadata=metadata)
-        show_info(f"Segmentation of {model_type} added to layers.")
+        show_info(f"INFO: Segmentation of {model_type} added to layers.")
 
     def _create_settings_widget(self):
         setting_values = QWidget()
@@ -138,6 +148,12 @@ class SegmentationWidget(BaseWidget):
         # read voxel size from layer metadata
         self.voxel_size_param, layout = self._add_float_param(
             "voxel_size", 0.0, min_val=0.0, max_val=100.0,
+        )
+        setting_values.layout().addLayout(layout)
+
+        self.checkpoint_param, layout = self._add_string_param(
+            name="checkpoint", value="", title="Load Custom Model",
+            placeholder="path/to/checkpoint.pt",
         )
         setting_values.layout().addLayout(layout)
 

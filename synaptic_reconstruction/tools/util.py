@@ -1,13 +1,26 @@
 import os
+import re
 from typing import Dict, List, Optional, Union
 
 import torch
 import numpy as np
 import pooch
-import warnings
 
 from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
+
+
+def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
+    model_path = _clean_filepath(model_path)
+    if device is None:
+        device = get_device(device)
+    try:
+        model = torch.load(model_path, map_location=torch.device(device), weights_only=False)
+    except Exception as e:
+        print(e)
+        print("model path", model_path)
+        return None
+    return model
 
 
 def get_model_path(model_type: str) -> str:
@@ -35,19 +48,14 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     Returns:
         The model.
     """
-    device = get_device(device)
+    if device is None:
+        device = get_device(device)
     model_path = get_model_path(model_type)
-    warnings.filterwarnings(
-        "ignore",
-        message="You are using `torch.load` with `weights_only=False`",
-        category=FutureWarning
-    )
-    model = torch.load(model_path)
+    model = torch.load(model_path, weights_only=False)
     model.to(device)
     return model
 
 
-# TODO: distinguish between 2d and 3d vesicle model segmentation
 def run_segmentation(
     image: np.ndarray,
     model: torch.nn.Module,
@@ -60,12 +68,15 @@ def run_segmentation(
     """Run synaptic structure segmentation.
 
     Args:
-        image: ...
-        model: ...
-        model_type: ...
-        tiling: ...
-        scale: ...
-        verbose: ...
+        image: The input image or image volume.
+        model: The segmentation model.
+        model_type: The model type. This will determine which segmentation
+            post-processing is used.
+        tiling: The tiling settings for inference.
+        scale: A scale factor for resizing the input before applying the model.
+            The output will be scaled back to the initial size.
+        verbose: Whether to print detailed information about the prediction and segmentation.
+        kwargs: Optional parameter for the segmentation function.
 
     Returns:
         The segmentation.
@@ -234,3 +245,27 @@ def compute_scale_from_voxel_size(
             voxel_size["z"] / training_voxel_size["z"]
         )
     return scale
+
+
+def _clean_filepath(filepath):
+    """
+    Cleans a given filepath by:
+    - Removing newline characters (\n)
+    - Removing escape sequences
+    - Stripping the 'file://' prefix if present
+
+    Args:
+        filepath (str): The original filepath
+
+    Returns:
+        str: The cleaned filepath
+    """
+    # Remove 'file://' prefix if present
+    if filepath.startswith("file://"):
+        filepath = filepath[7:]
+
+    # Remove escape sequences and newlines
+    filepath = re.sub(r'\\.', '', filepath)
+    filepath = filepath.replace('\n', '').replace('\r', '')
+
+    return filepath
