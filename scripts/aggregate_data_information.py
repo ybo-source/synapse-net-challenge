@@ -12,30 +12,24 @@ dual_ax_tem = "Dual-Axis TEM"
 stem = "STEM"
 
 
-def aggregate_vesicle_train_data(roots, test_tomograms, conditions, resolutions):
+def aggregate_vesicle_train_data(roots, conditions, resolutions):
     tomo_names = []
     tomo_vesicles_all, tomo_vesicles_imod = [], []
     tomo_condition = []
     tomo_resolution = []
     tomo_train = []
 
-    for ds, root in roots.items():
-        print("Aggregate data for", ds)
-        train_root = root["train"]
-        if train_root == "":
-            test_root = root["test"]
-            tomograms = sorted(glob(os.path.join(test_root, "2024**", "*.h5"), recursive=True))
-            this_test_tomograms = [os.path.basename(tomo) for tomo in tomograms]
+    def aggregate_split(ds, split_root, split):
+        if ds.startswith("04"):
+            tomograms = sorted(glob(os.path.join(split_root, "2024**", "*.h5"), recursive=True))
         else:
-            # This is only the case for 04, which is also nested
-            tomograms = sorted(glob(os.path.join(train_root, "*.h5")))
-            this_test_tomograms = test_tomograms[ds]
+            tomograms = sorted(glob(os.path.join(split_root, "*.h5")))
 
         assert len(tomograms) > 0, ds
         this_condition = conditions[ds]
         this_resolution = resolutions[ds][0]
 
-        for tomo_path in tqdm(tomograms):
+        for tomo_path in tqdm(tomograms, desc=f"Aggregate {split}"):
             fname = os.path.basename(tomo_path)
             with h5py.File(tomo_path, "r") as f:
                 try:
@@ -58,7 +52,16 @@ def aggregate_vesicle_train_data(roots, test_tomograms, conditions, resolutions)
             tomo_vesicles_imod.append(n_vesicles_imod)
             tomo_condition.append(this_condition)
             tomo_resolution.append(this_resolution)
-            tomo_train.append("test" if fname in this_test_tomograms else "train/val")
+            tomo_train.append(split)
+
+    for ds, root in roots.items():
+        print("Aggregate data for", ds)
+        train_root = root["train"]
+        if train_root != "":
+            aggregate_split(ds, train_root, "train/val")
+        test_root = root["test"]
+        if test_root != "":
+            aggregate_split(ds, test_root, "test")
 
     df = pd.DataFrame({
         "tomogram": tomo_names,
@@ -117,19 +120,6 @@ def vesicle_train_data():
         },
     }
 
-    test_tomograms = {
-        "01": ["tomogram-009.h5",  "tomogram-038.h5", "tomogram-049.h5", "tomogram-052.h5", "tomogram-057.h5", "tomogram-060.h5", "tomogram-067.h5", "tomogram-074.h5", "tomogram-076.h5", "tomogram-083.h5",    "tomogram-133.h5", "tomogram-136.h5", "tomogram-145.h5", "tomogram-149.h5", "tomogram-150.h5"],  # noqa
-        "02": ["tomogram-004.h5", "tomogram-008.h5"],
-        "03": ["tomogram-003.h5", "tomogram-004.h5", "tomogram-008.h5",],
-        "04": [],  # all used for test
-        "05": ["tomogram-003.h5", "tomogram-005.h5",],
-        "07": ["tomogram-006.h5", "tomogram-017.h5",],
-        "09": [],  # no test data
-        "10": ["tomogram-001.h5", "tomogram-002.h5", "tomogram-007.h5"],
-        "11": ["tomogram-001.h5 tomogram-007.h5 tomogram-008.h5"],
-        "12": ["tomogram-004.h5", "tomogram-021.h5", "tomogram-022.h5",],
-    }
-
     conditions = {
         "01": single_ax_tem,
         "02": dual_ax_tem,
@@ -156,7 +146,7 @@ def vesicle_train_data():
         "12": (1.554, 1.554, 1.554)
     }
 
-    aggregate_vesicle_train_data(roots, test_tomograms, conditions, resolutions)
+    aggregate_vesicle_train_data(roots, conditions, resolutions)
 
 
 def aggregate_az_train_data(roots, test_tomograms, conditions, resolutions):
