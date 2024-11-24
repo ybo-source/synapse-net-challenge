@@ -9,13 +9,6 @@ compartment_train = pd.read_excel("data_summary/compartment_training_data.xlsx")
 vesicle_train = pd.read_excel("data_summary/vesicle_training_data.xlsx")
 vesicle_da = pd.read_excel("data_summary/vesicle_domain_adaptation_data.xlsx", sheet_name="cryo")
 
-# Inner ear trainign data:
-# Sophia: 92
-# Rat: 19
-# Tether: 3
-# Ves Pools: 6
-# Total = 120
-
 
 def training_resolutions():
     res_az = np.round(az_train["resolution"].mean(), 2)
@@ -154,8 +147,29 @@ def summarize_compartment_train():
     print("Compartments:", test_tomos["compartment_count"].sum())
 
 
+def summarize_inner_ear_data():
+    # NOTE: this is not all trainig data, but the data on which we run the analysis
+    # New tomograms from Sophia.
+    n_tomos_sophia_tot = 87
+    n_tomos_sophia_manual = 33  # noqa
+    # This is the training data
+    n_tomos_sohphia_train = ""  # TODO  # noqa
+
+    # Published tomograms
+    n_tomos_rat = 19
+    n_tomos_tether = 3
+    n_tomos_ves_pool = 6
+
+    # 28
+    print("Total published:", n_tomos_rat + n_tomos_tether + n_tomos_ves_pool)
+    # 115
+    print("Total:", n_tomos_rat + n_tomos_tether + n_tomos_ves_pool + n_tomos_sophia_tot)
+
+
 # training_resolutions()
-summarize_vesicle_train_data()
+# summarize_vesicle_train_data()
 # summarize_vesicle_da()
 # summarize_az_train()
 # summarize_compartment_train()
+# summarize_inner_ear_data()
+summarize_inner_ear_data()

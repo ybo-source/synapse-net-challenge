@@ -35,68 +35,67 @@ def plot_pools(data, errors):
 
 
 def for_tomos_with_annotation():
-    manual_assignments, semi_automatic_assignments, automatic_assignments = get_measurements_with_annotation()
+    manual_assignments, semi_automatic_assignments, proofread_assignments = get_measurements_with_annotation()
 
     manual_counts = manual_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
     semi_automatic_counts = semi_automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
-    automatic_counts = automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
+    proofread_counts = proofread_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
 
     manual_stats = manual_counts.agg(["mean", "std"]).transpose().reset_index()
     semi_automatic_stats = semi_automatic_counts.agg(["mean", "std"]).transpose().reset_index()
-    automatic_stats = automatic_counts.agg(["mean", "std"]).transpose().reset_index()
+    proofread_stats = proofread_counts.agg(["mean", "std"]).transpose().reset_index()
 
     data = pd.DataFrame({
         "Pool": manual_stats["pool"],
         "Semi-automatic": semi_automatic_stats["mean"],
-        "Automatic": automatic_stats["mean"],
+        "Proofread": proofread_stats["mean"],
         "Manual": manual_stats["mean"],
     })
     errors = pd.DataFrame({
         "Pool": manual_stats["pool"],
         "Semi-automatic": semi_automatic_stats["std"],
-        "Automatic": automatic_stats["std"],
+        "Proofread": proofread_stats["std"],
         "Manual": manual_stats["std"],
     })
 
     plot_pools(data, errors)
 
-    output_path = "./results/vesicle_pools_with_manual_annotations.xlsx"
+    output_path = "./results/vesicle_pools_tomos_with_manual_annotations.xlsx"
     data.to_excel(output_path, index=False, sheet_name="Average")
     with pd.ExcelWriter(output_path, engine="openpyxl", mode="a") as writer:
         errors.to_excel(writer, sheet_name="StandardDeviation", index=False)
 
 
 def for_all_tomos():
-    semi_automatic_assignments, automatic_assignments = get_all_measurements()
+    semi_automatic_assignments, proofread_assignments = get_all_measurements()
 
-    automatic_counts = automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
-    automatic_stats = automatic_counts.agg(["mean", "std"]).transpose().reset_index()
+    proofread_counts = proofread_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
+    proofread_stats = proofread_counts.agg(["mean", "std"]).transpose().reset_index()
 
     semi_automatic_counts = semi_automatic_assignments.groupby(["tomogram", "pool"]).size().unstack(fill_value=0)
     semi_automatic_stats = semi_automatic_counts.agg(["mean", "std"]).transpose().reset_index()
 
     data = pd.DataFrame({
-        "Pool": automatic_stats["pool"],
+        "Pool": proofread_stats["pool"],
         "Semi-automatic": semi_automatic_stats["mean"],
-        "Automatic": automatic_stats["mean"],
+        "Proofread": proofread_stats["mean"],
     })
     errors = pd.DataFrame({
-        "Pool": automatic_stats["pool"],
+        "Pool": proofread_stats["pool"],
         "Semi-automatic": semi_automatic_stats["std"],
-        "Automatic": automatic_stats["std"],
+        "Proofread": proofread_stats["std"],
     })
 
     plot_pools(data, errors)
 
-    output_path = "./results/vesicle_pools_all_tomograms.xlsx"
+    output_path = "./results/vesicle_pools_all_tomos.xlsx"
     data.to_excel(output_path, index=False, sheet_name="Average")
     with pd.ExcelWriter(output_path, engine="openpyxl", mode="a") as writer:
         errors.to_excel(writer, sheet_name="StandardDeviation", index=False)
 
 
-# TODO: export the ribbon and pd stats (first need to discuss this with Fid)
 def main():
-    # for_tomos_with_annotation()
+    for_tomos_with_annotation()
     for_all_tomos()
 
 

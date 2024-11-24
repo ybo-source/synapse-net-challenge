@@ -32,7 +32,6 @@ def _plot_all(distances):
     plt.show()
 
 
-# TODO rename the method names.
 # We only care about the following distances:
 # - MP-V -> PD, AZ (Boundary)
 # - Docked-V -> PD, AZ
@@ -98,7 +97,7 @@ def _plot_selected(distances, save_path=None):
 
 
 def for_tomos_with_annotation(plot_all=True):
-    manual_assignments, semi_automatic_assignments, automatic_assignments = get_measurements_with_annotation()
+    manual_assignments, semi_automatic_assignments, proofread_assignments = get_measurements_with_annotation()
 
     manual_distances = manual_assignments[
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
@@ -110,38 +109,38 @@ def for_tomos_with_annotation(plot_all=True):
     ]
     semi_automatic_distances["approach"] = ["semi_automatic"] * len(semi_automatic_distances)
 
-    automatic_distances = automatic_assignments[
+    proofread_distances = proofread_assignments[
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
-    automatic_distances["approach"] = ["automatic"] * len(automatic_distances)
+    proofread_distances["approach"] = ["proofread"] * len(proofread_distances)
 
-    distances = pd.concat([manual_distances, semi_automatic_distances, automatic_distances])
+    distances = pd.concat([manual_distances, semi_automatic_distances, proofread_distances])
     if plot_all:
-        distances.to_excel("./results/distances_with_manual_annotations.xlsx", index=False)
+        distances.to_excel("./results/distances_tomos_with_manual_annotations.xlsx", index=False)
         _plot_all(distances)
     else:
-        _plot_selected(distances, save_path="./results/selected_distances_manual_annotations.xlsx")
+        _plot_selected(distances, save_path="./results/selected_distances_tomos_with_manual_annotations.xlsx")
 
 
 def for_all_tomos(plot_all=True):
-    semi_automatic_assignments, automatic_assignments = get_all_measurements()
+    semi_automatic_assignments, proofread_assignments = get_all_measurements()
 
     semi_automatic_distances = semi_automatic_assignments[
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
     semi_automatic_distances["approach"] = ["semi_automatic"] * len(semi_automatic_distances)
 
-    automatic_distances = automatic_assignments[
+    proofread_distances = proofread_assignments[
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
-    automatic_distances["approach"] = ["automatic"] * len(automatic_distances)
+    proofread_distances["approach"] = ["proofread"] * len(proofread_distances)
 
-    distances = pd.concat([semi_automatic_distances, automatic_distances])
+    distances = pd.concat([semi_automatic_distances, proofread_distances])
     if plot_all:
-        distances.to_excel("./results/distances_all_tomograms.xlsx", index=False)
+        distances.to_excel("./results/distances_all_tomos.xlsx", index=False)
         _plot_all(distances)
     else:
-        _plot_selected(distances, save_path="./results/selected_distances_all_tomograms.xlsx")
+        _plot_selected(distances, save_path="./results/selected_distances_all_tomos.xlsx")
 
 
 def main():

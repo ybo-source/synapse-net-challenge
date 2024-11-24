@@ -10,10 +10,12 @@ from tqdm import tqdm
 from synaptic_reconstruction.imod.export import load_points_from_imodinfo
 from synaptic_reconstruction.file_utils import get_data_path
 
+from common import get_finished_tomos
+
 sys.path.append("../processing")
 
 
-def aggregate_radii(data_root, table, save_path, get_tab):
+def aggregate_radii(data_root, table, save_path, get_tab, include_names):
     if os.path.exists(save_path):
         return
 
@@ -24,6 +26,14 @@ def aggregate_radii(data_root, table, save_path, get_tab):
             continue
 
         tomo_name = os.path.relpath(folder, os.path.join(data_root, "Electron-Microscopy-Susi/Analyse"))
+        if (
+            tomo_name in ("WT strong stim/Mouse 1/modiolar/1", "WT strong stim/Mouse 1/modiolar/2") and
+            (row["EM alt vs. Neu"] == "neu")
+        ):
+            continue
+        if tomo_name not in include_names:
+            continue
+
         tab_path = get_tab(folder)
         if tab_path is None:
             continue
@@ -38,7 +48,7 @@ def aggregate_radii(data_root, table, save_path, get_tab):
     radius_table.to_excel(save_path, index=False)
 
 
-def aggregate_radii_imod(data_root, table, save_path):
+def aggregate_radii_imod(data_root, table, save_path, include_names):
     if os.path.exists(save_path):
         return
 
@@ -49,6 +59,15 @@ def aggregate_radii_imod(data_root, table, save_path):
             continue
 
         tomo_name = os.path.relpath(folder, os.path.join(data_root, "Electron-Microscopy-Susi/Analyse"))
+        tomo_name = os.path.relpath(folder, os.path.join(data_root, "Electron-Microscopy-Susi/Analyse"))
+        if (
+            tomo_name in ("WT strong stim/Mouse 1/modiolar/1", "WT strong stim/Mouse 1/modiolar/2") and
+            (row["EM alt vs. Neu"] == "neu")
+        ):
+            continue
+        if tomo_name not in include_names:
+            continue
+
         annotation_folder = os.path.join(folder, "manuell")
         if not os.path.exists(annotation_folder):
             annotation_folder = os.path.join(folder, "Manuell")
@@ -84,7 +103,7 @@ def aggregate_radii_imod(data_root, table, save_path):
     radius_table.to_excel(save_path, index=False)
 
 
-def get_tab_automatic(folder):
+def get_tab_semi_automatic(folder):
     tab_name = "measurements_uncorrected_assignments.xlsx"
     res_path = os.path.join(folder, "korrektur", tab_name)
     if not os.path.exists(res_path):
@@ -94,7 +113,7 @@ def get_tab_automatic(folder):
     return res_path
 
 
-def get_tab_semi_automatic(folder):
+def get_tab_proofread(folder):
     tab_name = "measurements.xlsx"
     res_path = os.path.join(folder, "korrektur", tab_name)
     if not os.path.exists(res_path):
@@ -121,11 +140,22 @@ def main():
     table_path = os.path.join(data_root, "Electron-Microscopy-Susi", "Übersicht.xlsx")
     table = parse_table(table_path, data_root)
 
-    # TODO get the radii from imod
-    aggregate_radii(data_root, table, save_path="./results/vesicle_radii_automatic.xlsx", get_tab=get_tab_automatic)
-    aggregate_radii(data_root, table, save_path="./results/vesicle_radii_semi_automatic.xlsx", get_tab=get_tab_semi_automatic)  # noqa
-    aggregate_radii(data_root, table, save_path="./results/vesicle_radii_manual.xlsx", get_tab=get_tab_manual)
-    aggregate_radii_imod(data_root, table, save_path="./results/vesicle_radii_imod.xlsx")
+    all_tomos = get_finished_tomos()
+    aggregate_radii(
+        data_root, table, save_path="./results/vesicle_radii_semi_automatic.xlsx", get_tab=get_tab_semi_automatic,
+        include_names=all_tomos
+    )
+
+    aggregate_radii(
+        data_root, table, save_path="./results/vesicle_radii_proofread.xlsx", get_tab=get_tab_proofread,
+        include_names=all_tomos
+    )
+
+    # aggregate_radii(data_root, table, save_path="./results/vesicle_radii_manual.xlsx", get_tab=get_tab_manual)
+    aggregate_radii_imod(
+        data_root, table, save_path="./results/vesicle_radii_manual.xlsx",
+        include_names=all_tomos
+    )
 
 
 if __name__ == "__main__":
