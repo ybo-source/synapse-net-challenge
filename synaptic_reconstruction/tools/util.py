@@ -45,20 +45,6 @@ def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]
     return model
 
 
-def get_model_path(model_type: str) -> str:
-    """Get the local path to a given model.
-
-    Args:
-        The model type.
-
-    Returns:
-        The local path to the model.
-    """
-    model_registry = get_model_registry()
-    model_path = model_registry.fetch(model_type)
-    return model_path
-
-
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
@@ -70,7 +56,8 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     Returns:
         The model.
     """
-    device = get_device(device)
+    if device is None:
+        device = get_device(device)
     model_registry = get_model_registry()
     model_path = model_registry.fetch(model_type)
     warnings.filterwarnings(
