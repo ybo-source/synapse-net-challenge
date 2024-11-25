@@ -72,7 +72,7 @@ def convert_segmentation_to_spheres(
     resolution: Optional[Tuple[float, float, float]] = None,
     radius_factor: float = 1.0,
     estimate_radius_2d: bool = True,
-    props: Optional[Union[regionprops, list]] = None,
+    props: Optional[list] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Extract spheres parameterized by center and radius from a segmentation.
 
@@ -85,13 +85,15 @@ def convert_segmentation_to_spheres(
         estimate_radius_2d: If true the distance to boundary for determining the centroid and computing
             the radius will be computed only in 2d rather than in 3d. This can lead to better results
             in case of deformation across the depth axis.
-        props: The regionprops to use.
+        props: Optional list of regionprops
 
     Returns:
         np.array: the center coordinates
         np.array: the radii
     """
     num_workers = multiprocessing.cpu_count() if num_workers is None else num_workers
+    if props is None:
+        props = regionprops(segmentation)
     if props is None:
         props = regionprops(segmentation)
 
