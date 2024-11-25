@@ -182,7 +182,7 @@ def write_points_to_imod(
 
 def write_segmentation_to_imod_as_points(
     mrc_path: str,
-    segmentation_path: str,
+    segmentation: Union[str, np.ndarray],
     output_path: str,
     min_radius: Union[int, float],
     radius_factor: float = 1.0,
@@ -194,7 +194,7 @@ def write_segmentation_to_imod_as_points(
 
     Args:
         mrc_path: Filepath to the mrc volume that was segmented.
-        segmentation_path: Filepath to the segmentation stored as .tif.
+        segmentation: The segmentation (either as numpy array or filepath to a .tif file).
         output_path: Where to save the .mod file.
         min_radius: Minimum radius for export.
         radius_factor: Factor for increasing the radius to account for too small exported spheres.
@@ -211,7 +211,8 @@ def write_segmentation_to_imod_as_points(
     resolution = [res / 10 for res in resolution]
 
     # Extract the center coordinates and radii from the segmentation.
-    segmentation = imageio.imread(segmentation_path)
+    if isinstance(segmentation, str):
+        segmentation = imageio.imread(segmentation)
     coordinates, radii = convert_segmentation_to_spheres(
         segmentation, resolution=resolution, radius_factor=radius_factor, estimate_radius_2d=estimate_radius_2d
     )

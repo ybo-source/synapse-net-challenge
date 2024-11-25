@@ -12,6 +12,8 @@ from synaptic_reconstruction.file_utils import get_data_path
 
 from common import get_finished_tomos
 
+POOL_DICT = {"Docked-V": "MP-V", "MP-V": "MP-V", "RA-V": "RA-V"}
+
 sys.path.append("../processing")
 
 
@@ -42,6 +44,7 @@ def aggregate_diameters(data_root, table, save_path, get_tab, include_names, she
         radius_table.append(this_tab)
 
     radius_table = pd.concat(radius_table)
+    radius_table.insert(1, "combined_pool", radius_table["pool"].replace(POOL_DICT))
 
     print("Saving table for", len(radius_table), "vesicles to", save_path, sheet_name)
     if os.path.exists(save_path):
@@ -91,11 +94,13 @@ def aggregate_diameters_imod(data_root, table, save_path, include_names, sheet_n
         except AssertionError:
             continue
 
+        # Determined from matching the size of vesicles in IMOD.
+        radius_factor = 0.85
         this_tab = pd.DataFrame({
             "tomogram": [tomo_name] * len(radii),
             "pool": [label_names[label_id] for label_id in labels],
-            "radius [nm]": radii,
-            "diameter [nm]": 2 * radii,
+            "radius [nm]": radii * radius_factor,
+            "diameter [nm]": 2 * radii * radius_factor,
         })
         radius_table.append(this_tab)
 

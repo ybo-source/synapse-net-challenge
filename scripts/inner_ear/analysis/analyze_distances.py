@@ -7,6 +7,8 @@ import seaborn as sns
 
 from common import get_all_measurements, get_measurements_with_annotation
 
+POOL_DICT = {"Docked-V": "MP-V", "MP-V": "MP-V", "RA-V": "RA-V"}
+
 
 def _plot_all(distances):
     pools = pd.unique(distances["pool"])
@@ -45,7 +47,7 @@ def _plot_selected(distances, save_path=None):
 
     def _plot(pool_name, distance_col, structure_name, ax):
 
-        this_distances = distances[distances["pool"] == pool_name][["tomogram", "approach", distance_col]]
+        this_distances = distances[distances["combined_pool"] == pool_name][["tomogram", "approach", distance_col]]
 
         ax.set_title(f"{pool_name} to {structure_name}")
         sns.histplot(
@@ -88,8 +90,8 @@ def _plot_selected(distances, save_path=None):
     # NOTE: we over-ride a plot here, should not do this in the actual version
     _plot("MP-V", "pd_distance [nm]", "PD", axes[0, 0])
     _plot("MP-V", "boundary_distance [nm]", "AZ Membrane", axes[0, 1])
-    _plot("Docked-V", "pd_distance [nm]", "PD", axes[1, 0])
-    _plot("Docked-V", "boundary_distance [nm]", "AZ Membrane", axes[1, 0])
+    # _plot("Docked-V", "pd_distance [nm]", "PD", axes[1, 0])
+    # _plot("Docked-V", "boundary_distance [nm]", "AZ Membrane", axes[1, 0])
     _plot("RA-V", "ribbon_distance [nm]", "Ribbon", axes[1, 1])
 
     fig.tight_layout()
@@ -103,16 +105,19 @@ def for_tomos_with_annotation(plot_all=True):
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
     manual_distances["approach"] = ["manual"] * len(manual_distances)
+    manual_distances.insert(1, "combined_pool", manual_distances["pool"].replace(POOL_DICT))
 
     semi_automatic_distances = semi_automatic_assignments[
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
     semi_automatic_distances["approach"] = ["semi_automatic"] * len(semi_automatic_distances)
+    semi_automatic_distances.insert(1, "combined_pool", semi_automatic_distances["pool"].replace(POOL_DICT))
 
     proofread_distances = proofread_assignments[
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
     proofread_distances["approach"] = ["proofread"] * len(proofread_distances)
+    proofread_distances.insert(1, "combined_pool", proofread_distances["pool"].replace(POOL_DICT))
 
     distances = pd.concat([manual_distances, semi_automatic_distances, proofread_distances])
     if plot_all:
@@ -129,11 +134,13 @@ def for_all_tomos(plot_all=True):
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
     semi_automatic_distances["approach"] = ["semi_automatic"] * len(semi_automatic_distances)
+    semi_automatic_distances.insert(1, "combined_pool", semi_automatic_distances["pool"].replace(POOL_DICT))
 
     proofread_distances = proofread_assignments[
         ["tomogram", "pool", "ribbon_distance [nm]", "pd_distance [nm]", "boundary_distance [nm]"]
     ]
     proofread_distances["approach"] = ["proofread"] * len(proofread_distances)
+    proofread_distances.insert(1, "combined_pool", proofread_distances["pool"].replace(POOL_DICT))
 
     distances = pd.concat([semi_automatic_distances, proofread_distances])
     if plot_all:
