@@ -2,7 +2,83 @@ import argparse
 from functools import partial
 
 from .util import run_segmentation, get_model
+from ..imod.to_imod import export_helper, write_segmentation_to_imod_as_points, write_segmentation_to_imod
 from ..inference.util import inference_helper, parse_tiling
+
+
+def imod_point_cli():
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument(
+        "--input_path", "-i", required=True,
+        help="The filepath to the mrc file or the directory containing the tomogram data."
+    )
+    parser.add_argument(
+        "--segmentation_path", "-s", required=True,
+        help="The filepath to the tif file or the directory containing the segmentations."
+    )
+    parser.add_argument(
+        "--output_path", "-o", required=True,
+        help="The filepath to directory where the segmentations will be saved."
+    )
+    parser.add_argument(
+        "--segmentation_key", "-k", help=""
+    )
+    parser.add_argument(
+        "--min_radius", type=float, default=10.0, help=""
+    )
+    parser.add_argument(
+        "--radius_factor", type=float, default=1.0, help="",
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="",
+    )
+    args = parser.parse_args()
+
+    export_function = partial(
+        write_segmentation_to_imod_as_points,
+        min_radius=args.min_radius,
+        radius_factor=args.radius_factor,
+    )
+
+    export_helper(
+        input_path=args.input_path,
+        segmentation_path=args.segmentation_path,
+        output_root=args.output_path,
+        export_function=export_function,
+        force=args.force,
+        segmentation_key=args.segmentation_key,
+    )
+
+
+def imod_object_cli():
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument(
+        "--input_path", "-i", required=True,
+        help="The filepath to the mrc file or the directory containing the tomogram data."
+    )
+    parser.add_argument(
+        "--segmentation_path", "-s", required=True,
+        help="The filepath to the tif file or the directory containing the segmentations."
+    )
+    parser.add_argument(
+        "--output_path", "-o", required=True,
+        help="The filepath to directory where the segmentations will be saved."
+    )
+    parser.add_argument(
+        "--segmentation_key", "-k", help=""
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="",
+    )
+    args = parser.parse_args()
+    export_helper(
+        input_path=args.input_path,
+        segmentation_path=args.segmentation_path,
+        output_root=args.output_path,
+        export_function=write_segmentation_to_imod,
+        force=args.force,
+        segmentation_key=args.segmentation_key,
+    )
 
 
 # TODO: handle kwargs

@@ -8,12 +8,23 @@ from glob import glob
 from subprocess import run
 from typing import Optional, Tuple, Union
 
+import h5py
 import imageio.v3 as imageio
 import mrcfile
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 from skimage.measure import regionprops
 from tqdm import tqdm
+
+
+def _load_segmentation(segmentation_path, segmentation_key):
+    assert os.path.exists(segmentation_path), segmentation_path
+    if segmentation_key is None:
+        seg = imageio.imread(segmentation_path)
+    else:
+        with h5py.File(segmentation_path, "r") as f:
+            seg = f[segmentation_key][:]
+    return seg
 
 
 # TODO: this has still some issues with some tomograms that has an offset info.
@@ -25,6 +36,7 @@ def write_segmentation_to_imod(
     mrc_path: str,
     segmentation: Union[str, np.ndarray],
     output_path: str,
+    segmentation_key: Optional[str] = None,
 ) -> None:
     """Write a segmentation to a mod file as closed contour objects.
 
@@ -32,15 +44,14 @@ def write_segmentation_to_imod(
         mrc_path: The filepath to the mrc file from which the segmentation was derived.
         segmentation: The segmentation (either as numpy array or filepath to a .tif file).
         output_path: The output path where the mod file will be saved.
+        segmentation_key: The key to the segmentation data in case the segmentation is stored in hdf5 files.
     """
     cmd = "imodauto"
     cmd_path = shutil.which(cmd)
     assert cmd_path is not None, f"Could not find the {cmd} imod command."
 
-    # Load the segmentation from a tif file in case a filepath was passed.
-    if isinstance(segmentation, str):
-        assert os.path.exists(segmentation)
-        segmentation = imageio.imread(segmentation)
+    # Load the segmentation case a filepath was passed.
+    segmentation = _load_segmentation(segmentation, segmentation_key)
 
     # Binarize the segmentation and flip its axes to match the IMOD axis convention.
     segmentation = (segmentation > 0).astype("uint8")
@@ -187,6 +198,7 @@ def write_segmentation_to_imod_as_points(
     min_radius: Union[int, float],
     radius_factor: float = 1.0,
     estimate_radius_2d: bool = True,
+    segmentation_key: Optional[str] = None,
 ) -> None:
     """Write segmentation results to .mod file with imod point annotations.
 
@@ -201,6 +213,7 @@ def write_segmentation_to_imod_as_points(
         estimate_radius_2d: If true the distance to boundary for determining the centroid and computing
             the radius will be computed only in 2d rather than in 3d. This can lead to better results
             in case of deformation across the depth axis.
+        segmentation_key: The key to the segmentation data in case the segmentation is stored in hdf5 files.
     """
 
     # Read the resolution information from the mrcfile.
@@ -212,7 +225,7 @@ def write_segmentation_to_imod_as_points(
 
     # Extract the center coordinates and radii from the segmentation.
     if isinstance(segmentation, str):
-        segmentation = imageio.imread(segmentation)
+        segmentation = _load_segmentation(segmentation, segmentation_key)
     coordinates, radii = convert_segmentation_to_spheres(
         segmentation, resolution=resolution, radius_factor=radius_factor, estimate_radius_2d=estimate_radius_2d
     )
@@ -221,16 +234,22 @@ def write_segmentation_to_imod_as_points(
     write_points_to_imod(coordinates, radii, segmentation.shape, min_radius, output_path)
 
 
-# TODO we also need to support .rec files ...
-def _get_file_paths(input_path, ext=".mrc"):
+def _get_file_paths(input_path, ext=(".mrc", ".rec")):
     if not os.path.exists(input_path):
-        raise Exception(f"Input path not found {input_path}")
+        raise Exception(f"Input path not found {input_path}.")
+
+    if isinstance(ext, str):
+        ext = (ext,)
 
     if os.path.isfile(input_path):
         input_files = [input_path]
         input_root = None
     else:
-        input_files = sorted(glob(os.path.join(input_path, "**", f"*{ext}"), recursive=True))
+        input_files = []
+        for ex in ext:
+            input_files.extend(
+                sorted(glob(os.path.join(input_path, "**", f"*{ex}"), recursive=True))
+            )
         input_root = input_path
 
     return input_files, input_root
@@ -242,6 +261,7 @@ def export_helper(
     output_root: str,
     export_function: callable,
     force: bool = False,
+    segmentation_key: Optional[str] = None,
 ) -> None:
     """
     Helper function to run imod export for files in a directory.
@@ -258,9 +278,10 @@ def export_helper(
             the path to the segmentation in a .tif file and the output path as only arguments.
             If you want to pass additional arguments to this function the use 'funtools.partial'
         force: Whether to rerun segmentation for output files that are already present.
+        segmentation_key: The key to the segmentation data in case the segmentation is stored in hdf5 files.
     """
     input_files, input_root = _get_file_paths(input_path)
-    segmentation_files, _ = _get_file_paths(segmentation_path, ext=".tif")
+    segmentation_files, _ = _get_file_paths(segmentation_path, ext=".tif" if segmentation_key is None else ".h5")
     assert len(input_files) == len(segmentation_files)
 
     for input_path, seg_path in tqdm(zip(input_files, segmentation_files), total=len(input_files)):
@@ -279,4 +300,4 @@ def export_helper(
             continue
 
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
-        export_function(input_path, seg_path, output_path)
+        export_function(input_path, seg_path, output_path, segmentation_key=segmentation_key)
