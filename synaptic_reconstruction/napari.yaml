@@ -13,6 +13,9 @@ contributions:
     - id: synaptic_reconstruction.file_reader
       title: Read volumetric data
       python_name: synaptic_reconstruction.tools.volume_reader:get_reader
+    - id: synaptic_reconstruction.morphology
+      python_name: synaptic_reconstruction.tools.morphology_widget:MorphologyWidget
+      title: Morphology Analysis
 
   readers:
     - command: synaptic_reconstruction.file_reader
@@ -27,3 +30,5 @@ contributions:
       display_name: Segmentation
     - command: synaptic_reconstruction.distance_measure
       display_name: Distance Measurement
+    - command: synaptic_reconstruction.morphology
+      display_name: Morphology Analysis
