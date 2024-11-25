@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Dict, List, Optional, Union
 
 import torch
@@ -26,6 +27,24 @@ def _save_table(save_path, data):
     return file_path
 
 
+def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
+    model_path = _clean_filepath(model_path)
+    if device is None:
+        device = get_device(device)
+    try:
+        warnings.filterwarnings(
+            "ignore",
+            message="You are using `torch.load` with `weights_only=False`",
+            category=FutureWarning
+        )
+        model = torch.load(model_path, map_location=torch.device(device))
+    except Exception as e:
+        print(e)
+        print("model path", model_path)
+        return None
+    return model
+
+
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
@@ -37,7 +56,8 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     Returns:
         The model.
     """
-    device = get_device(device)
+    if device is None:
+        device = get_device(device)
     model_registry = get_model_registry()
     model_path = model_registry.fetch(model_type)
     warnings.filterwarnings(
@@ -237,3 +257,27 @@ def compute_scale_from_voxel_size(
             voxel_size["z"] / training_voxel_size["z"]
         )
     return scale
+
+
+def _clean_filepath(filepath):
+    """
+    Cleans a given filepath by:
+    - Removing newline characters (\n)
+    - Removing escape sequences
+    - Stripping the 'file://' prefix if present
+
+    Args:
+        filepath (str): The original filepath
+
+    Returns:
+        str: The cleaned filepath
+    """
+    # Remove 'file://' prefix if present
+    if filepath.startswith("file://"):
+        filepath = filepath[7:]
+    
+    # Remove escape sequences and newlines
+    filepath = re.sub(r'\\.', '', filepath)
+    filepath = filepath.replace('\n', '').replace('\r', '')
+
+    return filepath

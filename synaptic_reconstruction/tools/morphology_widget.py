@@ -5,6 +5,7 @@ import napari.layers
 import napari.viewer
 import numpy as np
 import pandas as pd
+from skimage.measure import regionprops
 
 from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
@@ -27,8 +28,10 @@ class MorphologyWidget(BaseWidget):
         self.viewer = napari.current_viewer()
         layout = QVBoxLayout()
 
+        self.image_selector_name = "Raw Image"
         self.image_selector_name1 = "Segmentation"
         # Create the image selection dropdown.
+        self.image_selector_widget = self._create_layer_selector(self.image_selector_name, layer_type="Image")
         self.segmentation1_selector_widget = self._create_layer_selector(self.image_selector_name1, layer_type="Labels")
 
         # Create advanced settings.
@@ -42,6 +45,7 @@ class MorphologyWidget(BaseWidget):
         self.measure_button2.clicked.connect(self.on_measure_structure_morphology)
 
         # Add the widgets to the layout.
+        layout.addWidget(self.image_selector_widget)
         layout.addWidget(self.segmentation1_selector_widget)
         layout.addWidget(self.settings)
         layout.addWidget(self.measure_button1)
@@ -49,88 +53,139 @@ class MorphologyWidget(BaseWidget):
 
         self.setLayout(layout)
 
-    def _create_shapes_layer(self, coords, radii, name="Shapes Layer"):
+    def _create_shapes_layer(self, table_data, name="Shapes Layer"):
         """
-        Create a Shapes layer with properties for IDs, coordinates, and radii.
+        Create and add a Shapes layer to the Napari viewer using table data.
 
         Args:
-            coords (np.ndarray): Array of 2D or 3D coordinates.
-            radii (np.ndarray): Array of radii corresponding to the coordinates.
+            table_data (pd.DataFrame): The table data containing coordinates, radii, and properties.
             name (str): Name of the layer.
 
         Returns:
-            line_layer: The created Shapes layer.
+            Shapes layer: The created Napari Shapes layer.
         """
-        assert len(coords) == len(radii), f"Shape mismatch: {coords.shape}, {radii.shape}"
-        
-        # Define the shape outlines (e.g., circles or lines). 
-        # For circles, the `coords` are the centers, and `radii` define the size.
+        coords = table_data[['x', 'y']].to_numpy() if 'z' not in table_data.columns else table_data[['x', 'y', 'z']].to_numpy()
+        radii = table_data['radii'].to_numpy()
+
         if coords.shape[1] == 2:
-            # For 2D data, represent circles as lines approximating the circumference
-            lines = [
+            # For 2D data, create circular outlines using trigonometric functions
+            outlines = [
                 np.column_stack((
                     coords[i, 0] + radii[i] * np.cos(np.linspace(0, 2 * np.pi, 100)),
                     coords[i, 1] + radii[i] * np.sin(np.linspace(0, 2 * np.pi, 100))
                 )) for i in range(len(coords))
             ]
+        elif coords.shape[1] == 3:
+            # For 3D data, create spherical outlines using latitude and longitude
+            theta = np.linspace(0, 2 * np.pi, 50)  # Longitude
+            phi = np.linspace(0, np.pi, 25)       # Latitude
+            sphere_points = np.array([
+                [
+                    coords[i, 0] + radii[i] * np.sin(p) * np.cos(t),
+                    coords[i, 1] + radii[i] * np.sin(p) * np.sin(t),
+                    coords[i, 2] + radii[i] * np.cos(p)
+                ]
+                for i in range(len(coords))
+                for t in theta for p in phi
+            ])
+            outlines = [
+                sphere_points[i * len(theta) * len(phi):(i + 1) * len(theta) * len(phi)]
+                for i in range(len(coords))
+            ]
         else:
-            raise NotImplementedError("3D shapes not yet implemented.")  # Handle 3D if needed
+            raise ValueError("Coordinate dimensionality must be 2 or 3.")
 
-        # Properties for the table
-        properties = {
-            "index": np.arange(len(coords)),
-            "x": coords[:, 0],
-            "y": coords[:, 1],
-            "radii": radii,
-        }
-
-        # Add the shapes layer
-        line_layer = self.viewer.add_shapes(
-            lines,
+        # Add the shapes layer with properties
+        layer = self.viewer.add_shapes(
+            outlines,
             name=name,
             shape_type="polygon",  # Use "polygon" for closed shapes like circles
             edge_width=2,
             edge_color="red",
             face_color="transparent",
             blending="additive",
-            properties=properties,  # Attach the properties here
+            properties=table_data.to_dict(orient='list'),  # Attach table data as properties
         )
-        return line_layer
+        return layer
 
-    def _to_table_data(self, coords, radii):
+    def _to_table_data(self, coords, radii, props):
+        """
+        Create a table of data including coordinates, radii, and intensity statistics.
+
+        Args:
+            coords (np.ndarray): Array of 2D or 3D coordinates.
+            radii (np.ndarray): Array of radii corresponding to the coordinates.
+            props (list): List of properties containing intensity statistics.
+
+        Returns:
+            pd.DataFrame: The formatted table data.
+        """
         assert len(coords) == len(radii), f"Shape mismatch: {coords.shape}, {radii.shape}"
-        # Handle both 2D and 3D coordinates
-        if coords.ndim == 2:
-            col_names = ['x', 'y'] if coords.shape[1] == 2 else ['x', 'y', 'z']
-            table_data = {
-                'index': np.arange(len(coords)),
-                **{col: coords[:, i] for i, col in enumerate(col_names)},
-                'radii': radii
-            }
-        else:
-            # Fallback for 1D label and radii
-            table_data = {"label": coords, "distance": radii}
         
+        # Define columns based on dimension (2D or 3D)
+        col_names = ['x', 'y'] if coords.shape[1] == 2 else ['x', 'y', 'z']
+        table_data = {
+            'index': np.arange(len(coords)),
+            **{col: coords[:, i] for i, col in enumerate(col_names)},
+            'radii': radii,
+            'intensity_max': [prop.intensity_max for prop in props],
+            'intensity_mean': [prop.intensity_mean for prop in props],
+            'intensity_min': [prop.intensity_min for prop in props],
+            'intensity_std': [prop.intensity_std for prop in props],
+        }
+
         return pd.DataFrame(table_data)
 
-    def _add_table(self, coords, radii, name: str):
-        layer = self._create_shapes_layer(coords, radii)
+    # def _add_table(self, coords, radii, props, name: str):
+    #     layer = self._create_shapes_layer(coords, radii, props)
 
-        # Add a table layer to the Napari viewer
+    #     # Add a table layer to the Napari viewer
+    #     if add_table is not None:
+    #         add_table(layer, self.viewer)
+
+    #     # Save table to file if save path is provided
+    #     if self.save_path.text() != "":
+    #         file_path = _save_table(self.save_path.text(), self._to_table_data(coords, radii, props))
+    #         show_info(f"INFO: Added table and saved file to {file_path}.")
+    #     else:
+    #         show_info("INFO: Table added to viewer.")
+
+    def _add_table(self, coords, radii, props, name="Shapes Layer"):
+        """
+        Add a Shapes layer and table data to the Napari viewer.
+
+        Args:
+            viewer (napari.Viewer): The Napari viewer instance.
+            coords (np.ndarray): Array of 2D or 3D coordinates.
+            radii (np.ndarray): Array of radii corresponding to the coordinates.
+            props (list): List of properties containing intensity statistics.
+            name (str): Name of the Shapes layer.
+            save_path (str): Path to save the table data, if provided.
+        """
+        # Create table data
+        table_data = self._to_table_data(coords, radii, props)
+        
+        # Add the shapes layer
+        layer = self._create_shapes_layer(table_data, name)
+
         if add_table is not None:
             add_table(layer, self.viewer)
 
-        # Save table to file if save path is provided
-        if self.save_path.text() != "":
-            file_path = _save_table(self.save_path.text(), self._to_table_data(coords, radii))
-            show_info(f"INFO: Added table and saved file to {file_path}.")
+        # Save the table to a file if a save path is provided
+        if self.save_path.text():
+            table_data.to_csv(self.save_path, index=False)
+            print(f"INFO: Added table and saved file to {self.save_path}.")
         else:
-            show_info("INFO: Table added to viewer.")
+            print("INFO: Table added to viewer.")
 
     def on_measure_vesicle_morphology(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
+        image = self._get_layer_selector_data(self.image_selector_name)
         if segmentation is None:
             show_info("INFO: Please choose a segmentation.")
+            return
+        if image is None:
+            show_info("INFO: Please choose an image.")
             return
 
         # get metadata from layer if available
@@ -142,16 +197,26 @@ class MorphologyWidget(BaseWidget):
         if self.voxel_size_param.value() != 0.0:  # changed from default
             resolution = segmentation.ndim * [self.voxel_size_param.value()]
 
+        props = regionprops(label_image=segmentation, intensity_image=image)
+
         coords, radii = convert_segmentation_to_spheres(
             segmentation=segmentation,
-            resolution=resolution
+            resolution=resolution,
+            props=props,
         )
-        print("coords", coords.shape, "radii", radii.shape)
         # table_data = self._to_table_data(coords, radii)
-        self._add_table(coords, radii, name="Vesicles")
+        self._add_table(coords, radii, props, name="Vesicles")
 
     def on_measure_structure_morphology(self):
+        """add the structure measurements to the segmentation layer (via properties) 
+        and visualize the properties table
+
+        Returns:
+            _type_: _description_
+        """
+        
         return None
+    
         # segmentation = self._get_layer_selector_data(self.image_selector_name1)
         # if segmentation is None:
         #     show_info("Please choose a segmentation.")
