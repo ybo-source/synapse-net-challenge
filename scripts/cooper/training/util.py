@@ -1,11 +1,7 @@
 import os
 from glob import glob
 import h5py
-from tqdm import tqdm
-import napari
-import torch
 import torch_em
-from torch_em.util.prediction import predict_with_halo
 import torch.nn as nn
 import numpy as np
 from skimage.measure import regionprops

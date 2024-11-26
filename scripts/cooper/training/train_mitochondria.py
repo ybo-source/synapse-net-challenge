@@ -13,9 +13,10 @@ import util
 
 
 def main():
-    parser = argparse.ArgumentParser(description="3D UNet for mitochondrial segmentation")
+    parser = argparse.ArgumentParser(description="3D UNet training for mitochondrial segmentation")
     parser.add_argument(
-        "--data_dir", type=str, default="", help="Path to the data directory"
+        "--data_dir", type=str, default="/scratch-grete/projects/nim00007/data/mitochondria/cooper/fidi_down_s2",
+        help="Path to the data directory"
         )
     parser.add_argument(
         "--patch_shape", type=int, nargs=3, default=(32, 256, 256), help="Patch shape for data loading (3D tuple)"
@@ -30,7 +31,8 @@ def main():
         "--checkpoint_path", type=str, default="", help="Path to checkpoint used to load model's state_dict"
         )
     parser.add_argument(
-        "--experiment_name", type=str, default="default-mito-net", help="Name that is used for the experiment and store the model's weights"
+        "--experiment_name", type=str, default="default-mito-net",
+        help="Name that is used for the experiment and store the model's weights"
         )
     parser.add_argument(
         "--batch_size", type=int, default=1, help="Batch size to be used"
