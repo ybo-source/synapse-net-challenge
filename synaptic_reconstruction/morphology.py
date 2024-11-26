@@ -69,26 +69,7 @@ def compute_radii(
     return ids, radii
 
 
-# # TODO adjust the surface for open vs. closed structures
-# def compute_object_morphology(object_, structure_name, resolution=None):
-#     find_contours
-#     verts, faces, normals, _ = marching_cubes(object_, spacing=(1.0, 1.0, 1.0) if resolution is None else resolution)
-
-#     mesh = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=normals)
-#     surface = mesh.area
-#     if mesh.is_watertight:
-#         volume = np.abs(mesh.volume)
-#     else:
-#         warnings.warn("Could not compute mesh volume and setting it to NaN.")
-#         volume = np.nan
-
-#     morphology = pd.DataFrame({
-#         "structure": [structure_name],
-#         "volume [pixel^3]" if resolution is None else "volume [nm^3]": [volume],
-#         "surface [pixel^2]" if resolution is None else "surface [nm^2]": [surface],
-#     })
-#     return morphology
-
+# TODO adjust the surface for open vs. closed structures
 def compute_object_morphology(object_, structure_name, resolution=None):
     """
     Compute the morphology (volume and surface area) of a 2D or 3D object.
