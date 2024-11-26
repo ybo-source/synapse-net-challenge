@@ -214,8 +214,40 @@ class MorphologyWidget(BaseWidget):
         Returns:
             _type_: _description_
         """
+        segmentation = self._get_layer_selector_data(self.image_selector_name1)
+        if segmentation is None:
+            show_info("INFO: Please choose a segmentation.")
+            return
+        # get metadata from layer if available
+        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        resolution = metadata.get("voxel_size", None)
+        if resolution is not None:
+            resolution = [v for v in resolution.values()]
+        #image = self._get_layer_selector_data(self.image_selector_name)
+        morphology = compute_object_morphology(
+            object_=segmentation, structure_name=self.image_selector_name1,
+            resolution=resolution
+            )
         
-        return None
+        self._add_table_structure(morphology)
+        
+    def _add_table_structure(self, morphology):
+        # add properties to segmentation layer
+        segmentation_selector_widget = self.layer_selectors[self.image_selector_name1]
+        image_selector = segmentation_selector_widget.layout().itemAt(1).widget()
+        selected_layer_name = image_selector.currentText()
+        self.viewer.layers[selected_layer_name].properties = morphology
+        
+        # Add a table layer to the Napari viewer
+        if add_table is not None:
+            add_table(self.viewer.layers[selected_layer_name], self.viewer)
+        
+        # Save table to file if save path is provided
+        if self.save_path.text() != "":
+            file_path = _save_table(self.save_path.text(), self._to_table_data_structure(morphology))
+            show_info(f"INFO: Added table and saved file to {file_path}.")
+        else:
+            print("INFO: Table added to viewer.")
     
         # segmentation = self._get_layer_selector_data(self.image_selector_name1)
         # if segmentation is None:
