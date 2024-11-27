@@ -98,6 +98,7 @@ def convert_segmentation_to_spheres(
     def coords_and_rads(prop):
         seg_id = prop.label
         bbox = prop.bbox
+        ndim = len(bbox) // 2
 
         # Handle 2D bounding box
         if len(bbox) == 4:
@@ -107,11 +108,6 @@ def convert_segmentation_to_spheres(
                 dists = distance_transform_edt(mask, sampling=resolution)
             else:
                 dists = distance_transform_edt(mask)
-            max_coord = np.unravel_index(np.argmax(dists), mask.shape)
-            radius = dists[max_coord] * radius_factor
-
-            offset = np.array(bbox[:2])
-            coord = np.array(max_coord) + offset
 
         # Handle 3D bounding box
         elif len(bbox) == 6:
@@ -125,14 +121,15 @@ def convert_segmentation_to_spheres(
                     dists = np.array([distance_transform_edt(ma) for ma in mask])
             else:
                 dists = distance_transform_edt(mask, sampling=resolution)
-
-            max_coord = np.unravel_index(np.argmax(dists), mask.shape)
-            radius = dists[max_coord] * radius_factor
-
-            offset = np.array(bbox[:3])
-            coord = np.array(max_coord) + offset
         else:
             raise ValueError(f"Unsupported bounding box dimensions: {len(bbox)}")
+
+        max_coord = np.unravel_index(np.argmax(dists), mask.shape)
+        radius = dists[max_coord] * radius_factor
+
+        offset = np.array(bbox[:ndim])
+
+        coord = np.array(max_coord) + offset
 
         return coord, radius
 
