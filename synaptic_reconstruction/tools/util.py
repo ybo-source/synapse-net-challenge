@@ -25,6 +25,7 @@ def _save_table(save_path, data):
         raise ValueError("Invalid extension for table: {ext}. We support .csv or .xlsx.")
     return file_path
 
+
 def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     model_path = _clean_filepath(model_path)
     if device is None:
@@ -65,14 +66,7 @@ def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None
     """
     if device is None:
         device = get_device(device)
-
-    model_registry = get_model_registry()
-    model_path = model_registry.fetch(model_type)
-    warnings.filterwarnings(
-        "ignore",
-        message="You are using `torch.load` with `weights_only=False`",
-        category=FutureWarning
-    )
+    model_path = get_model_path(model_type)
     model = torch.load(model_path, weights_only=False)
     model.to(device)
     return model

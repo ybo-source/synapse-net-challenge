@@ -77,7 +77,7 @@ def compute_object_morphology(object_, structure_name, resolution=None):
     Args:
         object_ (np.ndarray): 2D or 3D binary object array.
         structure_name (str): Name of the structure being analyzed.
-        resolution (tuple): Physical spacing between pixels/voxels (e.g., nm or μm).
+        resolution (tuple): Physical spacing between nm.
 
     Returns:
         pd.DataFrame: Morphology information containing volume and surface area.

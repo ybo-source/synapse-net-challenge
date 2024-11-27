@@ -64,7 +64,11 @@ class MorphologyWidget(BaseWidget):
         Returns:
             Shapes layer: The created Napari Shapes layer.
         """
-        coords = table_data[['x', 'y']].to_numpy() if 'z' not in table_data.columns else table_data[['x', 'y', 'z']].to_numpy()
+        coords = (
+            table_data[['x', 'y']].to_numpy()
+            if 'z' not in table_data.columns
+            else table_data[['x', 'y', 'z']].to_numpy()
+        )
         radii = table_data['radii'].to_numpy()
 
         if coords.shape[1] == 2:
@@ -121,7 +125,7 @@ class MorphologyWidget(BaseWidget):
             pd.DataFrame: The formatted table data.
         """
         assert len(coords) == len(radii), f"Shape mismatch: {coords.shape}, {radii.shape}"
-        
+
         # Define columns based on dimension (2D or 3D)
         col_names = ['x', 'y'] if coords.shape[1] == 2 else ['x', 'y', 'z']
         table_data = {
@@ -135,20 +139,6 @@ class MorphologyWidget(BaseWidget):
         }
 
         return pd.DataFrame(table_data)
-
-    # def _add_table(self, coords, radii, props, name: str):
-    #     layer = self._create_shapes_layer(coords, radii, props)
-
-    #     # Add a table layer to the Napari viewer
-    #     if add_table is not None:
-    #         add_table(layer, self.viewer)
-
-    #     # Save table to file if save path is provided
-    #     if self.save_path.text() != "":
-    #         file_path = _save_table(self.save_path.text(), self._to_table_data(coords, radii, props))
-    #         show_info(f"INFO: Added table and saved file to {file_path}.")
-    #     else:
-    #         show_info("INFO: Table added to viewer.")
 
     def _add_table(self, coords, radii, props, name="Shapes Layer"):
         """
@@ -164,7 +154,7 @@ class MorphologyWidget(BaseWidget):
         """
         # Create table data
         table_data = self._to_table_data(coords, radii, props)
-        
+
         # Add the shapes layer
         layer = self._create_shapes_layer(table_data, name)
 
@@ -204,15 +194,11 @@ class MorphologyWidget(BaseWidget):
             resolution=resolution,
             props=props,
         )
-        # table_data = self._to_table_data(coords, radii)
         self._add_table(coords, radii, props, name="Vesicles")
 
     def on_measure_structure_morphology(self):
         """add the structure measurements to the segmentation layer (via properties) 
         and visualize the properties table
-
-        Returns:
-            _type_: _description_
         """
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
         if segmentation is None:
@@ -223,59 +209,30 @@ class MorphologyWidget(BaseWidget):
         resolution = metadata.get("voxel_size", None)
         if resolution is not None:
             resolution = [v for v in resolution.values()]
-        #image = self._get_layer_selector_data(self.image_selector_name)
         morphology = compute_object_morphology(
             object_=segmentation, structure_name=self.image_selector_name1,
             resolution=resolution
             )
-        
+
         self._add_table_structure(morphology)
-        
+
     def _add_table_structure(self, morphology):
         # add properties to segmentation layer
         segmentation_selector_widget = self.layer_selectors[self.image_selector_name1]
         image_selector = segmentation_selector_widget.layout().itemAt(1).widget()
         selected_layer_name = image_selector.currentText()
         self.viewer.layers[selected_layer_name].properties = morphology
-        
+
         # Add a table layer to the Napari viewer
         if add_table is not None:
             add_table(self.viewer.layers[selected_layer_name], self.viewer)
-        
+
         # Save table to file if save path is provided
         if self.save_path.text() != "":
             file_path = _save_table(self.save_path.text(), self._to_table_data_structure(morphology))
             show_info(f"INFO: Added table and saved file to {file_path}.")
         else:
             print("INFO: Table added to viewer.")
-    
-        # segmentation = self._get_layer_selector_data(self.image_selector_name1)
-        # if segmentation is None:
-        #     show_info("Please choose a segmentation.")
-        #     return
-        # # get metadata from layer if available
-        # metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
-        # resolution = metadata.get("voxel_size", None)
-        # if resolution is not None:
-        #     resolution = [v for v in resolution.values()]
-        # # if user input is present override metadata
-        # if self.voxel_size_param.value() != 0.0:  # changed from default
-        #     resolution = segmentation.ndim * [self.voxel_size_param.value()]
-
-        # (distances,
-        #  endpoints1,
-        #  endpoints2,
-        #  seg_ids) = distance_measurements.measure_pairwise_object_distances(
-        #     segmentation=segmentation, distance_type="boundary", resolution=resolution
-        # )
-        # lines, properties = distance_measurements.create_pairwise_distance_lines(
-        #     distances=distances, endpoints1=endpoints1, endpoints2=endpoints2, seg_ids=seg_ids.tolist(),
-        # )
-        # table_data = self._to_table_data(
-        #     distances=properties["distance"],
-        #     seg_ids=np.concatenate([properties["id_a"][:, None], properties["id_b"][:, None]], axis=1)
-        # )
-        # self._add_lines_and_table(lines, properties, table_data, name="pairwise-distances")
 
     def _create_settings_widget(self):
         setting_values = QWidget()

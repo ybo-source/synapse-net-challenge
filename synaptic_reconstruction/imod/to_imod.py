@@ -94,19 +94,17 @@ def convert_segmentation_to_spheres(
     num_workers = multiprocessing.cpu_count() if num_workers is None else num_workers
     if props is None:
         props = regionprops(segmentation)
-    if props is None:
-        props = regionprops(segmentation)
 
     def coords_and_rads(prop):
         seg_id = prop.label
         bbox = prop.bbox
-        
+
         # Handle 2D bounding box
         if len(bbox) == 4:
             bb = np.s_[bbox[0]:bbox[2], bbox[1]:bbox[3]]
             mask = segmentation[bb] == seg_id
             if resolution:
-                dists = distance_transform_edt(mask, sampling=resolution[:2])
+                dists = distance_transform_edt(mask, sampling=resolution)
             else:
                 dists = distance_transform_edt(mask)
             max_coord = np.unravel_index(np.argmax(dists), mask.shape)
@@ -122,10 +120,9 @@ def convert_segmentation_to_spheres(
 
             if estimate_radius_2d:
                 if resolution:
-                    dists = np.array([distance_transform_edt(ma, sampling=resolution[:2]) for ma in mask])
-                else:
                     dists = np.array([distance_transform_edt(ma, sampling=resolution) for ma in mask])
-                dists = np.array([distance_transform_edt(ma, sampling=resolution[1:]) for ma in mask])
+                else:
+                    dists = np.array([distance_transform_edt(ma) for ma in mask])
             else:
                 dists = distance_transform_edt(mask, sampling=resolution)
 
