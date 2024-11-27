@@ -129,7 +129,7 @@ class MorphologyWidget(BaseWidget):
         # Define columns based on dimension (2D or 3D)
         col_names = ['x', 'y'] if coords.shape[1] == 2 else ['x', 'y', 'z']
         table_data = {
-            'index': np.arange(len(coords)),
+            'label_id': [prop.label for prop in props],
             **{col: coords[:, i] for i, col in enumerate(col_names)},
             'radii': radii,
             'intensity_max': [prop.intensity_max for prop in props],
