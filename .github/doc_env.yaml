@@ -15,6 +15,6 @@ dependencies:
     - kornia
     - tensorboard
     - pdoc
-    - sklearn
+    - scikit-learn
     - pip:
         - napari-skimage-regionprops
