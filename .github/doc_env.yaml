@@ -16,5 +16,6 @@ dependencies:
     - tensorboard
     - pdoc
     - scikit-learn
+    - mrcfile
     - pip:
         - napari-skimage-regionprops
