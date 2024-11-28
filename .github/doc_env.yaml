@@ -18,5 +18,6 @@ dependencies:
     - pdoc
     - scikit-learn
     - mrcfile
+    - trimesh
     - pip:
         - napari-skimage-regionprops
