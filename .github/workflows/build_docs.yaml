@@ -25,7 +25,7 @@ jobs:
       uses: mamba-org/setup-micromamba@v2
       with:
         micromamba-version: "latest"       # Use the latest version of micromamba
-        environment-file: environment.yml  # Reference your environment.yml file
+        environment-file: .github/workflows/build_docs.yaml  # Reference your environment.yml file
         cache: true                        # Cache the micromamba environment
 
     - name: Install package
@@ -36,6 +36,7 @@ jobs:
       run: pdoc synaptic_reconstruction -o doc/html
 
   deploy:
+    name: Deploy Documentation
     needs: build
     runs-on: ubuntu-latest
     permissions:
