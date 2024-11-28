@@ -25,16 +25,19 @@ jobs:
     - name: Set up Micromamba
       uses: mamba-org/setup-micromamba@v2
       with:
-        micromamba-version: "latest"
+        micromamba-version: "latest"       # Use the latest version of micromamba
         environment-file: .github/doc_env.yaml  # Reference your environment.yml file
         init-shell: bash
         cache-environment: true
         post-cleanup: 'all'
+        # cache: true                        # Cache the micromamba environment
 
     - name: Install package
+      # shell: bash -l {0}
       run: pip install -e .
 
     - name: Generate Documentation
+      shell: bash -l {0} 
       run: pdoc synaptic_reconstruction -o doc/html
 
     - name: Verify Documentation Output
@@ -43,7 +46,7 @@ jobs:
     - name: Upload Documentation Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: github-pages  # Must match the artifact_name in deploy-pages
+        name: documentation
         path: doc/html
 
   deploy:
@@ -53,64 +56,16 @@ jobs:
     permissions:
       pages: write
       id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-    - name: Deploy to GitHub Pages
-      uses: actions/deploy-pages@v2
-      with:
-        artifact_name: github-pages
-# jobs:
-#   build:
-#     name: Build Documentation
-#     runs-on: ubuntu-latest
-
-#     steps:
-#     - name: Checkout Code
-#       uses: actions/checkout@v3
-
-#     - name: Set up Micromamba
-#       uses: mamba-org/setup-micromamba@v2
-#       with:
-#         micromamba-version: "latest"       # Use the latest version of micromamba
-#         environment-file: .github/doc_env.yaml  # Reference your environment.yml file
-#         init-shell: bash
-#         cache-environment: true
-#         post-cleanup: 'all'
-#         # cache: true                        # Cache the micromamba environment
-
-#     - name: Install package
-#       # shell: bash -l {0}
-#       run: pip install -e .
-
-#     - name: Generate Documentation
-#       shell: bash -l {0} 
-#       run: pdoc synaptic_reconstruction -o doc/html
-
-#     - name: Verify Documentation Output
-#       run: ls -la doc/html
-
-#     - name: Upload Documentation Artifact
-#       uses: actions/upload-artifact@v3
-#       with:
-#         name: documentation
-#         path: doc/html
-
-#   deploy:
-#     name: Deploy Documentation
-#     needs: build
-#     runs-on: ubuntu-latest
-#     permissions:
-#       pages: write
-#       id-token: write
-#     environment:
-#       name: github-pages
-#       url: ${{ steps.deployment.outputs.page_url }}
-#     steps:
-#       - name: Download Documentation Artifact
-#         uses: actions/download-artifact@v3
-#         with:
-#           name: documentation
-#       - name: Deploy to GiHub Pages
-#         uses: actions/deploy-pages@v2  
-#         with: 
-#           artifact_name: github-pages
+      - name: Download Documentation Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: documentation
+      - name: Deploy to GiHub Pages
+        uses: actions/deploy-pages@v2  
+        with: 
+          artifact_name: documentation
 
