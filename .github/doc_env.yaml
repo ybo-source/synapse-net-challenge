@@ -1,5 +1,6 @@
 channels:
     - conda-forge
+    - pytorch
 name:
     synaptic-reconstruction
 dependencies:
