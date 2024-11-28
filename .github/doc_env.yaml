@@ -6,6 +6,7 @@ name:
 dependencies:
     - python=3.9
     - python-elf
+    - torch_em
     - napari
     - pip
     - pyqt
