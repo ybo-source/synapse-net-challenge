@@ -40,6 +40,15 @@ jobs:
       shell: bash -l {0} 
       run: pdoc synaptic_reconstruction -o doc/html
 
+    - name: Verify Documentation Output
+      run: ls -la doc/html
+
+    - name: Upload Documentation Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: doc/html
+
   deploy:
     name: Deploy Documentation
     needs: build
