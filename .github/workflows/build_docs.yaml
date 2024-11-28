@@ -26,7 +26,7 @@ jobs:
       uses: mamba-org/setup-micromamba@v2
       with:
         micromamba-version: "latest"       # Use the latest version of micromamba
-        environment-file: .github/workflows/build_docs.yaml  # Reference your environment.yml file
+        environment-file: synapse-net/.github/doc_env.yaml  # Reference your environment.yml file
         init-shell: bash
         cache-environment: true
         post-cleanup: 'all'
