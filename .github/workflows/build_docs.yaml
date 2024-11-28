@@ -27,10 +27,10 @@ jobs:
       with:
         micromamba-version: "latest"       # Use the latest version of micromamba
         environment-file: .github/workflows/build_docs.yaml  # Reference your environment.yml file
-        cache: true                        # Cache the micromamba environment
+        # cache: true                        # Cache the micromamba environment
 
     - name: Install package
-      shell: bash -l {0}
+      # shell: bash -l {0}
       run: pip install -e .
 
     - name: Generate Documentation
