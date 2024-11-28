@@ -5,7 +5,7 @@ name:
     synaptic-reconstruction
 dependencies:
     - python=3.9
-    # - python-elf
+    - python-elf
     - napari
     - pip
     - pyqt
