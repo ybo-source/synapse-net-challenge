@@ -4,7 +4,8 @@ channels:
 name:
     synaptic-reconstruction
 dependencies:
-    - python-elf
+    - python=3.9
+    # - python-elf
     - napari
     - pip
     - pyqt
