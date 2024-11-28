@@ -37,6 +37,7 @@ jobs:
       run: pip install -e .
 
     - name: Generate Documentation
+      shell: bash -l {0} 
       run: pdoc synaptic_reconstruction -o doc/html
 
   deploy:
