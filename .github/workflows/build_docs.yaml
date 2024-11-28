@@ -1,0 +1,55 @@
+name: Build and Deploy Docs
+
+on:
+  push:
+    paths:
+      - "doc/*.md"   # Trigger on changes to any markdown file
+      - "**/*.py"   # Optionally include changes in Python files
+    branches:
+      - main        # Run the workflow only on pushes to the main branch
+
+# security: restrict permissions for CI jobs.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Micromamba
+      uses: mamba-org/setup-micromamba@v2
+      with:
+        micromamba-version: "latest"       # Use the latest version of micromamba
+        environment-file: environment.yml  # Reference your environment.yml file
+        cache: true                        # Cache the micromamba environment
+
+    - name: Install package
+      shell: bash -l {0}
+      run: pip install -e .
+
+    - name: Generate Documentation
+      run: pdoc synaptic_reconstruction -o doc/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v2  
+  # deploy:
+  #   - name: Deploy to GitHub Pages
+  #     uses: peaceiris/actions-gh-pages@v3
+  #     with:
+  #       github_token: ${{ secrets.GITHUB_TOKEN }}
+  #       publish_dir: doc/html

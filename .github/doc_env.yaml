@@ -1,0 +1,17 @@
+channels:
+    - conda-forge
+name:
+    synaptic-reconstruction
+dependencies:
+    - python-elf
+    - napari
+    - pip
+    - pyqt
+    - magicgui
+    - pytorch
+    - bioimageio.core
+    - kornia
+    - tensorboard
+    - pdoc
+    - pip:
+        - napari-skimage-regionprops
