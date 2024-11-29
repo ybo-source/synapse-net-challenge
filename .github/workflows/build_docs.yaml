@@ -38,7 +38,7 @@ jobs:
 
     - name: Generate Documentation
       shell: bash -l {0} 
-      run: pdoc -o doc/
+      run: pdoc synaptic_reconstruction -o doc/
 
     - name: Verify Documentation Output
       run: ls -la doc/
