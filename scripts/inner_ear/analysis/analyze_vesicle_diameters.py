@@ -17,7 +17,9 @@ POOL_DICT = {"Docked-V": "MP-V", "MP-V": "MP-V", "RA-V": "RA-V"}
 sys.path.append("../processing")
 
 
-def aggregate_diameters(data_root, table, save_path, get_tab, include_names, sheet_name):
+def aggregate_diameters(
+    data_root, table, save_path, get_tab, include_names, method, subset, radius_factor
+):
     radius_table = []
     for _, row in tqdm(table.iterrows(), total=len(table), desc="Collect tomo information"):
         folder = row["Local Path"]
@@ -39,12 +41,14 @@ def aggregate_diameters(data_root, table, save_path, get_tab, include_names, she
 
         tab = pd.read_excel(tab_path)
         this_tab = tab[["pool", "radius [nm]"]]
+        this_tab.loc[:, "radius [nm]"] = this_tab["radius [nm]"] * radius_factor
         this_tab.insert(0, "tomogram", [tomo_name] * len(this_tab))
         this_tab.insert(3, "diameter [nm]", this_tab["radius [nm]"] * 2)
         radius_table.append(this_tab)
 
     radius_table = pd.concat(radius_table)
     radius_table.insert(1, "combined_pool", radius_table["pool"].replace(POOL_DICT))
+    breakpoint()
 
     print("Saving table for", len(radius_table), "vesicles to", save_path, sheet_name)
     if os.path.exists(save_path):
@@ -52,6 +56,9 @@ def aggregate_diameters(data_root, table, save_path, get_tab, include_names, she
             radius_table.to_excel(writer, sheet_name=sheet_name, index=False)
     else:
         radius_table.to_excel(save_path, sheet_name=sheet_name, index=False)
+
+    tomos = pd.unique(radius_table.tomogram)
+    return tomos
 
 
 def aggregate_diameters_imod(data_root, table, save_path, include_names, sheet_name):
@@ -84,23 +91,24 @@ def aggregate_diameters_imod(data_root, table, save_path, include_names, sheet_n
         annotation_file = annotation_file[0]
 
         tomo_file = get_data_path(folder)
-        with mrcfile.open(tomo_file) as f:
-            shape = f.data.shape
-            resolution = list(f.voxel_size.item())
-            resolution = [res / 10 for res in resolution][0]
+        # with mrcfile.open(tomo_file) as f:
+        #     shape = f.data.shape
+        #     resolution = list(f.voxel_size.item())
+        #     resolution = [res / 10 for res in resolution][0]
 
         try:
-            _, radii, labels, label_names = load_points_from_imodinfo(annotation_file, shape, resolution=resolution)
+            _, radii, labels, label_names = load_points_from_imodinfo(
+                annotation_file, shape, resolution=[1.0, 1.0, 1.0]
+            )
         except AssertionError:
             continue
 
         # Determined from matching the size of vesicles in IMOD.
-        radius_factor = 0.85
         this_tab = pd.DataFrame({
             "tomogram": [tomo_name] * len(radii),
             "pool": [label_names[label_id] for label_id in labels],
-            "radius [nm]": radii * radius_factor,
-            "diameter [nm]": 2 * radii * radius_factor,
+            "radius [nm]": radii,
+            "diameter [nm]": 2 * radii,
         })
         radius_table.append(this_tab)
 
@@ -151,31 +159,36 @@ def main():
 
     all_tomos = get_finished_tomos()
 
+    radius_factor = 0.85
+
     print("All tomograms")
     save_path = "./results/vesicle_diameters_all_tomos.xlsx"
     aggregate_diameters(
-        data_root, table, save_path=save_path, get_tab=get_tab_semi_automatic, include_names=all_tomos,
-        sheet_name="Semi-automatic",
+        data_root, table, save_path=save_path, get_tab=get_tab_semi_automatic,
+        include_names=all_tomos,
+        method="Semi-automatic",
+        subset="manual",
+        radius_factor=radius_factor,
     )
+    return
     aggregate_diameters(
         data_root, table, save_path=save_path, get_tab=get_tab_proofread, include_names=all_tomos,
-        sheet_name="Proofread",
+        sheet_name="Proofread", radius_factor=radius_factor,
     )
 
     print()
     print("Tomograms with manual annotations")
-    # aggregate_diameters(data_root, table, save_path="./results/vesicle_radii_manual.xlsx", get_tab=get_tab_manual)
     save_path = "./results/vesicle_diameters_tomos_with_manual_annotations.xlsx"
     man_tomos = aggregate_diameters_imod(
         data_root, table, save_path=save_path, include_names=all_tomos, sheet_name="Manual",
     )
     aggregate_diameters(
         data_root, table, save_path=save_path, get_tab=get_tab_semi_automatic, include_names=man_tomos,
-        sheet_name="Semi-automatic",
+        sheet_name="Semi-automatic", radius_factor=radius_factor,
     )
     aggregate_diameters(
         data_root, table, save_path=save_path, get_tab=get_tab_proofread, include_names=man_tomos,
-        sheet_name="Proofread",
+        sheet_name="Proofread", radius_factor=radius_factor,
     )
 
 

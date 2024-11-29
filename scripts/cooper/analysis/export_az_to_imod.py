@@ -16,9 +16,11 @@ def check_imod(tomo_path, mod_path):
 
 
 def export_all_to_imod(check_input=True, check_export=True):
-    files = sorted(glob("./az_segmentation/**/*.h5", recursive=True))
+    files = sorted(glob("./proofread_az/**/*.h5", recursive=True))
     mrc_root = "./mrc_files"
     output_folder = "./az_export/initial_model"
+
+    ratings = pd.read_excel("quality_ratings/az_quality_clean_FM.xlsx")
 
     for ff in files:
         ds, fname = os.path.split(ff)
@@ -28,12 +30,26 @@ def export_all_to_imod(check_input=True, check_export=True):
         if os.path.exists(out_path):
             continue
 
+        restrict_to_good_azs = False
+        if restrict_to_good_azs:
+            tomo_name = os.path.splitext(fname)[0]
+            rating = ratings[
+                (ratings["Dataset"] == ds) & (ratings["Tomogram"] == tomo_name)
+            ]["Rating"].values[0]
+            if rating != "Good":
+                print("Skipping", ds, tomo_name, "due to", rating)
+                continue
+
         os.makedirs(out_folder, exist_ok=True)
         mrc_path = os.path.join(mrc_root, ds, fname.replace(".h5", ".rec"))
         assert os.path.exists(mrc_path), mrc_path
 
         with h5py.File(ff, "r") as f:
-            seg = f["thin_az"][:]
+            if "thin_az_corrected" in f:
+                print("Loading corrected az!")
+                seg = f["thin_az_corrected"][:]
+            else:
+                seg = f["az_thin_proofread"][:]
 
         seg = binary_dilation(seg, iterations=2)
         seg = binary_closing(seg, iterations=2)
@@ -114,21 +130,21 @@ def measure_surfaces():
             result["AZ Surface"].append(area)
 
     result = pd.DataFrame(result)
-    result.to_excel("./az_measurements_all.xlsx", index=False)
+    result.to_excel("./results/az_areas_all.xlsx", index=False)
 
 
 def filter_surfaces():
-    all_results = pd.read_excel("./az_measurements_all.xlsx")
+    all_results = pd.read_excel("./results/az_areas_all.xlsx")
     man_tomos = pd.read_csv("./man_tomos.tsv")
 
     man_results = all_results.merge(man_tomos[["Dataset", "Tomogram"]], on=["Dataset", "Tomogram"], how="inner")
-    man_results.to_excel("./az_measuerements_manual.xlsx", index=False)
+    man_results.to_excel("./results/az_areas_manual.xlsx", index=False)
 
 
 def main():
     export_all_to_imod(False, False)
     smooth_all_surfaces(False)
-    # measure_surfaces()
+    measure_surfaces()
     filter_surfaces()
 
 

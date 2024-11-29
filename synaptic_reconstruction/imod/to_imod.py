@@ -51,7 +51,8 @@ def write_segmentation_to_imod(
     assert cmd_path is not None, f"Could not find the {cmd} imod command."
 
     # Load the segmentation case a filepath was passed.
-    segmentation = _load_segmentation(segmentation, segmentation_key)
+    if isinstance(segmentation, str):
+        segmentation = _load_segmentation(segmentation, segmentation_key)
 
     # Binarize the segmentation and flip its axes to match the IMOD axis convention.
     segmentation = (segmentation > 0).astype("uint8")

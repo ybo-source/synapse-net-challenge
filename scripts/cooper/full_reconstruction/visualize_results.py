@@ -13,7 +13,6 @@ TABLE = "/home/pape/Desktop/sfb1286/mboc_synapse/draft_figures/full_reconstructi
 
 # Skip datasets for which all figures were already done.
 SKIP_DS = ["20241019_Tomo-eval_MF_Synapse", "20241019_Tomo-eval_PS_Synapse"]
-# SKIP_DS = []
 
 
 def _get_name_and_row(path, table):
@@ -54,7 +53,9 @@ def visualize_result(path, table):
     compartment_ids = _get_compartment_ids(row)
 
     # access = np.s_[:]
-    access = np.s_[::3, ::3, ::3]
+    scale = 3
+    access = np.s_[::scale, ::scale, ::scale]
+    resolution = (scale * 0.868,) * 3
 
     with h5py.File(path, "r") as f:
         raw = f["raw"][access]
@@ -86,13 +87,24 @@ def visualize_result(path, table):
 
     vesicle_ids = np.unique(vesicles)[1:]
 
+    transpose = False
+    if transpose:
+        raw = raw[:, ::-1]
+        active_zone = active_zone[:, ::-1]
+        mitos = mitos[:, ::-1]
+        vesicles = vesicles[:, ::-1]
+        compartments = compartments[:, ::-1]
+
     v = napari.Viewer()
-    v.add_image(raw)
-    v.add_labels(mitos)
-    v.add_labels(vesicles, colormap={ves_id: "orange" for ves_id in vesicle_ids})
-    v.add_labels(compartments, colormap={1: "red", 2: "green", 3: "orange"})
-    v.add_labels(active_zone, colormap={1: "blue"})
+    v.add_image(raw, scale=resolution)
+    v.add_labels(mitos, scale=resolution)
+    v.add_labels(vesicles, colormap={ves_id: "orange" for ves_id in vesicle_ids}, scale=resolution)
+    v.add_labels(compartments, colormap={1: "red", 2: "green", 3: "orange"}, scale=resolution)
+    v.add_labels(active_zone, colormap={1: "blue"}, scale=resolution)
     v.title = f"{ds_name}/{name}"
+    v.scale_bar.visible = True
+    v.scale_bar.unit = "nm"
+    v.scale_bar.font_size = 16
     napari.run()
 
 
