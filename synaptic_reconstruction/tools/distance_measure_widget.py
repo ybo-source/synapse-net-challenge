@@ -87,6 +87,8 @@ class DistanceMeasureWidget(BaseWidget):
             blending="additive",
             properties=properties,
         )
+        line_layer.properties["distances"] = table_data
+
         if add_table is not None:
             add_table(line_layer, self.viewer)
 

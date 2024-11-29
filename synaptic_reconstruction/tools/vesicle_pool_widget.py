@@ -11,8 +11,6 @@ from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 
 from .base_widget import BaseWidget
-from synaptic_reconstruction.imod.to_imod import convert_segmentation_to_spheres
-from synaptic_reconstruction.morphology import compute_object_morphology
 from synaptic_reconstruction.tools.util import _save_table
 
 try:
@@ -21,7 +19,7 @@ except ImportError:
     add_table = None
 
 
-class MorphologyWidget(BaseWidget):
+class VesiclePoolWidget(BaseWidget):
     def __init__(self):
         super().__init__()
 
