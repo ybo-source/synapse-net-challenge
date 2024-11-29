@@ -64,9 +64,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: documentation
+          path: .
       - name: Copy pdoc HTML to root
         run: |
-          ls -la documentation
+          ls -la .
           cp -r documentation/* .  # Copy HTML content to root directory
 
       - name: Copy markdown files to root
