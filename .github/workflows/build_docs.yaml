@@ -64,6 +64,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: documentation
+      - name: Copy pdoc HTML to root
+        run: |
+          cp -r documentation/html/* .  # Copy HTML content to root directory
+
+      - name: Copy markdown files to root
+        run: |
+          cp doc/*.md .  # Copy markdown files from doc/ to root directory
+
       - name: Deploy to GiHub Pages
         uses: actions/deploy-pages@v4
         with: 
