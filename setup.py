@@ -14,6 +14,8 @@ setup(
     entry_points={
         "console_scripts": [
             "synapse_net.run_segmentation = synaptic_reconstruction.tools.cli:segmentation_cli",
+            "synapse_net.export_to_imod_points = synaptic_reconstruction.tools.cli:imod_point_cli",
+            "synapse_net.export_to_imod_objects = synaptic_reconstruction.tools.cli:imod_object_cli",
         ],
         "napari.manifest": [
             "synaptic_reconstruction = synaptic_reconstruction:napari.yaml",
