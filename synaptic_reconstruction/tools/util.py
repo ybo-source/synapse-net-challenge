@@ -10,6 +10,22 @@ from ..inference.vesicles import segment_vesicles
 from ..inference.mitochondria import segment_mitochondria
 
 
+def _save_table(save_path, data):
+    ext = os.path.splitext(save_path)[1]
+    if ext == "":  # No file extension given, By default we save to CSV.
+        file_path = f"{save_path}.csv"
+        data.to_csv(file_path, index=False)
+    elif ext == ".csv":  # Extension was specified as csv
+        file_path = save_path
+        data.to_csv(file_path, index=False)
+    elif ext == ".xlsx":  # We also support excel.
+        file_path = save_path
+        data.to_excel(file_path, index=False)
+    else:
+        raise ValueError("Invalid extension for table: {ext}. We support .csv or .xlsx.")
+    return file_path
+
+
 def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     model_path = _clean_filepath(model_path)
     if device is None:
@@ -36,7 +52,7 @@ def get_model_path(model_type: str) -> str:
     model_path = model_registry.fetch(model_type)
     return model_path
 
-
+  
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
@@ -105,7 +121,7 @@ def get_model_training_resolution(model_type):
     resolutions = {
         "active_zone": {"x": 1.44, "y": 1.44, "z": 1.44},
         "compartments": {"x": 3.47, "y": 3.47, "z": 3.47},
-        "mitochondria": {"x": 1.0, "y": 1.0, "z": 1.0},  # FIXME: this is a dummy value, we need to determine the real one
+        "mitochondria": {"x": 2.07, "y": 2.07, "z": 2.07},
         "vesicles_2d": {"x": 1.35, "y": 1.35},
         "vesicles_3d": {"x": 1.35, "y": 1.35, "z": 1.35},
         "vesicles_cryo": {"x": 1.35, "y": 1.35, "z": 0.88},
