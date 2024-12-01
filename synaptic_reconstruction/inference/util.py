@@ -4,17 +4,17 @@ import warnings
 from glob import glob
 from typing import Dict, Optional, Tuple
 
-# Suppress annoying import warnings.
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import bioimageio.core
+# # Suppress annoying import warnings.
+# with warnings.catch_warnings():
+#     warnings.simplefilter("ignore")
+#     import bioimageio.core
 
 import imageio.v3 as imageio
 import elf.parallel as parallel
 import numpy as np
 import torch
 import torch_em
-import xarray
+# import xarray
 
 from elf.io import open_file
 from scipy.ndimage import binary_closing
@@ -80,9 +80,8 @@ def get_prediction(
     verbose: bool = True,
     with_channels: bool = False,
     mask: Optional[np.ndarray] = None,
-):
-    """
-    Run prediction on a given volume.
+) -> np.ndarray:
+    """Run prediction on a given volume.
 
     This function will automatically choose the correct prediction implementation,
     depending on the model type.
@@ -94,7 +93,8 @@ def get_prediction(
         tiling: The tiling configuration for the prediction.
         verbose: Whether to print timing information.
         with_channels: Whether to predict with channels.
-        mask:
+        mask: Optional binary mask. If given, the prediction will only be run in
+            the foreground region of the mask.
 
     Returns:
         The predicted volume.
@@ -121,10 +121,9 @@ def get_prediction(
 
     # Run prediction with the bioimage.io library.
     if is_bioimageio:
-        # TODO determine if we use the old or new API and select the corresponding function
         if mask is not None:
             raise NotImplementedError
-        pred = get_prediction_bioimageio_old(input_volume, model_path, tiling, verbose)
+        raise NotImplementedError
 
     # Run prediction with the torch-em library.
     else:
@@ -149,35 +148,6 @@ def get_prediction(
     return pred
 
 
-def get_prediction_bioimageio_old(
-    input_volume: np.ndarray,  # [z, y, x]
-    model_path: str,
-    tiling: Dict[str, Dict[str, int]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
-    verbose: bool = True,
-):
-    """
-    Run prediction using bioimage.io functionality on a given volume.
-
-    Args:
-        input_volume: The input volume to predict on.
-        model_path: The path to the model checkpoint.
-        tiling: The tiling configuration for the prediction.
-        verbose: Whether to print timing information.
-
-    Returns:
-        The predicted volume.
-    """
-    # get foreground and boundary predictions from the model
-    t0 = time.time()
-    model = bioimageio.core.load_resource_description(model_path)
-    with bioimageio.core.create_prediction_pipeline(model) as pp:
-        input_ = xarray.DataArray(input_volume[None, None], dims=tuple("bczyx"))
-        pred = bioimageio.core.predict_with_tiling(pp, input_, tiling=tiling, verbose=verbose)[0].squeeze()
-    if verbose:
-        print("Prediction time in", time.time() - t0, "s")
-    return pred
-
-
 def get_prediction_torch_em(
     input_volume: np.ndarray,  # [z, y, x]
     tiling: Dict[str, Dict[str, int]],  # {"tile": {"z": int, ...}, "halo": {"z": int, ...}}
@@ -187,8 +157,7 @@ def get_prediction_torch_em(
     with_channels: bool = False,
     mask: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """
-    Run prediction using torch-em on a given volume.
+    """Run prediction using torch-em on a given volume.
 
     Args:
         input_volume: The input volume to predict on.
@@ -197,6 +166,8 @@ def get_prediction_torch_em(
         tiling: The tiling configuration for the prediction.
         verbose: Whether to print timing information.
         with_channels: Whether to predict with channels.
+        mask: Optional binary mask. If given, the prediction will only be run in
+            the foreground region of the mask.
 
     Returns:
         The predicted volume.
@@ -292,9 +263,8 @@ def inference_helper(
     mask_input_ext: str = ".tif",
     force: bool = False,
     output_key: Optional[str] = None,
-):
-    """
-    Helper function to run segmentation for mrc files.
+) -> None:
+    """Helper function to run segmentation for mrc files.
 
     Args:
         input_path: The path to the input data.
@@ -378,8 +348,11 @@ def inference_helper(
         print(f"Saved segmentation to {output_path}.")
 
 
-def get_default_tiling():
+def get_default_tiling() -> Dict[str, Dict[str, int]]:
     """Determine the tile shape and halo depending on the available VRAM.
+
+    Returns:
+        The default tiling settings for the available computational resources.
     """
     if torch.cuda.is_available():
         print("Determining suitable tiling")
@@ -415,16 +388,18 @@ def get_default_tiling():
     return tiling
 
 
-def parse_tiling(tile_shape, halo):
-    """
-    Helper function to parse tiling parameter input from the command line.
+def parse_tiling(
+    tile_shape: Tuple[int, int, int],
+    halo: Tuple[int, int, int]
+) -> Dict[str, Dict[str, int]]:
+    """Helper function to parse tiling parameter input from the command line.
 
     Args:
         tile_shape: The tile shape. If None the default tile shape is used.
         halo: The halo. If None the default halo is used.
 
     Returns:
-        dict: the tiling specification
+        The tiling specification.
     """
 
     default_tiling = get_default_tiling()

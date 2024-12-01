@@ -6,7 +6,7 @@ import torch_em
 import torch_em.self_training as self_training
 
 from .semisupervised_training import get_unsupervised_loader
-from .supervised_training import get_2d_model, get_3d_model, get_supervised_loader, determine_ndim
+from .supervised_training import get_2d_model, get_3d_model, get_supervised_loader, _determine_ndim
 
 
 def mean_teacher_adaptation(
@@ -28,12 +28,15 @@ def mean_teacher_adaptation(
     n_samples_train: Optional[int] = None,
     n_samples_val: Optional[int] = None,
     sampler: Optional[callable] = None,
-):
+) -> None:
     """Run domain adapation to transfer a network trained on a source domain for a supervised
     segmentation task to perform this task on a different target domain.
 
     We support different domain adaptation settings:
-    -
+    - unsupervised domain adaptation: the default mode when 'supervised_train_paths' and
+     'supervised_val_paths' are not given.
+    - semi-supervised domain adaptation: domain adaptation on unlabeled and labeled data,
+      when 'supervised_train_paths' and 'supervised_val_paths' are given.
 
     Args:
         name: The name for the checkpoint to be trained.
@@ -71,7 +74,7 @@ def mean_teacher_adaptation(
             based on the patch_shape and size of the volumes used for validation.
     """
     assert (supervised_train_paths is None) == (supervised_val_paths is None)
-    is_2d, _ = determine_ndim(patch_shape)
+    is_2d, _ = _determine_ndim(patch_shape)
 
     if source_checkpoint is None:
         # training from scratch only makes sense if we have supervised training data

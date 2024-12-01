@@ -43,8 +43,7 @@ def segment_cristae(
     scale: Optional[List[float]] = None,
     mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
-    """
-    Segment cristae in an input volume.
+    """Segment cristae in an input volume.
 
     Args:
         input_volume: The input volume to segment. Expects 2 3D volumes: raw and mitochondria

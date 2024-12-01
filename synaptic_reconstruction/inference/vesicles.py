@@ -134,8 +134,7 @@ def segment_vesicles(
     exclude_boundary: bool = False,
     mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
-    """
-    Segment vesicles in an input volume.
+    """Segment vesicles in an input volume or image.
 
     Args:
         input_volume: The input volume to segment.

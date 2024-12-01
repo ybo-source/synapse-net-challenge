@@ -19,6 +19,7 @@ def get_3d_model(
         initial_features: The number of features in the first level of the U-Net.
             The number of features increases by a factor of two in each level.
         final_activation: The activation applied to the last output layer.
+
     Returns:
         The U-Net.
     """
@@ -60,14 +61,14 @@ def get_2d_model(
     return model
 
 
-def adjust_patch_shape(data_shape, patch_shape):
+def _adjust_patch_shape(data_shape, patch_shape):
     # If data is 2D and patch_shape is 3D, drop the extra dimension in patch_shape
     if data_shape == 2 and len(patch_shape) == 3:
         return patch_shape[1:]  # Remove the leading dimension in patch_shape
     return patch_shape  # Return the original patch_shape for 3D data
 
 
-def determine_ndim(patch_shape):
+def _determine_ndim(patch_shape):
     # Check for 2D or 3D training
     try:
         z, y, x = patch_shape
@@ -120,7 +121,7 @@ def get_supervised_loader(
     Returns:
         The PyTorch dataloader.
     """
-    _, ndim = determine_ndim(patch_shape)
+    _, ndim = _determine_ndim(patch_shape)
     if label_transform is not None:  # A specific label transform was passed, do nothing.
         pass
     elif add_boundary_transform:
@@ -137,7 +138,7 @@ def get_supervised_loader(
         label_transform = torch_em.transform.label.connected_components
 
     if ndim == 2:
-        adjusted_patch_shape = adjust_patch_shape(ndim, patch_shape)
+        adjusted_patch_shape = _adjust_patch_shape(ndim, patch_shape)
         transform = torch_em.transform.Compose(
             torch_em.transform.PadIfNecessary(adjusted_patch_shape), torch_em.transform.get_augmentations(2)
         )
@@ -239,7 +240,7 @@ def supervised_training(
         check_loader(val_loader, n_samples=4)
         return
 
-    is_2d, _ = determine_ndim(patch_shape)
+    is_2d, _ = _determine_ndim(patch_shape)
     if is_2d:
         model = get_2d_model(out_channels=out_channels)
     else:
