@@ -83,6 +83,7 @@ def imod_object_cli():
 
 # TODO: handle kwargs
 # TODO: add custom model path
+# TODO: enable autoscaling from input resolution
 def segmentation_cli():
     parser = argparse.ArgumentParser(description="Run segmentation.")
     parser.add_argument(
@@ -117,15 +118,24 @@ def segmentation_cli():
     parser.add_argument(
         "--data_ext", default=".mrc", help="The extension of the tomogram data. By default .mrc."
     )
+    parser.add_argument(
+        "--segmentation_key", "-s", help=""
+    )
+    # TODO enable autoscaling
+    parser.add_argument(
+        "--scale", type=float, default=None, help=""
+    )
     args = parser.parse_args()
 
     model = get_model(args.model)
     tiling = parse_tiling(args.tile_shape, args.halo)
+    scale = None if args.scale is None else 3 * (args.scale,)
 
     segmentation_function = partial(
-        run_segmentation, model=model, model_type=args.model, verbose=False, tiling=tiling,
+        run_segmentation, model=model, model_type=args.model, verbose=False, tiling=tiling, scale=scale
     )
     inference_helper(
         args.input_path, args.output_path, segmentation_function,
         mask_input_path=args.mask_path, force=args.force, data_ext=args.data_ext,
+        output_key=args.segmentation_key,
     )

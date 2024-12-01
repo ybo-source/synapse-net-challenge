@@ -332,7 +332,7 @@ def inference_helper(
         mask_files, _ = _get_file_paths(mask_input_path, mask_input_ext)
         assert len(input_files) == len(mask_files)
 
-    for i, img_path in tqdm(enumerate(input_files), total=len(input_files)):
+    for i, img_path in tqdm(enumerate(input_files), total=len(input_files), desc="Processing files"):
         # Determine the output file name.
         input_folder, input_name = os.path.split(img_path)
 
@@ -350,7 +350,12 @@ def inference_helper(
         # Check if the output path is already present.
         # If it is we skip the prediction, unless force was set to true.
         if os.path.exists(output_path) and not force:
-            continue
+            if output_key is None:
+                continue
+            else:
+                with open_file(output_path, "r") as f:
+                    if output_key in f:
+                        continue
 
         # Load the input volume. If we have extra_files then this concatenates the
         # data across a new first axis (= channel axis).

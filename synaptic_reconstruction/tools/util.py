@@ -6,8 +6,10 @@ import torch
 import numpy as np
 import pooch
 
-from ..inference.vesicles import segment_vesicles
+from ..inference.active_zone import segment_active_zone
+from ..inference.compartments import segment_compartments
 from ..inference.mitochondria import segment_mitochondria
+from ..inference.vesicles import segment_vesicles
 
 
 def load_custom_model(model_path: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
@@ -86,9 +88,9 @@ def run_segmentation(
     elif model_type == "mitochondria":
         segmentation = segment_mitochondria(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
     elif model_type == "active_zone":
-        raise NotImplementedError
+        segmentation = segment_active_zone(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
     elif model_type == "compartments":
-        raise NotImplementedError
+        segmentation = segment_compartments(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
     elif model_type == "inner_ear_structures":
         raise NotImplementedError
     else:
