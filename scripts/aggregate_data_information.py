@@ -200,7 +200,7 @@ def active_zone_train_data():
         "01": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/exported_imod_objects/01_hoi_maus_2020_incomplete",  # noqa
         "04": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/exported_imod_objects/04_hoi_stem_examples",  # noqa
         "06": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/exported_imod_objects/06_hoi_wt_stem750_fm",  # noqa
-        "12": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/2D_data/20241021_imig_2014_data_transfer_exported_grouped",  # noqa
+        "12": "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/exported_imod_objects/12_chemical_fix_cryopreparation",  # noqa
     }
 
     test_tomograms = {
@@ -467,11 +467,58 @@ def get_image_sizes_tem_2d():
             print(f["raw"].shape)
 
 
+def mito_train_data():
+    train_root = "/scratch-grete/projects/nim00007/data/mitochondria/cooper/fidi_down_s2"
+    test_tomograms = [
+        "36859_J1_66K_TS_CA3_MF_18_rec_2Kb1dawbp_crop_downscaled.h5",
+        "3.2_downscaled.h5",
+    ]
+    all_tomos = sorted(glob(os.path.join(train_root, "*.h5")))
+
+    tomo_names = []
+    tomo_condition = []
+    tomo_mitos = []
+    tomo_resolution = []
+    tomo_train = []
+
+    for tomo in all_tomos:
+        fname = os.path.basename(tomo)
+        split = "test" if fname in test_tomograms else "train/val"
+        if "36859" in fname or "37371" in fname:  # This is from the STEM dataset.
+            condition = stem
+            resolution = 2 * 0.868
+        else:  # This is from the TEM Single-Axis Dataset
+            condition = single_ax_tem
+            # These were scaled, despite the resolution mismatch
+            resolution = 2 * 1.554
+
+        with h5py.File(tomo, "r") as f:
+            seg = f["labels/mitochondria"][:]
+            n_mitos = len(np.unique(seg)) - 1
+
+        tomo_names.append(tomo)
+        tomo_condition.append(condition)
+        tomo_train.append(split)
+        tomo_resolution.append(resolution)
+        tomo_mitos.append(n_mitos)
+
+    df = pd.DataFrame({
+        "tomogram": tomo_names,
+        "condition": tomo_condition,
+        "resolution": tomo_resolution,
+        "used_for": tomo_train,
+        "mito_count_all": tomo_mitos,
+    })
+
+    os.makedirs("data_summary", exist_ok=True)
+    df.to_excel("./data_summary/mitochondria.xlsx", index=False)
+
+
 def main():
     # active_zone_train_data()
     # compartment_train_data()
-    # mito_train_data()
-    vesicle_train_data()
+    mito_train_data()
+    # vesicle_train_data()
 
     # vesicle_domain_adaptation_data()
     # get_n_images_frog()
