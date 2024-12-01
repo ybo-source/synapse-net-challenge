@@ -52,8 +52,9 @@ def edge_filter(
             - "sato": Edges are found with a sato-filter, followed by smoothing and leveling.
         per_slice: Compute the filter per slice instead of for the whole volume.
         n_threads: Number of threads for parallel computation over the slices.
+
     Returns:
-        Volume with edge strength.
+        Edge filter response.
     """
     if method not in FILTERS:
         raise ValueError(f"Invalid edge filter method: {method}. Expect one of {FILTERS}.")
@@ -100,6 +101,7 @@ def check_filters(
             The filter names must match `method` in `edge_filter`.
         sigmas: The sigma values to use for the filters.
         show: Whether to show the filter responses in napari.
+
     Returns:
         Dictionary with the filter responses.
     """
@@ -153,6 +155,7 @@ def refine_vesicle_shapes(
         return_seeds: Whether to return the seeds used for the watershed.
         compactness: The compactness parameter passed to the watershed function.
             Higher compactness leads to more regular sized vesicles.
+
     Returns:
         The refined vesicles.
     """
