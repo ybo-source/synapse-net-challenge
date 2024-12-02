@@ -444,7 +444,7 @@ def keep_direct_distances(
     seg_ids: np.ndarray,
     line_dilation: int = 0,
     scale: Optional[Tuple[int, int, int]] = None,
-) -> List[List[int, int]]:
+) -> List[List[int]]:
     """Filter out all distances that are not direct; distances that are occluded by another segmented object.
 
     Args:
