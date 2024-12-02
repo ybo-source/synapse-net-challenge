@@ -6,7 +6,7 @@ import torch_em
 import torch_em.self_training as self_training
 from torchvision import transforms
 
-from .supervised_training import get_2d_model, get_3d_model, get_supervised_loader, determine_ndim
+from .supervised_training import get_2d_model, get_3d_model, get_supervised_loader, _determine_ndim
 
 
 def weak_augmentations(p: float = 0.75) -> callable:
@@ -61,7 +61,7 @@ def get_unsupervised_loader(
     else:
         roi = None
 
-    _, ndim = determine_ndim(patch_shape)
+    _, ndim = _determine_ndim(patch_shape)
     raw_transform = torch_em.transform.get_raw_transform()
     transform = torch_em.transform.get_augmentations(ndim=ndim)
 
@@ -99,7 +99,7 @@ def semisupervised_training(
     n_samples_train: Optional[int] = None,
     n_samples_val: Optional[int] = None,
     check: bool = False,
-):
+) -> None:
     """Run semi-supervised segmentation training.
 
     Args:

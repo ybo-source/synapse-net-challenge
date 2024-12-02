@@ -157,8 +157,7 @@ def segment_compartments(
     n_slices_exclude: int = 0,
     **kwargs,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
-    """
-    Segment synaptic compartments in an input volume.
+    """Segment synaptic compartments in an input volume.
 
     Args:
         input_volume: The input volume to segment.

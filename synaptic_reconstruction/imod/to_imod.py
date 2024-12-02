@@ -38,7 +38,7 @@ def write_segmentation_to_imod(
     output_path: str,
     segmentation_key: Optional[str] = None,
 ) -> None:
-    """Write a segmentation to a mod file as closed contour objects.
+    """Write a segmentation to a mod file as closed contour object(s).
 
     Args:
         mrc_path: The filepath to the mrc file from which the segmentation was derived.
@@ -109,8 +109,8 @@ def convert_segmentation_to_spheres(
         props: Optional list of regionprops
 
     Returns:
-        np.array: the center coordinates
-        np.array: the radii
+        The center coordinates.
+        The radii.
     """
     num_workers = multiprocessing.cpu_count() if num_workers is None else num_workers
     if props is None:

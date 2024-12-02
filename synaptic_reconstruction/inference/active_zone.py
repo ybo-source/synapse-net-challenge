@@ -10,8 +10,7 @@ from synaptic_reconstruction.inference.util import get_prediction, _Scaler
 
 
 def find_intersection_boundary(segmented_AZ: np.ndarray, segmented_compartment: np.ndarray) -> np.ndarray:
-    """
-    Find the cumulative intersection of the boundary of each label in segmented_compartment with segmented_AZ.
+    """Find the intersection of the boundaries of each objects in segmented_compartment with segmented_AZ.
 
     Args:
         segmented_AZ: 3D array representing the active zone (AZ).

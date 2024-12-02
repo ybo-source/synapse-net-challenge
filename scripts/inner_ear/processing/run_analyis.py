@@ -10,8 +10,9 @@ import vigra
 
 from synaptic_reconstruction.file_utils import get_data_path
 from synaptic_reconstruction.distance_measurements import (
-    measure_segmentation_to_object_distances,
     filter_blocked_segmentation_to_object_distances,
+    load_distances,
+    measure_segmentation_to_object_distances,
 )
 
 from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
@@ -172,8 +173,9 @@ def assign_vesicles_to_pools(
 
     # Filter out the blocked vesicles.
     if apply_extra_filters:
+        rav_dists, ep1, ep2, all_rav_ids = load_distances(distance_paths["ribbon"])
         rav_ids = filter_blocked_segmentation_to_object_distances(
-            vesicles, distance_paths["ribbon"], seg_ids=rav_ids, line_dilation=4, verbose=True,
+            vesicles, rav_dists, ep1, ep2, all_rav_ids, filter_seg_ids=rav_ids, line_dilation=4, verbose=True,
         )
         rav_ids = filter_border_vesicles(vesicles, seg_ids=rav_ids)
 

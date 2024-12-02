@@ -1,21 +1,10 @@
-# Synaptic Reconstruction
+# SynapseNet: Deep Learning for Automatic Synapse Reconstruction
 
-Reconstruction of synaptic structures in electron microscopy.
+SynapseNet is a tool for segmentation and analysis of synapses in electron microscopy.
 
-THIS IS WORK IN PROGRESS!
+To learn how to use SynapseNet, check out [the documentation](https://computational-cell-analytics.github.io/synapse-net/).
+To learn more about how it works, check out [our preprint](TODO).
 
-## Installation
-
-- Make sure conda or mamba is installed.
-    - If you don't have a conda installation yet we recommend [micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html)
-- Create the environment with all required dependencies: `mamba env create -f environment.yaml`
-- Activate the environment: `mamba activate synaptic-reconstruction`
-- Install the package: `pip install -e .`
-
-## Tools
-
-### Segmentation Correction
-
-https://napari.org/stable/howtos/layers/labels.html
-
-### Distance Measurements
+See an example reconstruction of a mossy fibre synapse with SynapseNet.
+Automatic segmentation of synaptic vesicles are rendered in orange, active zones in blue and two mitochondria in red and cyan.
+![Reconstruction of a mossy fiber synapse](doc/images/synapse-reconstruction.png)

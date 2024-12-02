@@ -75,6 +75,7 @@ def eval_compartments():
     print("Compartment Evaluation:")
     print("Avergage pieces per compartment:", avg, "+-", std)
     print("Max pieces per compartment:", max_)
+    print("Number of compartments:", len(pieces_per_compartment))
 
 
 def eval_mitos():
@@ -124,11 +125,11 @@ def check_mitos():
 def main():
     # check_mitos()
 
-    eval_mitos()
-    print()
+    # eval_mitos()
+    # print()
     eval_compartments()
-    print()
-    eval_az()
+    # print()
+    # eval_az()
 
 
 main()
