@@ -14,14 +14,24 @@ especially throught the [domain adaptation](domain-adaptation) functionality.
 SynapseNet offers a [napari plugin](napari-plugin), [command line interface](command-line-interface), and [python library](python-library).
 Please cite our [bioRxiv preprint](TODO) if you use it in your research.
 
-## Installation
+**The rest of the documentation will be updated in the next days!**
+
+## Requirements & Installation
 
 - Requirements: Tested on Linux but should work on Mac/Windows.
     - GPU needed to use 3d segmentation networks
 - Installation via conda and local pip install
     - GPU support
 
+- Make sure conda or mamba is installed.
+    - If you don't have a conda installation yet we recommend [micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html)
+- Create the environment with all required dependencies: `mamba env create -f environment.yaml`
+- Activate the environment: `mamba activate synaptic-reconstruction`
+- Install the package: `pip install -e .`
+
 ## Napari Plugin
+
+lorem ipsum
 
 ## Command Line Functionality
 
