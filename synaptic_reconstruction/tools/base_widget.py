@@ -31,6 +31,8 @@ class BaseWidget(QWidget):
             layer_filter = napari.layers.Image
         elif layer_type == "Labels":
             layer_filter = napari.layers.Labels
+        elif layer_type == "Shapes":
+            layer_filter = napari.layers.Shapes
         else:
             raise ValueError("layer_type must be either 'Image' or 'Labels'.")
 

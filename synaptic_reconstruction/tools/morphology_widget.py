@@ -157,13 +157,11 @@ class MorphologyWidget(BaseWidget):
 
         # Add the shapes layer
         layer = self._create_shapes_layer(table_data, name)
-        
+
         # Add properties to segmentation layer
         segmentation_layer = self._get_layer_selector_layer(self.image_selector_name1)
-        if not segmentation_layer.properties:
-            segmentation_layer.properties = table_data
-        else:
-            segmentation_layer.properties["morphology"] = table_data
+
+        segmentation_layer.metadata["morphology"] = table_data
 
         if add_table is not None:
             add_table(layer, self.viewer)
@@ -186,7 +184,7 @@ class MorphologyWidget(BaseWidget):
             return
 
         # get metadata from layer if available
-        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
         resolution = metadata.get("voxel_size", None)
         if resolution is not None:
             resolution = [v for v in resolution.values()]
@@ -212,7 +210,7 @@ class MorphologyWidget(BaseWidget):
             show_info("INFO: Please choose a segmentation.")
             return
         # get metadata from layer if available
-        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
         resolution = metadata.get("voxel_size", None)
         if resolution is not None:
             resolution = [v for v in resolution.values()]
@@ -226,10 +224,10 @@ class MorphologyWidget(BaseWidget):
     def _add_table_structure(self, morphology):
         segmentation_layer = self._get_layer_selector_layer(self.image_selector_name1)
         table_data = self._to_table_data_structure(morphology)
-        if not segmentation_layer.properties:
-            segmentation_layer.properties = table_data
-        else:
-            segmentation_layer.properties["morphology"] = table_data
+
+        segmentation_layer.metadata["morphology"] = table_data
+        segmentation_layer.properties = table_data
+        print("segmentation layer metadata:\n", segmentation_layer.metadata)
 
         # Add a table layer to the Napari viewer
         if add_table is not None:
@@ -244,11 +242,14 @@ class MorphologyWidget(BaseWidget):
 
     def _to_table_data_structure(self, morphology):
         # Create table data
-        table_data = {
-            "Name": morphology["perimeter [pixel]"],
-            "area [pixel^2]": morphology["area [pixel^2]"],
-            "perimeter [pixel]": morphology["perimeter [pixel]"],
-        }
+        return morphology
+        # for k, v in morphology.items():
+        #     table_data = {k: v}
+        # table_data = {
+        #     "Name": morphology["perimeter [pixel]"],
+        #     "area [pixel^2]": morphology["area [pixel^2]"],
+        #     "perimeter [pixel]": morphology["perimeter [pixel]"],
+        # }
         return pd.DataFrame(table_data)
 
     def _create_settings_widget(self):

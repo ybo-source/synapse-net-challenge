@@ -16,6 +16,9 @@ contributions:
     - id: synaptic_reconstruction.morphology
       python_name: synaptic_reconstruction.tools.morphology_widget:MorphologyWidget
       title: Morphology Analysis
+    - id: synaptic_reconstruction.vesicle_pooling
+      python_name: synaptic_reconstruction.tools.vesicle_pool_widget:VesiclePoolWidget
+      title: Vesicle Pooling
 
   readers:
     - command: synaptic_reconstruction.file_reader
@@ -32,3 +35,5 @@ contributions:
       display_name: Distance Measurement
     - command: synaptic_reconstruction.morphology
       display_name: Morphology Analysis
+    - command: synaptic_reconstruction.vesicle_pooling
+      display_name: Vesicle Pooling
