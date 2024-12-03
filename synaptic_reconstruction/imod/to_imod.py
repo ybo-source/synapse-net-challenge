@@ -137,7 +137,7 @@ def convert_segmentation_to_spheres(
 
             if estimate_radius_2d:
                 if resolution:
-                    dists = np.array([distance_transform_edt(ma, sampling=resolution) for ma in mask])
+                    dists = np.array([distance_transform_edt(ma, sampling=resolution[1:]) for ma in mask])
                 else:
                     dists = np.array([distance_transform_edt(ma) for ma in mask])
             else:
