@@ -14,24 +14,53 @@ especially throught the [domain adaptation](domain-adaptation) functionality.
 SynapseNet offers a [napari plugin](napari-plugin), [command line interface](command-line-interface), and [python library](python-library).
 Please cite our [bioRxiv preprint](TODO) if you use it in your research.
 
-**The rest of the documentation will be updated in the next days!**
 
 ## Requirements & Installation
 
-- Requirements: Tested on Linux but should work on Mac/Windows.
-    - GPU needed to use 3d segmentation networks
-- Installation via conda and local pip install
-    - GPU support
+SynapseNet was developed and tested on Linux. It should be possible to install and use it on Mac or Windows, but we have not tested this.
+Furthermore, SynapseNet requires a GPU for segmentation of 3D volumes.
 
-- Make sure conda or mamba is installed.
-    - If you don't have a conda installation yet we recommend [micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html)
-- Create the environment with all required dependencies: `mamba env create -f environment.yaml`
-- Activate the environment: `mamba activate synaptic-reconstruction`
-- Install the package: `pip install -e .`
+You need a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) or [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) installation. Follow the instruction at the respective links if you have installed neither. We assume you have `conda` for the rest of the instructions. After installing it, you can use the `conda` command.
+
+To install it you should follow these steps:
+- First, download the SynapseNet repository via
+```bash
+git clone https://github.com/computational-cell-analytics/synapse-net
+```
+- Then, enter the `synapse-net` folder:
+```bash
+cd synapse-net
+```
+- Now you can install the environment for SynapseNet with `conda` from the environment file we proved:
+```bash
+conda env create -f environment.yaml
+```
+- You will need to confirm this step. It will take a while. Afterwards you can activate the environment:
+```bash
+conda activate synapse-net
+```
+- Finally, install SynapseNet itself into the environment:
+```bash
+pip install -e .
+```
+
+Now you can use all SynapseNet features. From now on, just activate the environment via
+```
+conda activate synapse-net
+```
+to use them.
+
+> Note: If you use `mamba` instead of conda just replace `conda` in the commands above with `mamba`.
+
+> Note: We also provide an environment for a CPU version of SynapseNet. You can install it by replacing `environment.yaml` with `environment_cpu.yaml` in the respective command above. This version can be used for 2D vesicle segmentation, but it does not work for 3D segmentation.
+
+> Note: If you have issues with the CUDA version then install a PyTorch that matches your nvidia drivers. See [pytorch.org](https://pytorch.org/) for details.
+
 
 ## Napari Plugin
 
-lorem ipsum
+**The rest of the documentation will be updated in the next days!**
+
 
 ## Command Line Functionality
 
@@ -39,6 +68,7 @@ lorem ipsum
 - export to imod
     - vesicles / spheres
     - objects
+
 
 ## Python Library
 
