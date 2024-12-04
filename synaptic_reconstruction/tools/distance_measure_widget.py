@@ -87,10 +87,10 @@ class DistanceMeasureWidget(BaseWidget):
             blending="additive",
             properties=properties,
         )
-        if line_layer.metadata is None:
-            line_layer.metadata = table_data
-        else:
-            line_layer.metadata["distances"] = table_data
+        # if line_layer.metadata is None:
+        #     line_layer.metadata = table_data
+        # else:
+        line_layer.properties["distances"] = table_data
 
         if add_table is not None:
             add_table(line_layer, self.viewer)

@@ -69,7 +69,7 @@ class MorphologyWidget(BaseWidget):
             if 'z' not in table_data.columns
             else table_data[['x', 'y', 'z']].to_numpy()
         )
-        radii = table_data['radii'].to_numpy()
+        radii = table_data['radius'].to_numpy()
 
         if coords.shape[1] == 2:
             # For 2D data, create circular outlines using trigonometric functions
@@ -131,7 +131,7 @@ class MorphologyWidget(BaseWidget):
         table_data = {
             'label_id': [prop.label for prop in props],
             **{col: coords[:, i] for i, col in enumerate(col_names)},
-            'radii': radii,
+            'radius': radii,
             'intensity_max': [prop.intensity_max for prop in props],
             'intensity_mean': [prop.intensity_mean for prop in props],
             'intensity_min': [prop.intensity_min for prop in props],
@@ -157,11 +157,6 @@ class MorphologyWidget(BaseWidget):
 
         # Add the shapes layer
         layer = self._create_shapes_layer(table_data, name)
-
-        # Add properties to segmentation layer
-        segmentation_layer = self._get_layer_selector_layer(self.image_selector_name1)
-
-        segmentation_layer.metadata["morphology"] = table_data
 
         if add_table is not None:
             add_table(layer, self.viewer)
@@ -199,7 +194,7 @@ class MorphologyWidget(BaseWidget):
             resolution=resolution,
             props=props,
         )
-        self._add_table(coords, radii, props, name="Vesicles")
+        self._add_table(coords, radii, props, name="Vesicles Morphology")
 
     def on_measure_structure_morphology(self):
         """add the structure measurements to the segmentation layer (via properties) 
@@ -222,35 +217,21 @@ class MorphologyWidget(BaseWidget):
         self._add_table_structure(morphology)
 
     def _add_table_structure(self, morphology):
-        segmentation_layer = self._get_layer_selector_layer(self.image_selector_name1)
-        table_data = self._to_table_data_structure(morphology)
-
-        segmentation_layer.metadata["morphology"] = table_data
-        segmentation_layer.properties = table_data
-        print("segmentation layer metadata:\n", segmentation_layer.metadata)
+        segmentation = self._get_layer_selector_data(self.image_selector_name1)
+        layer = self.viewer.add_labels(np.zeros(segmentation.shape, dtype=np.uint16), name="Structure Morphology")
+        # Add properties to layer for add_table function
+        layer.properties = morphology
 
         # Add a table layer to the Napari viewer
         if add_table is not None:
-            add_table(segmentation_layer, self.viewer)
+            add_table(layer, self.viewer)
 
         # Save table to file if save path is provided
         if self.save_path.text() != "":
-            file_path = _save_table(self.save_path.text(), table_data)
+            file_path = _save_table(self.save_path.text(), morphology)
             show_info(f"INFO: Added table and saved file to {file_path}.")
         else:
             print("INFO: Table added to viewer.")
-
-    def _to_table_data_structure(self, morphology):
-        # Create table data
-        return morphology
-        # for k, v in morphology.items():
-        #     table_data = {k: v}
-        # table_data = {
-        #     "Name": morphology["perimeter [pixel]"],
-        #     "area [pixel^2]": morphology["area [pixel^2]"],
-        #     "perimeter [pixel]": morphology["perimeter [pixel]"],
-        # }
-        return pd.DataFrame(table_data)
 
     def _create_settings_widget(self):
         setting_values = QWidget()

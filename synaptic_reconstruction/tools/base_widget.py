@@ -38,7 +38,7 @@ class BaseWidget(QWidget):
 
         selector_widget = QtWidgets.QWidget()
         image_selector = QtWidgets.QComboBox()
-        layer_label = QtWidgets.QLabel(f"{selector_name} Layer:")
+        layer_label = QtWidgets.QLabel(f"{selector_name}:")
 
         # Populate initial options
         self._update_selector(selector=image_selector, layer_filter=layer_filter)
