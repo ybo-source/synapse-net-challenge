@@ -156,7 +156,11 @@ class MorphologyWidget(BaseWidget):
         table_data = self._to_table_data(coords, radii, props)
 
         # Add the shapes layer
-        layer = self._create_shapes_layer(table_data, name)
+        layer = self._get_layer_selector_layer(self.image_selector_name1)
+        if layer.properties:
+            layer.properties = layer.properties.update(table_data)
+        else:
+            layer.properties = table_data
 
         if add_table is not None:
             add_table(layer, self.viewer)
@@ -217,10 +221,12 @@ class MorphologyWidget(BaseWidget):
         self._add_table_structure(morphology)
 
     def _add_table_structure(self, morphology):
-        segmentation = self._get_layer_selector_data(self.image_selector_name1)
-        layer = self.viewer.add_labels(np.zeros(segmentation.shape, dtype=np.uint16), name="Structure Morphology")
+        layer = self._get_layer_selector_layer(self.image_selector_name1)
         # Add properties to layer for add_table function
-        layer.properties = morphology
+        if layer.properties:
+            layer.properties = layer.properties.update(morphology)
+        else:
+            layer.properties = morphology
 
         # Add a table layer to the Napari viewer
         if add_table is not None:

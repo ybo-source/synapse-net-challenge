@@ -28,11 +28,9 @@ class VesiclePoolWidget(BaseWidget):
 
         self.image_selector_name = "Distances to Structure"
         self.image_selector_name1 = "Vesicles Segmentation"
-        self.image_selector_name2 = "Vesicles Morphology"
         # # Create the image selection dropdown.
         self.image_selector_widget = self._create_layer_selector(self.image_selector_name, layer_type="Shapes")
         self.segmentation1_selector_widget = self._create_layer_selector(self.image_selector_name1, layer_type="Labels")
-        self.image_selector_widget2 = self._create_layer_selector(self.image_selector_name2, layer_type="Shapes")
 
         # Create new layer name
         self.new_layer_name_param, new_layer_name_layout = self._add_string_param(
@@ -62,14 +60,11 @@ class VesiclePoolWidget(BaseWidget):
 
         # Add the widgets to the layout.
         layout.addWidget(self.image_selector_widget)
-        layout.addWidget(self.image_selector_widget2)
         layout.addWidget(self.segmentation1_selector_widget)
         layout.addLayout(query_layout)
         layout.addLayout(new_layer_name_layout)
         layout.addLayout(pooled_group_name_layout)
-        # layout.addWidget(self.settings)
         layout.addWidget(self.measure_button1)
-        # layout.addWidget(self.measure_button2)
 
         self.setLayout(layout)
 
@@ -77,10 +72,8 @@ class VesiclePoolWidget(BaseWidget):
         distances_layer = self._get_layer_selector_layer(self.image_selector_name)
         distances = distances_layer.properties
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
-        morphology_layer = self._get_layer_selector_layer(self.image_selector_name2)
+        morphology_layer = self._get_layer_selector_layer(self.image_selector_name1)
         morphology = morphology_layer.properties
-        print("distances", distances)
-        print("morphology", morphology)
 
         if segmentation is None:
             show_info("INFO: Please choose a segmentation.")
@@ -99,24 +92,11 @@ class VesiclePoolWidget(BaseWidget):
             show_info("INFO: Please enter a pooled group name.")
             return
         pooled_group_name = self.pooled_group_name_param.text()
-        
-        # Get distances layer
-        # distance_layer_name =   # query.get("distance_layer_name", None)
-        # if distance_layer_name in self.viewer.layers:
-        #     distances = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+
         if distances is None:
             show_info("INFO: Distances layer could not be found or has no values.")
             return
         vesicle_pool = self._compute_vesicle_pool(segmentation, distances, morphology, new_layer_name, pooled_group_name, query)
-
-        # # get metadata from layer if available
-        # metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
-        # resolution = metadata.get("voxel_size", None)
-        # if resolution is not None:
-        #     resolution = [v for v in resolution.values()]
-        # # if user input is present override metadata
-        # if self.voxel_size_param.value() != 0.0:  # changed from default
-        #     resolution = segmentation.ndim * [self.voxel_size_param.value()]
 
     def _compute_vesicle_pool(self, segmentation, distances, morphology, new_layer_name, pooled_group_name, query):
         """
@@ -128,7 +108,7 @@ class VesiclePoolWidget(BaseWidget):
             morphology (dict): Properties from the morphology layer.
             new_layer_name (str): Name for the new layer to be created.
             pooled_group_name (str): Name for the pooled group to be assigned.
-            query (dict): Query parameters with keys "min_radius" and "max_distance".
+            query (dict): Query parameters.
 
         Returns:
             dict: Updated properties for the new vesicle pool.
@@ -147,72 +127,62 @@ class VesiclePoolWidget(BaseWidget):
 
         # Merge dataframes on the 'id' column
         merged_df = morphology.merge(distances, left_on="label_id", right_on="id", suffixes=("_morph", "_dist"))
-        # Filter rows based on query parameters
+
         # Apply the query string to filter the data
         filtered_df = self._parse_query(query, merged_df)
 
         # Extract valid vesicle IDs
         valid_vesicle_ids = filtered_df["label_id"].tolist()
 
-        # Debugging output
-        for _, row in filtered_df.iterrows():
-            print(f"Vesicle {row['label_id']}: Passed (Radius: {row['radius']}, Distance: {row['distance']})")
-
-        # Update segmentation layer with valid vesicles
         new_layer_data = np.zeros(segmentation.shape, dtype=np.uint8)
+        pool_id = 1
+        layer = None
+        
+        # check if group already exists 
+        if new_layer_name in self.viewer.layers:
+            layer = self.viewer.layers[new_layer_name]
+            if pooled_group_name not in layer.properties["pool"]:
+                new_layer_data = layer.data
+                pool_id = len(np.unique(layer.properties["pool"])) + 1
+        # compute vesicles with new pool_id and properties
         for vesicle_id in valid_vesicle_ids:
-            new_layer_data[segmentation == vesicle_id] = 1  # Highlight pooled vesicles
-
-        # Create a new layer in the viewer
-        self.viewer.add_labels(
-            new_layer_data,
-            name=new_layer_name,
-            properties={
-                "id": valid_vesicle_ids,
-                "radius": filtered_df["radius"].tolist(),
-                "distance": filtered_df["distance"].tolist(),
-            },
-        )
-        show_info(f"Vesicle pool created with {len(valid_vesicle_ids)} vesicles.")
+            new_layer_data[segmentation == vesicle_id] = pool_id
+        new_properties = {
+            "id": valid_vesicle_ids,
+            "radius": filtered_df["radius"].tolist(),
+            "distance": filtered_df["distance"].tolist(),
+            "pool": [pooled_group_name] * len(valid_vesicle_ids)
+        }
+        if new_layer_name in self.viewer.layers:
+            layer = self.viewer.layers[new_layer_name]
+            # override current vesicles with new pooled vesicles
+            if pooled_group_name in layer.properties["pool"]:
+                layer.data = new_layer_data
+                layer.properties = new_properties
+                show_info(f"Vesicle pool '{pooled_group_name}' overriden with {len(valid_vesicle_ids)} vesicles.")
+            else:
+                # add new vesicles and pool to existing layer
+                current_properties = pd.DataFrame(layer.properties)
+                new_properties = pd.DataFrame(new_properties)
+                merged = pd.concat([current_properties, new_properties], ignore_index=True)
+                layer.data = new_layer_data
+                layer.properties = merged
+                show_info(f"Vesicle pool '{pooled_group_name}' updated with {len(valid_vesicle_ids)} vesicles.")
+        else:
+            # Create a new layer in the viewer
+            self.viewer.add_labels(
+                new_layer_data,
+                name=new_layer_name,
+                properties=new_properties
+            )
+            show_info(f"Added new layer '{new_layer_name}' with {len(valid_vesicle_ids)} vesicles in group '{pooled_group_name}'.")
+        if add_table is not None:
+            add_table(self.viewer.layers[new_layer_name], self.viewer)
         return {
                 "id": valid_vesicle_ids,
                 "radius": filtered_df["radius"].tolist(),
                 "distance": filtered_df["distance"].tolist(),
             }
-
-        # # Filter vesicles based on the query
-        # valid_vesicles = []
-        # for i in distances_ids:
-        #     distance = distances.get("distance", [])[i]
-        #     radius = morphology.get("radius", [])[i]
-        #     if radius >= min_radius and distance <= max_distance:
-        #         print(f"Vesicle {i}: Passed (Radius: {radius}, Distance: {distance})")
-        #         valid_vesicles.append(i)
-        #     else:
-        #         print(f"Vesicle {i}: Failed (Radius: {radius}, Distance: {distance})")
-        
-        # Create pooled properties
-        # pooled_properties = {
-        #     "id": [i for i in valid_vesicles],
-        #     "radius": [morphology["radius"][i] for i in valid_vesicles],
-        #     "distance": [distances["distance"][i] for i in valid_vesicles],
-        # }
-        # print("pooled_properties", pooled_properties)
-        # print("np.unique(segmenation)", np.unique(segmentation))
-
-        # # Create a new layer in the viewer
-        # new_layer_data = np.zeros(segmentation.shape, dtype=np.uint8)
-        # for vesicle_id in valid_vesicles:
-        #     new_layer_data[segmentation == vesicle_id] = 1
-
-        # self.viewer.add_labels(
-        #     new_layer_data,
-        #     name=new_layer_name,
-        #     properties=pooled_properties,
-        # )
-
-        # show_info(f"INFO: Created pooled vesicle layer '{new_layer_name}' with {len(valid_vesicles)} vesicles.")
-        # return pooled_properties
 
     def _parse_query(self, query, data):
         """
