@@ -4,8 +4,8 @@ import numpy as np
 
 
 class TestDistanceMeasurement(unittest.TestCase):
-    def test_compute_boundary_distances(self):
-        from synaptic_reconstruction.distance_measurements import compute_boundary_distances
+    def test_measure_pairwise_object_distances(self):
+        from synaptic_reconstruction.distance_measurements import measure_pairwise_object_distances
 
         shape = (4, 64, 64)
         seg = np.zeros(shape, dtype="uint32")
@@ -17,7 +17,7 @@ class TestDistanceMeasurement(unittest.TestCase):
         seg[1, 16, 63] = 5
 
         for resolution in (None, 2.3, 4.4):
-            distances, _, _, seg_ids = compute_boundary_distances(seg, resolution, n_threads=1)
+            distances, _, _, seg_ids = measure_pairwise_object_distances(seg, resolution=resolution, n_threads=1)
 
             factor = 1 if resolution is None else resolution
 
