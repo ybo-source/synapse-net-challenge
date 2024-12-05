@@ -44,6 +44,8 @@ class VesiclePoolWidget(BaseWidget):
         self.query_param, query_layout = self._add_string_param(
             name="Query String",
             value="",
+            tooltip="Enter a comma separated query string (e.g., 'radius > 15, distance > 250') "
+            "Possible filters: radius, distance, area, intensity_max, intensity_mean, intensity_min, intensity_std"
         )
 
         # Create advanced settings.
