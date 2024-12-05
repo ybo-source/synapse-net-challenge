@@ -12,7 +12,7 @@ SynapseNet mainly targets electron tomography, but can also be appled to other t
 especially throught the [domain adaptation](domain-adaptation) functionality.
 
 SynapseNet offers a [napari plugin](napari-plugin), [command line interface](command-line-interface), and [python library](python-library).
-Please cite our [bioRxiv preprint](TODO) if you use it in your research.
+Please cite our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2024.12.02.626387v1) if you use it in your research.
 
 
 ## Requirements & Installation
