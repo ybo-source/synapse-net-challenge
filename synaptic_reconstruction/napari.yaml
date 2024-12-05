@@ -1,5 +1,5 @@
 name: synaptic_reconstruction
-display_name: Synaptic Reconstruction
+display_name: SynapseNet
 # see https://napari.org/stable/plugins/manifest.html for valid categories
 categories: ["Image Processing", "Annotation"]
 contributions:

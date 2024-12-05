@@ -1,6 +1,6 @@
 import os
 
-from typing import Callable, List, Optional, Sequence, Union
+from typing import Callable, Dict, List, Optional, Sequence, Union
 import mrcfile
 from napari.types import LayerData
 
@@ -74,14 +74,16 @@ def read_image_volume(path: PathOrPaths) -> List[LayerData]:
         return
 
 
-def read_voxel_size(input_path: str) -> dict | None:
+def read_voxel_size(input_path: str) -> Dict[str, float] | None:
     """Read voxel size from mrc/rec file and store it in layer_attributes.
     The original unit of voxel size is Angstrom and we convert it to nanometers
     by dividing it by ten.
 
     Args:
-        input_path (str): path to mrc/rec file
-        layer_attributes (dict): napari layer attributes to store voxel size to
+        input_path: Path to mrc/rec file.
+
+    Returns:
+        Mapping from the axis name to voxel size. None if the voxel size could not be read.
     """
     new_voxel_size = None
     with mrcfile.open(input_path, permissive=True) as mrc:

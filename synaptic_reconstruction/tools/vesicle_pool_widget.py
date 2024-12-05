@@ -14,6 +14,9 @@ try:
 except ImportError:
     add_table = None
 
+# This will fail if we have more than 8 pools.
+COLORMAP = ["red", "blue", "yellow", "cyan", "purple", "magenta", "orange", "green"]
+
 
 class VesiclePoolWidget(BaseWidget):
     def __init__(self):
@@ -24,26 +27,23 @@ class VesiclePoolWidget(BaseWidget):
 
         self.image_selector_name = "Distances to Structure"
         self.image_selector_name1 = "Vesicles Segmentation"
-        # # Create the image selection dropdown.
+        # Create the image selection dropdown.
         self.image_selector_widget = self._create_layer_selector(self.image_selector_name, layer_type="Shapes")
         self.segmentation1_selector_widget = self._create_layer_selector(self.image_selector_name1, layer_type="Labels")
 
-        # Create new layer name
-        self.new_layer_name_param, new_layer_name_layout = self._add_string_param(
-            name="New Layer Name",
-            value="",
+        # Create new layer name.
+        self.pool_layer_name_param, pool_layer_name_layout = self._add_string_param(
+            name="Output Layer Name", value="",
         )
 
-        # pooled group name
-        self.pooled_group_name_param, pooled_group_name_layout = self._add_string_param(
-            name="Pooled Group Name",
-            value="",
+        # Create pool name.
+        self.pool_name_param, pool_name_layout = self._add_string_param(
+            name="Vesicle Pool", value="",
         )
 
         # Create query string
         self.query_param, query_layout = self._add_string_param(
-            name="Query String",
-            value="",
+            name="Criterion", value="",
             tooltip="Enter a comma separated query string (e.g., 'radius > 15, distance > 250') "
             "Possible filters: radius, distance, area, intensity_max, intensity_mean, intensity_min, intensity_std"
         )
@@ -59,8 +59,8 @@ class VesiclePoolWidget(BaseWidget):
         layout.addWidget(self.image_selector_widget)
         layout.addWidget(self.segmentation1_selector_widget)
         layout.addLayout(query_layout)
-        layout.addLayout(new_layer_name_layout)
-        layout.addLayout(pooled_group_name_layout)
+        layout.addLayout(pool_layer_name_layout)
+        layout.addLayout(pool_name_layout)
         layout.addWidget(self.measure_button1)
 
         self.setLayout(layout)
@@ -78,24 +78,24 @@ class VesiclePoolWidget(BaseWidget):
         if self.query_param.text() == "":
             show_info("INFO: Please enter a query string.")
             return
-        # resolve string
         query = self.query_param.text()
 
-        if self.new_layer_name_param.text() == "":
+        if self.pool_layer_name_param.text() == "":
             show_info("INFO: Please enter a new layer name.")
             return
-        new_layer_name = self.new_layer_name_param.text()
-        if self.pooled_group_name_param.text() == "":
+        pool_layer_name = self.pool_layer_name_param.text()
+        if self.pool_name_param.text() == "":
             show_info("INFO: Please enter a pooled group name.")
             return
-        pooled_group_name = self.pooled_group_name_param.text()
+        pool_name = self.pool_name_param.text()
 
         if distances is None:
             show_info("INFO: Distances layer could not be found or has no values.")
             return
-        self._compute_vesicle_pool(segmentation, distances, morphology, new_layer_name, pooled_group_name, query)
 
-    def _compute_vesicle_pool(self, segmentation, distances, morphology, new_layer_name, pooled_group_name, query):
+        self._compute_vesicle_pool(segmentation, distances, morphology, pool_layer_name, pool_name, query)
+
+    def _compute_vesicle_pool(self, segmentation, distances, morphology, pool_layer_name, pool_name, query):
         """
         Compute a vesicle pool based on the provided query parameters.
 
@@ -103,94 +103,104 @@ class VesiclePoolWidget(BaseWidget):
             segmentation (array): Segmentation data (e.g., labeled regions).
             distances (dict): Properties from the distances layer.
             morphology (dict): Properties from the morphology layer.
-            new_layer_name (str): Name for the new layer to be created.
-            pooled_group_name (str): Name for the pooled group to be assigned.
+            pool_layer_name (str): Name for the new layer to be created.
+            pool_name (str): Name for the pooled group to be assigned.
             query (dict): Query parameters.
         """
 
-        distances_ids = distances.get("id", [])
+        distance_ids = distances.get("label_id", [])
         morphology_ids = morphology.get("label_id", [])
 
-        # Check if IDs are identical
-        if set(distances_ids) != set(morphology_ids):
+        # Ensure that IDs are identical.
+        if set(distance_ids) != set(morphology_ids):
             show_info("ERROR: The IDs in distances and morphology are not identical.")
             return
 
+        # Create a merged dataframe from the dataframes which are relevant for the criterion.
+        # TODO: select the dataframes more dynamically depending on the criterion defined by the user.
         distances = pd.DataFrame(distances)
         morphology = pd.DataFrame(morphology)
+        merged_df = morphology.merge(distances, left_on="label_id", right_on="label_id", suffixes=("_morph", "_dist"))
 
-        # Merge dataframes on the 'id' column
-        merged_df = morphology.merge(distances, left_on="label_id", right_on="id", suffixes=("_morph", "_dist"))
-
-        # Apply the query string to filter the data
+        # Assign the vesicles to the current pool by filtering the mergeddataframe based on the query.
         filtered_df = self._parse_query(query, merged_df)
+        pool_vesicle_ids = filtered_df.label_id.values.tolist()
 
-        # Extract valid vesicle IDs
-        valid_vesicle_ids = filtered_df["label_id"].tolist()
+        # Check if this layer was already created in a previous pool assignment.
+        if pool_layer_name in self.viewer.layers:
+            # If yes then load the previous pool assignments and merge them with the new pool assignments
+            pool_layer = self.viewer.layers[pool_layer_name]
+            pool_properties = pd.DataFrame.from_dict(pool_layer.properties)
 
-        new_layer_data = np.zeros(segmentation.shape, dtype=np.uint8)
-        pool_id = 1
-        layer = None
+            pool_names = pd.unique(pool_properties.pool).tolist()
+            if pool_name in pool_names:
+                # This pool has already been assigned and we changed the criterion.
+                # Its old assignment has to be over-written, remove the rows for this pool.
+                pool_properties = pool_properties[pool_properties.pool != pool_name]
 
-        # check if group already exists 
-        if new_layer_name in self.viewer.layers:
-            layer = self.viewer.layers[new_layer_name]
-            if pooled_group_name not in layer.properties["pool"]:
-                new_layer_data = layer.data
-                pool_id = len(np.unique(layer.properties["pool"])) + 1
-        # compute vesicles with new pool_id and properties
-        for vesicle_id in valid_vesicle_ids:
-            new_layer_data[segmentation == vesicle_id] = pool_id
-        new_properties = {
-            "id": valid_vesicle_ids,
-            "radius": filtered_df["radius"].tolist(),
-            "distance": filtered_df["distance"].tolist(),
-            "pool": [pooled_group_name] * len(valid_vesicle_ids)
-        }
-        if new_layer_name in self.viewer.layers:
-            layer = self.viewer.layers[new_layer_name]
-            # override current vesicles with new pooled vesicles
-            if pooled_group_name in layer.properties["pool"]:
-                layer.data = new_layer_data
-                layer.properties = new_properties
-                show_info(f"Vesicle pool '{pooled_group_name}' overriden with {len(valid_vesicle_ids)} vesicles.")
-            else:
-                # add new vesicles and pool to existing layer
-                current_properties = pd.DataFrame(layer.properties)
-                new_properties = pd.DataFrame(new_properties)
-                merged = pd.concat([current_properties, new_properties], ignore_index=True)
-                layer.data = new_layer_data
-                layer.properties = merged
-                show_info(f"Vesicle pool '{pooled_group_name}' updated with {len(valid_vesicle_ids)} vesicles.")
+            # Combine the vesicle ids corresponding to the previous assignment with the
+            # assignment for the new / current pool.
+            old_pool_ids = pool_properties.label_id.values.tolist()
+            pool_assignments = sorted(pool_vesicle_ids + old_pool_ids)
+
+            # Get a map for each vesicle id to its pool.
+            id_to_pool_name = {ves_id: pool_name for ves_id in pool_vesicle_ids}
+            id_to_pool_name.update({k: v for k, v in zip(old_pool_ids, pool_properties.pool.values)})
+
+            # Get the pool values.
+            # This is the list of pool names, corresponding to the selected ids in pool_assignments.
+            pool_values = [id_to_pool_name[ves_id] for ves_id in pool_assignments]
+
         else:
-            # Create a new layer in the viewer
-            self.viewer.add_labels(
-                new_layer_data,
-                name=new_layer_name,
-                properties=new_properties
-            )
-            show_info(
-                f"Added new layer '{new_layer_name}' with {len(valid_vesicle_ids)} "
-                f"vesicles in group '{pooled_group_name}'."
-            )
-        if add_table is not None:
-            add_table(self.viewer.layers[new_layer_name], self.viewer)
-        return {
-                "id": valid_vesicle_ids,
-                "radius": filtered_df["radius"].tolist(),
-                "distance": filtered_df["distance"].tolist(),
-            }
+            # Otherwise, this is the first pool assignment.
+            pool_assignments = pool_vesicle_ids
+            pool_values = [pool_name] * len(pool_assignments)
 
-    def _parse_query(self, query, data):
-        """
-        Parse and apply a query string to filter data.
+        # Create the filtered segmentation.
+        vesicle_pools = segmentation.copy()
+        vesicle_pools[~np.isin(vesicle_pools, pool_assignments)] = 0
+
+        # Create the pool properties.
+        pool_properties = merged_df[merged_df.label_id.isin(pool_assignments)]
+        pool_properties.insert(1, "pool", pool_values)
+
+        # Create the colormap to group the pools in the layer rendering.
+        # This can lead to color switches: if a new pool gets added which starts with
+        # a letter that's earlier in the alphabet the color will switch.
+        # To avoid this the user has to specify the pool color (not yet implemented, see next todo).
+        pool_names = np.unique(pool_values).tolist()
+        # TODO: add setting so that users can over-ride the color for a pool.
+        # TODO: provide a default color (how?) to avoid the warning
+        pool_colors = {pname: COLORMAP[pool_names.index(pname)] for pname in pool_names}
+        vesicle_colors = {
+            label_id: pool_colors[pname] for label_id, pname
+            in zip(pool_properties.label_id.values, pool_properties.pool.values)
+        }
+
+        # TODO print some messages
+        # Add or replace the pool layer and properties.
+        if pool_layer_name in self.viewer.layers:
+            # message about added or over-ridden pool, including number of vesicles in pool
+            pool_layer = self.viewer.layers[pool_layer_name]
+            pool_layer.data = vesicle_pools
+            pool_layer.color_map = vesicle_colors
+        else:
+            # message about new pool, including number of vesicles in pool
+            pool_layer = self.viewer.add_labels(vesicle_pools, name=pool_layer_name, colormap=vesicle_colors)
+
+        # TODO add the save path
+        self._add_properties_and_table(pool_layer, pool_properties, save_path="")
+        pool_layer.refresh()
+
+    def _parse_query(self, query: str, data: pd.DataFrame) -> pd.DataFrame:
+        """Parse and apply a query string to filter data.
 
         Args:
-            query (str): Comma-separated query string (e.g., "radius > 15, distance > 250").
-            data (pd.DataFrame): DataFrame containing the data to filter.
+            query: Comma-separated query string (e.g., "radius > 15, distance > 250").
+            data: DataFrame containing the data to filter.
 
         Returns:
-            pd.DataFrame: Filtered DataFrame.
+            Filtered DataFrame.
         """
         filters = query.split(",")  # Split the query into individual conditions
         filters = [f.strip() for f in filters]  # Remove extra spaces
@@ -210,9 +220,7 @@ class VesiclePoolWidget(BaseWidget):
         self.save_path, layout = self._add_path_param(name="Save Table", select_type="file", value="")
         setting_values.layout().addLayout(layout)
 
-        self.voxel_size_param, layout = self._add_float_param(
-            "voxel_size", 0.0, min_val=0.0, max_val=100.0,
-        )
+        self.voxel_size_param, layout = self._add_float_param("voxel_size", 0.0, min_val=0.0, max_val=100.0)
         setting_values.layout().addLayout(layout)
 
         settings = self._make_collapsible(widget=setting_values, title="Advanced Settings")
