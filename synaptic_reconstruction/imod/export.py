@@ -1,7 +1,7 @@
 import shutil
 import tempfile
 from subprocess import run
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 import imageio.v3 as imageio
 import numpy as np
@@ -144,7 +144,23 @@ def export_segmentation(
     imageio.imwrite(output_path, segmentation.astype("uint8"), compression="zlib")
 
 
-def draw_spheres(coordinates, radii, shape, verbose=True):
+def draw_spheres(
+    coordinates: np.ndarray,
+    radii: np.ndarray,
+    shape: Tuple[int, int, int],
+    verbose: bool = True,
+) -> np.ndarray:
+    """Create a volumetric segmentation by painting spheres around the given coordinates.
+
+    Args:
+        coordinates: The center coordinates of the spheres.
+        radii: The radii of the spheres.
+        shape: The shape of the volume.
+        verbose: Whether to print the progress bar.
+
+    Returns:
+        The segmentation volume with painted spheres.
+    """
     labels = np.zeros(shape, dtype="uint32")
     for label_id, (coord, radius) in tqdm(
         enumerate(zip(coordinates, radii), start=1), total=len(coordinates), disable=not verbose
@@ -166,10 +182,35 @@ def draw_spheres(coordinates, radii, shape, verbose=True):
 
 
 def load_points_from_imodinfo(
-    imod_path, full_shape, bb=None,
-    exclude_labels=None, exclude_label_patterns=None,
-    resolution=None,
-):
+    imod_path: str,
+    full_shape: Tuple[int, int, int],
+    bb: Optional[Tuple[slice, slice, slice]] = None,
+    exclude_labels: Optional[List[int]] = None,
+    exclude_label_patterns: Optional[List[str]] = None,
+    resolution: Optional[float] = None,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[int, str]]:
+    """Load point coordinates, radii and label information from a .mod file.
+
+    The coordinates and sizes returned will be scaled so that they are in
+    the voxel coordinate space if the 'resolution' parameter is passed.
+    If it is not passed then the radius will be returned in the physical resolution.
+
+    Args:
+        imod_path: The filepath to the .mod file.
+        full_shape: The voxel shape of the volume.
+        bb: Optional bounding box to limit the extracted points to.
+        exclude_labels: Label ids to exclude from the export.
+            This can be used to exclude specific labels / classes, specifying them by their id.
+        exclude_label_patterns: Label names to exclude from the export.
+            This can be used to exclude specific labels / classes, specifying them by their name.
+        resolution: The resolution / voxel size of the data. Will be used to scale the radii.
+
+    Returns:
+        The center coordinates of the sphere annotations.
+        The radii of the spheres.
+        The ids of the semantic labels.
+        The names of the semantic labels.
+    """
     coordinates, sizes, labels = [], [], []
     label_names = {}
 
@@ -274,14 +315,33 @@ def load_points_from_imodinfo(
 
 
 def export_point_annotations(
-    imod_path,
-    shape,
-    bb=None,
-    exclude_labels=None,
-    exclude_label_patterns=None,
-    return_coords_and_radii=False,
-    resolution=None,
-):
+    imod_path: str,
+    shape: Tuple[int, int, int],
+    bb: Optional[Tuple[slice, slice, slice]] = None,
+    exclude_labels: Optional[List[int]] = None,
+    exclude_label_patterns: Optional[List[str]] = None,
+    return_coords_and_radii: bool = False,
+    resolution: Optional[float] = None,
+) -> Tuple[np.ndarray, np.ndarray, Dict[int, str]]:
+    """Create a segmentation by drawing spheres corresponding to objects from a .mod file.
+
+    Args:
+        imod_path: The filepath to the .mod file.
+        shape: The voxel shape of the volume.
+        bb: Optional bounding box to limit the extracted points to.
+        exclude_labels: Label ids to exclude from the segmentation.
+            This can be used to exclude specific labels / classes, specifying them by their id.
+        exclude_label_patterns: Label names to exclude from the segmentation.
+            This can be used to exclude specific labels / classes, specifying them by their name.
+        return_coords_and_radii: Whether to also return the underlying coordinates
+            and radii of the exported spheres.
+        resolution: The resolution / voxel size of the data. Will be used to scale the radii.
+
+    Returns:
+        The exported segmentation.
+        The label ids for the instance ids in the segmentation.
+        The map of label ids to corresponding obejct names.
+    """
     coordinates, radii, labels, label_names = load_points_from_imodinfo(
         imod_path, shape, bb=bb,
         exclude_labels=exclude_labels,

@@ -4,7 +4,21 @@ from elf.evaluation.matching import label_overlap, intersection_over_union
 from skimage.segmentation import relabel_sequential
 
 
-def find_additional_objects(ground_truth, segmentation, matching_threshold=0.5):
+def find_additional_objects(
+    ground_truth: np.ndarray,
+    segmentation: np.ndarray,
+    matching_threshold: float = 0.5
+) -> np.ndarray:
+    """Compare ground-truth annotations with a segmentation to find objects not in the annotation.
+
+    Args:
+        ground_trut:
+        segmentation:
+        matching_threshold:
+
+    Returns:
+    """
+
     segmentation = relabel_sequential(segmentation)[0]
 
     # Match the objects in the segmentation to the ground-truth.

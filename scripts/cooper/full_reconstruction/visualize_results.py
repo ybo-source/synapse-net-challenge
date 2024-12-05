@@ -6,11 +6,13 @@ import napari
 import numpy as np
 import pandas as pd
 
+from skimage.filters import gaussian
+
 ROOT = "./04_full_reconstruction"
 TABLE = "/home/pape/Desktop/sfb1286/mboc_synapse/draft_figures/full_reconstruction.xlsx"
 
 # Skip datasets for which all figures were already done.
-SKIP_DS = ["20241019_Tomo-eval_MF_Synapse"]
+SKIP_DS = ["20241019_Tomo-eval_MF_Synapse", "20241019_Tomo-eval_PS_Synapse"]
 
 
 def _get_name_and_row(path, table):
@@ -46,13 +48,14 @@ def visualize_result(path, table):
     if ds_name in SKIP_DS:
         return
 
-    # if row["Use for vis"].values[0] == "yes":
-    if row["Use for vis"].values[0] in ("yes", "no"):
+    if row["Use for Vis"].values[0] == "no":
         return
     compartment_ids = _get_compartment_ids(row)
 
     # access = np.s_[:]
-    access = np.s_[::2, ::2, ::2]
+    scale = 3
+    access = np.s_[::scale, ::scale, ::scale]
+    resolution = (scale * 0.868,) * 3
 
     with h5py.File(path, "r") as f:
         raw = f["raw"][access]
@@ -60,6 +63,10 @@ def visualize_result(path, table):
         active_zone = f["labels/active_zone"][access]
         mitos = f["labels/mitochondria"][access]
         compartments = f["labels/compartments"][access]
+    print("Loading done")
+
+    raw = gaussian(raw)
+    print("Gaussian done")
 
     if any(comp_ids is not None for comp_ids in compartment_ids):
         mask = np.zeros(raw.shape, dtype="bool")
@@ -78,13 +85,26 @@ def visualize_result(path, table):
         mitos[~mask] = 0
         compartments = compartments_new
 
+    vesicle_ids = np.unique(vesicles)[1:]
+
+    transpose = False
+    if transpose:
+        raw = raw[:, ::-1]
+        active_zone = active_zone[:, ::-1]
+        mitos = mitos[:, ::-1]
+        vesicles = vesicles[:, ::-1]
+        compartments = compartments[:, ::-1]
+
     v = napari.Viewer()
-    v.add_image(raw)
-    v.add_labels(mitos)
-    v.add_labels(vesicles)
-    v.add_labels(compartments)
-    v.add_labels(active_zone)
+    v.add_image(raw, scale=resolution)
+    v.add_labels(mitos, scale=resolution)
+    v.add_labels(vesicles, colormap={ves_id: "orange" for ves_id in vesicle_ids}, scale=resolution)
+    v.add_labels(compartments, colormap={1: "red", 2: "green", 3: "orange"}, scale=resolution)
+    v.add_labels(active_zone, colormap={1: "blue"}, scale=resolution)
     v.title = f"{ds_name}/{name}"
+    v.scale_bar.visible = True
+    v.scale_bar.unit = "nm"
+    v.scale_bar.font_size = 16
     napari.run()
 
 
@@ -115,6 +135,7 @@ def main():
     paths = sorted(glob(os.path.join(ROOT, "**/*.h5"), recursive=True))
     table = pd.read_excel(TABLE)
     for path in paths:
+        print(path)
         visualize_result(path, table)
         # visualize_only_compartment(path, table)
 

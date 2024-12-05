@@ -1,0 +1,18 @@
+channels:
+    - conda-forge
+name:
+    synapse-net
+dependencies:
+    - bioimageio.core
+    - kornia
+    - magicgui
+    - napari
+    - pip
+    - pyqt
+    - python-elf
+    - pytorch
+    - tensorboard
+    - torch_em
+    - trimesh
+    - pip:
+        - napari-skimage-regionprops

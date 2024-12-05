@@ -1,17 +1,22 @@
 channels:
+    - pytorch
+    - nvidia
     - conda-forge
 name:
-    synaptic-reconstruction
+    synapse-net
 dependencies:
-    - python-elf
+    - bioimageio.core
+    - kornia
+    - magicgui
     - napari
     - pip
     - pyqt
-    - magicgui
+    - python-elf
     - pytorch
-    - bioimageio.core
-    - kornia
+    - pytorch-cuda=12.4
     - tensorboard
+    - torch_em
+    - torchvision
     - trimesh
     - pip:
         - napari-skimage-regionprops

@@ -1,6 +1,6 @@
 import os
 import multiprocessing as mp
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -18,7 +18,25 @@ except ImportError:
     skfmm = None
 
 
-def compute_geodesic_distances(segmentation, distance_to, resolution=None, unsigned=True):
+def compute_geodesic_distances(
+    segmentation: np.ndarray,
+    distance_to: np.ndarray,
+    resolution: Optional[Union[int, float, Tuple[int, int, int]]] = None,
+    unsigned: bool = True,
+) -> np.ndarray:
+    """Compute the geodesic distances between a segmentation and a distance target.
+
+    This function require scikit-fmm to be installed.
+
+    Args:
+        segmentation: The binary segmentation.
+        distance_to: The binary distance target.
+        resolution: The voxel size of the data, used to scale the distances.
+        unsigned: Whether to return the unsigned or signed distances.
+
+    Returns:
+        Array with the geodesic distance values.
+    """
     assert skfmm is not None, "Please install scikit-fmm to use compute_geodesic_distance."
 
     invalid = segmentation == 0
@@ -43,14 +61,12 @@ def compute_geodesic_distances(segmentation, distance_to, resolution=None, unsig
     return distances
 
 
-# TODO update this
 def _compute_centroid_distances(segmentation, resolution, n_neighbors):
-    # TODO enable eccentricity centers instead
     props = regionprops(segmentation)
     centroids = np.array([prop.centroid for prop in props])
     if resolution is not None:
-        pass  # TODO scale the centroids
-
+        scale_factor = np.array(resolution)[:, None]
+        centroids *= scale_factor
     pair_distances = pairwise_distances(centroids)
     return pair_distances
 
@@ -313,11 +329,13 @@ def create_pairwise_distance_lines(
         endpoints1: One set of distance end points.
         endpoints2: The other set of distance end points.
         seg_ids: The segmentation pair corresponding to each distance.
-        n_neighbors: ...
-        pairs: ...
-        bb: ....
-        scale: ...
-        remove_duplicates: ...
+        n_neighbors: The number of nearest neighbors to take into consideration
+            for creating the distance lines.
+        pairs: Optional list of ids to use for creating the distance lines.
+        bb: Bounding box for restricing the distance line creation.
+        scale: Scale factor for resizing the distance lines.
+            Use this if the corresponding segmentations were downscaled for visualization.
+        remove_duplicates: Remove duplicate id pairs from the distance lines.
 
     Returns:
         The lines for plotting in napari.
@@ -386,8 +404,10 @@ def create_object_distance_lines(
         endpoints1: One set of distance end points.
         endpoints2: The other set of distance end points.
         seg_ids: The segmentation ids corresponding to each distance.
-        max_distance: ...
-        scale: ...
+        max_distance: Maximal distance for drawing the distance line.
+        filter_seg_ids: Segmentation ids to restrict the distance lines.
+        scale: Scale factor for resizing the distance lines.
+            Use this if the corresponding segmentations were downscaled for visualization.
 
     Returns:
         The lines for plotting in napari.
@@ -416,13 +436,32 @@ def create_object_distance_lines(
     return lines, properties
 
 
-def keep_direct_distances(segmentation, measurement_path, line_dilation=0, scale=None):
-    """Filter out all distances that are not direct.
-    I.e. distances that cross another segmented object.
-    """
+def keep_direct_distances(
+    segmentation: np.ndarray,
+    distances: np.ndarray,
+    endpoints1: np.ndarray,
+    endpoints2: np.ndarray,
+    seg_ids: np.ndarray,
+    line_dilation: int = 0,
+    scale: Optional[Tuple[int, int, int]] = None,
+) -> List[List[int]]:
+    """Filter out all distances that are not direct; distances that are occluded by another segmented object.
 
-    distances, ep1, ep2, seg_ids = load_distances(measurement_path)
-    distance_lines, properties = create_object_distance_lines(distances, ep1, ep2, seg_ids, scale=scale)
+    Args:
+        segmentation: The segmentation from which the distances are derived.
+        distances: The measurd distances.
+        endpoints1: One set of distance end points.
+        endpoints2: The other set of distance end points.
+        seg_ids: The segmentation ids corresponding to each distance.
+        line_dilation: Dilation factor of the distance lines for determining occlusions.
+        scale: Scaling factor of the segmentation compared to the distance measurements.
+
+    Returns:
+        The list of id pairs that are kept.
+    """
+    distance_lines, properties = create_object_distance_lines(
+        distances, endpoints1, endpoints2, seg_ids, scale=scale
+    )
 
     ids_a, ids_b = properties["id_a"], properties["id_b"]
     filtered_ids_a, filtered_ids_b = [], []
@@ -459,10 +498,35 @@ def keep_direct_distances(segmentation, measurement_path, line_dilation=0, scale
 
 
 def filter_blocked_segmentation_to_object_distances(
-    segmentation, measurement_path, line_dilation=0, scale=None, seg_ids=None, verbose=False,
-):
-    distances, ep1, ep2, seg_ids = load_distances(measurement_path)
-    distance_lines, properties = create_object_distance_lines(distances, ep1, ep2, seg_ids, scale=scale)
+    segmentation: np.ndarray,
+    distances: np.ndarray,
+    endpoints1: np.ndarray,
+    endpoints2: np.ndarray,
+    seg_ids: np.ndarray,
+    line_dilation: int = 0,
+    scale: Optional[Tuple[int, int, int]] = None,
+    filter_seg_ids: Optional[List[int]] = None,
+    verbose: bool = False,
+) -> List[int]:
+    """Filter out all distances that are not direct; distances that are occluded by another segmented object.
+
+    Args:
+        segmentation: The segmentation from which the distances are derived.
+        distances: The measurd distances.
+        endpoints1: One set of distance end points.
+        endpoints2: The other set of distance end points.
+        seg_ids: The segmentation ids corresponding to each distance.
+        line_dilation: Dilation factor of the distance lines for determining occlusions.
+        scale: Scaling factor of the segmentation compared to the distance measurements.
+        filter_seg_ids: Segmentation ids to restrict the distance lines.
+        verbose: Whether to print progressbar.
+
+    Returns:
+        The list of id pairs that are kept.
+    """
+    distance_lines, properties = create_object_distance_lines(
+         distances, endpoints1, endpoints2, seg_ids, scale=scale
+    )
     all_seg_ids = properties["id"]
 
     filtered_ids = []

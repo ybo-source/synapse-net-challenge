@@ -66,8 +66,7 @@ def segment_mitochondria(
     scale: Optional[List[float]] = None,
     mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
-    """
-    Segment mitochondria in an input volume.
+    """Segment mitochondria in an input volume.
 
     Args:
         input_volume: The input volume to segment.

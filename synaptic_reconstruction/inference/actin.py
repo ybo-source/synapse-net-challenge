@@ -24,8 +24,7 @@ def segment_actin(
     scale: Optional[List[float]] = None,
     mask: Optional[np.ndarray] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
-    """
-    Segment actin in an input volume.
+    """Segment actin in an input volume.
 
     Args:
         input_volume: The input volume to segment.

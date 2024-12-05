@@ -136,7 +136,6 @@ class SegmentationWidget(BaseWidget):
         setting_values.layout().addLayout(layout)
 
         # Create UI for the halo.
-
         self.tiling["halo"]["x"], self.tiling["halo"]["y"], self.tiling["halo"]["z"], layout = self._add_shape_param(
             ("halo_x", "halo_y", "halo_z"),
             (self.default_tiling["halo"]["x"], self.default_tiling["halo"]["y"], self.default_tiling["halo"]["z"]),
@@ -145,7 +144,7 @@ class SegmentationWidget(BaseWidget):
         )
         setting_values.layout().addLayout(layout)
 
-        # read voxel size from layer metadata
+        # Read voxel size from layer metadata.
         self.voxel_size_param, layout = self._add_float_param(
             "voxel_size", 0.0, min_val=0.0, max_val=100.0,
         )
