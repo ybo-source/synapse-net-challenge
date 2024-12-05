@@ -1,17 +1,13 @@
-import os
-
 import napari
 import napari.layers
 import napari.viewer
 import numpy as np
 import pandas as pd
-from skimage.measure import regionprops
 
 from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 
 from .base_widget import BaseWidget
-from synaptic_reconstruction.tools.util import _save_table
 
 try:
     from napari_skimage_regionprops import add_table
@@ -57,7 +53,6 @@ class VesiclePoolWidget(BaseWidget):
         self.measure_button1 = QPushButton("Create Vesicle Pool")
         self.measure_button1.clicked.connect(self.on_pool_vesicles)
 
-
         # Add the widgets to the layout.
         layout.addWidget(self.image_selector_widget)
         layout.addWidget(self.segmentation1_selector_widget)
@@ -96,7 +91,7 @@ class VesiclePoolWidget(BaseWidget):
         if distances is None:
             show_info("INFO: Distances layer could not be found or has no values.")
             return
-        vesicle_pool = self._compute_vesicle_pool(segmentation, distances, morphology, new_layer_name, pooled_group_name, query)
+        self._compute_vesicle_pool(segmentation, distances, morphology, new_layer_name, pooled_group_name, query)
 
     def _compute_vesicle_pool(self, segmentation, distances, morphology, new_layer_name, pooled_group_name, query):
         """
@@ -109,9 +104,6 @@ class VesiclePoolWidget(BaseWidget):
             new_layer_name (str): Name for the new layer to be created.
             pooled_group_name (str): Name for the pooled group to be assigned.
             query (dict): Query parameters.
-
-        Returns:
-            dict: Updated properties for the new vesicle pool.
         """
 
         distances_ids = distances.get("id", [])
@@ -137,7 +129,7 @@ class VesiclePoolWidget(BaseWidget):
         new_layer_data = np.zeros(segmentation.shape, dtype=np.uint8)
         pool_id = 1
         layer = None
-        
+
         # check if group already exists 
         if new_layer_name in self.viewer.layers:
             layer = self.viewer.layers[new_layer_name]
@@ -175,7 +167,10 @@ class VesiclePoolWidget(BaseWidget):
                 name=new_layer_name,
                 properties=new_properties
             )
-            show_info(f"Added new layer '{new_layer_name}' with {len(valid_vesicle_ids)} vesicles in group '{pooled_group_name}'.")
+            show_info(
+                f"Added new layer '{new_layer_name}' with {len(valid_vesicle_ids)} "
+                f"vesicles in group '{pooled_group_name}'."
+            )
         if add_table is not None:
             add_table(self.viewer.layers[new_layer_name], self.viewer)
         return {

@@ -87,9 +87,7 @@ class DistanceMeasureWidget(BaseWidget):
             blending="additive",
             properties=properties,
         )
-        # if line_layer.metadata is None:
-        #     line_layer.metadata = table_data
-        # else:
+
         line_layer.properties["distances"] = table_data
 
         if add_table is not None:
@@ -141,7 +139,7 @@ class DistanceMeasureWidget(BaseWidget):
         resolution = metadata.get("voxel_size", None)
         if resolution is not None:
             resolution = [v for v in resolution.values()]
-        # if user input is present override metadata
+        # if user input is present, override metadata
         if self.voxel_size_param.value() != 0.0:  # changed from default
             resolution = segmentation.ndim * [self.voxel_size_param.value()]
 

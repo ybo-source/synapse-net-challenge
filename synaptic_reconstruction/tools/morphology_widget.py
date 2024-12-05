@@ -1,5 +1,3 @@
-import os
-
 import napari
 import napari.layers
 import napari.viewer
@@ -201,7 +199,8 @@ class MorphologyWidget(BaseWidget):
         self._add_table(coords, radii, props, name="Vesicles Morphology")
 
     def on_measure_structure_morphology(self):
-        """add the structure measurements to the segmentation layer (via properties) 
+        """
+        Add the structure measurements to the segmentation layer (via properties)
         and visualize the properties table
         """
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
