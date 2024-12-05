@@ -54,7 +54,7 @@ def get_model_path(model_type: str) -> str:
     model_path = model_registry.fetch(model_type)
     return model_path
 
-  
+
 def get_model(model_type: str, device: Optional[Union[str, torch.device]] = None) -> torch.nn.Module:
     """Get the model for the given segmentation type.
 
@@ -100,14 +100,14 @@ def run_segmentation(
         The segmentation.
     """
     if model_type.startswith("vesicles"):
-        segmentation = segment_vesicles(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
+        segmentation = segment_vesicles(image, model=model, tiling=tiling, scale=scale, verbose=verbose, **kwargs)
     elif model_type == "mitochondria":
-        segmentation = segment_mitochondria(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
+        segmentation = segment_mitochondria(image, model=model, tiling=tiling, scale=scale, verbose=verbose, **kwargs)
     elif model_type == "active_zone":
-        segmentation = segment_active_zone(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
+        segmentation = segment_active_zone(image, model=model, tiling=tiling, scale=scale, verbose=verbose, **kwargs)
     elif model_type == "compartments":
-        segmentation = segment_compartments(image, model=model, tiling=tiling, scale=scale, verbose=verbose)
-    elif model_type == "inner_ear_structures":
+        segmentation = segment_compartments(image, model=model, tiling=tiling, scale=scale, verbose=verbose, **kwargs)
+    elif model_type == "ribbon_synapse_structures":
         raise NotImplementedError
     else:
         raise ValueError(f"Unknown model type: {model_type}")

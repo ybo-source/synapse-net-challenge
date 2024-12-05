@@ -11,6 +11,7 @@ from typing import Dict, Optional, Tuple
 
 import imageio.v3 as imageio
 import elf.parallel as parallel
+import mrcfile
 import numpy as np
 import torch
 import torch_em
@@ -131,7 +132,7 @@ def get_prediction(
             # torch_em expects the root folder of a checkpoint path instead of the checkpoint itself.
             if model_path.endswith("best.pt"):
                 model_path = os.path.split(model_path)[0]
-        print(f"tiling {tiling}")
+        # print(f"tiling {tiling}")
         # Create updated_tiling with the same structure
         updated_tiling = {
             "tile": {},
@@ -140,7 +141,7 @@ def get_prediction(
         # Update tile dimensions
         for dim in tiling["tile"]:
             updated_tiling["tile"][dim] = tiling["tile"][dim] - 2 * tiling["halo"][dim]
-        print(f"updated_tiling {updated_tiling}")
+        # print(f"updated_tiling {updated_tiling}")
         pred = get_prediction_torch_em(
             input_volume, updated_tiling, model_path, model, verbose, with_channels, mask=mask
         )
@@ -252,6 +253,33 @@ def _load_input(img_path, extra_files, i):
     return input_volume
 
 
+def _derive_scale(img_path, model_resolution):
+    try:
+        with mrcfile.open(img_path, "r") as f:
+            voxel_size = f.voxel_size
+            if len(model_resolution) == 2:
+                voxel_size = [voxel_size.y, voxel_size.x]
+            else:
+                voxel_size = [voxel_size.z, voxel_size.y, voxel_size.x]
+
+        assert len(voxel_size) == len(model_resolution)
+        # The voxel size is given in Angstrom and we need to translate it to nanometer.
+        voxel_size = [vsize / 10 for vsize in voxel_size]
+
+        # Compute the correct scale factor.
+        scale = tuple(vsize / res for vsize, res in zip(voxel_size, model_resolution))
+        print("Rescaling the data at", img_path, "by", scale, "to match the training voxel size", model_resolution)
+
+    except Exception:
+        warnings.warn(
+            f"The voxel size could not be read from the data for {img_path}. "
+            "This data will not be scaled for prediction."
+        )
+        scale = None
+
+    return scale
+
+
 def inference_helper(
     input_path: str,
     output_root: str,
@@ -263,6 +291,8 @@ def inference_helper(
     mask_input_ext: str = ".tif",
     force: bool = False,
     output_key: Optional[str] = None,
+    model_resolution: Optional[Tuple[float, float, float]] = None,
+    scale: Optional[Tuple[float, float, float]] = None,
 ) -> None:
     """Helper function to run segmentation for mrc files.
 
@@ -282,7 +312,13 @@ def inference_helper(
         mask_input_ext: File extension for the mask inputs (by default .tif).
         force: Whether to rerun segmentation for output files that are already present.
         output_key: Output key for the prediction. If none will write an hdf5 file.
+        model_resolution: The resolution / voxel size to which the inputs should be scaled for prediction.
+            If given, the scaling factor will automatically be determined based on the voxel_size of the input data.
+        scale: Fixed factor for scaling the model inputs. Cannot be passed together with 'model_resolution'.
     """
+    if (scale is not None) and (model_resolution is not None):
+        raise ValueError("You must not provide both 'scale' and 'model_resolution' arguments.")
+
     # Get the input files. If input_path is a folder then this will load all
     # the mrc files beneath it. Otherwise we assume this is an mrc file already
     # and just return the path to this mrc file.
@@ -333,8 +369,18 @@ def inference_helper(
         # Load the mask (if given).
         mask = None if mask_files is None else imageio.imread(mask_files[i])
 
+        # Determine the scale factor:
+        # If the neither the 'scale' nor 'model_resolution' arguments were passed then set it to None.
+        if scale is None and model_resolution is None:
+            this_scale = None
+        elif scale is not None:   # If 'scale' was passed then use it.
+            this_scale = scale
+        else:   # Otherwise 'model_resolution' was passed, use it to derive the scaling from the data
+            assert model_resolution is not None
+            this_scale = _derive_scale(img_path, model_resolution)
+
         # Run the segmentation.
-        segmentation = segmentation_function(input_volume, mask=mask)
+        segmentation = segmentation_function(input_volume, mask=mask, scale=this_scale)
 
         # Write the result to tif or h5.
         os.makedirs(os.path.split(output_path)[0], exist_ok=True)
@@ -348,15 +394,21 @@ def inference_helper(
         print(f"Saved segmentation to {output_path}.")
 
 
-def get_default_tiling() -> Dict[str, Dict[str, int]]:
+def get_default_tiling(is_2d: bool = False) -> Dict[str, Dict[str, int]]:
     """Determine the tile shape and halo depending on the available VRAM.
+
+    Args:
+        is_2d: Whether to return tiling settings for 2d inference.
 
     Returns:
         The default tiling settings for the available computational resources.
     """
-    if torch.cuda.is_available():
-        print("Determining suitable tiling")
+    if is_2d:
+        tile = {"x": 768, "y": 768, "z": 1}
+        halo = {"x": 128, "y": 128, "z": 0}
+        return {"tile": tile, "halo": halo}
 
+    if torch.cuda.is_available():
         # We always use the same default halo.
         halo = {"x": 64, "y": 64, "z": 16}  # before 64,64,8
 
@@ -390,19 +442,21 @@ def get_default_tiling() -> Dict[str, Dict[str, int]]:
 
 def parse_tiling(
     tile_shape: Tuple[int, int, int],
-    halo: Tuple[int, int, int]
+    halo: Tuple[int, int, int],
+    is_2d: bool = False,
 ) -> Dict[str, Dict[str, int]]:
     """Helper function to parse tiling parameter input from the command line.
 
     Args:
         tile_shape: The tile shape. If None the default tile shape is used.
         halo: The halo. If None the default halo is used.
+        is_2d: Whether to return tiling for a 2d model.
 
     Returns:
         The tiling specification.
     """
 
-    default_tiling = get_default_tiling()
+    default_tiling = get_default_tiling(is_2d=is_2d)
 
     if tile_shape is None:
         tile_shape = default_tiling["tile"]
