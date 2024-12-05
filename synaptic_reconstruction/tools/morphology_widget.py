@@ -196,7 +196,7 @@ class MorphologyWidget(BaseWidget):
             resolution=resolution,
             props=props,
         )
-        self._add_table(coords, radii, props, name="Vesicles Morphology")
+        self._add_table(coords, radii, props, name="Vesicle Morphology")
 
     def on_measure_structure_morphology(self):
         """
