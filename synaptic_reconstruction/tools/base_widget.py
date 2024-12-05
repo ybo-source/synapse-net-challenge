@@ -1,12 +1,19 @@
+import os
 from pathlib import Path
 
 import napari
 import qtpy.QtWidgets as QtWidgets
 
+from napari.utils.notifications import show_info
 from qtpy.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QComboBox, QCheckBox
 )
 from superqt import QCollapsible
+
+try:
+    from napari_skimage_regionprops import add_table
+except ImportError:
+    add_table = None
 
 
 class BaseWidget(QWidget):
@@ -31,12 +38,14 @@ class BaseWidget(QWidget):
             layer_filter = napari.layers.Image
         elif layer_type == "Labels":
             layer_filter = napari.layers.Labels
+        elif layer_type == "Shapes":
+            layer_filter = napari.layers.Shapes
         else:
             raise ValueError("layer_type must be either 'Image' or 'Labels'.")
 
         selector_widget = QtWidgets.QWidget()
         image_selector = QtWidgets.QComboBox()
-        layer_label = QtWidgets.QLabel(f"{selector_name} Layer:")
+        layer_label = QtWidgets.QLabel(f"{selector_name}:")
 
         # Populate initial options
         self._update_selector(selector=image_selector, layer_filter=layer_filter)
@@ -58,8 +67,22 @@ class BaseWidget(QWidget):
     def _update_selector(self, selector, layer_filter):
         """Update a single selector with the current image layers in the viewer."""
         selector.clear()
-        image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, layer_filter)]  # if isinstance(layer, napari.layers.Image)
+        image_layers = [layer.name for layer in self.viewer.layers if isinstance(layer, layer_filter)]
         selector.addItems(image_layers)
+
+    def _get_layer_selector_layer(self, selector_name):
+        """Return the layer currently selected in a given selector."""
+        if selector_name in self.layer_selectors:
+            selector_widget = self.layer_selectors[selector_name]
+
+            # Retrieve the QComboBox from the QWidget's layout
+            image_selector = selector_widget.layout().itemAt(1).widget()
+
+            if isinstance(image_selector, QComboBox):
+                selected_layer_name = image_selector.currentText()
+                if selected_layer_name in self.viewer.layers:
+                    return self.viewer.layers[selected_layer_name]
+        return None  # Return None if layer not found
 
     def _get_layer_selector_data(self, selector_name, return_metadata=False):
         """Return the data for the layer currently selected in a given selector."""
@@ -172,7 +195,7 @@ class BaseWidget(QWidget):
             title=title[1] if title is not None else title, tooltip=tooltip
         )
         layout.addLayout(y_layout)
-        
+
         if len(names) == 3:
             z_layout = QVBoxLayout()
             z_param, _ = self._add_int_param(
@@ -262,3 +285,43 @@ class BaseWidget(QWidget):
         else:
             # Handle the case where the selected path is not a file
             print("Invalid file selected. Please try again.")
+
+    def _handle_resolution(self, metadata, voxel_size_param, ndim):
+        # Get the resolution / voxel size from the layer metadata if available.
+        resolution = metadata.get("voxel_size", None)
+        if resolution is not None:
+            resolution = [resolution[ax] for ax in ("zyx" if ndim == 3 else "yx")]
+
+        # If user input was given then override resolution from metadata.
+        if voxel_size_param.value() != 0.0:  # Changed from default.
+            resolution = ndim * [voxel_size_param.value()]
+
+        assert len(resolution) == ndim
+        return resolution
+
+    def _save_table(self, save_path, data):
+        ext = os.path.splitext(save_path)[1]
+        if ext == "":  # No file extension given, By default we save to CSV.
+            file_path = f"{save_path}.csv"
+            data.to_csv(file_path, index=False)
+        elif ext == ".csv":  # Extension was specified as csv
+            file_path = save_path
+            data.to_csv(file_path, index=False)
+        elif ext == ".xlsx":  # We also support excel.
+            file_path = save_path
+            data.to_excel(file_path, index=False)
+        else:
+            raise ValueError("Invalid extension for table: {ext}. We support .csv or .xlsx.")
+        return file_path
+
+    def _add_properties_and_table(self, layer, table_data, save_path=""):
+        if layer.properties:
+            layer.properties = layer.properties.update(table_data)
+        else:
+            layer.properties = table_data
+        if add_table is not None:
+            add_table(layer, self.viewer)
+        # Save table to file if save path is provided.
+        if save_path != "":
+            file_path = self._save_table(self.save_path.text(), table_data)
+            show_info(f"INFO: Added table and saved file to {file_path}.")

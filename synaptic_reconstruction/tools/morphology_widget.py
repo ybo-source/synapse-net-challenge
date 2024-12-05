@@ -1,5 +1,3 @@
-import os
-
 import napari
 import napari.layers
 import napari.viewer
@@ -13,12 +11,6 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from .base_widget import BaseWidget
 from synaptic_reconstruction.imod.to_imod import convert_segmentation_to_spheres
 from synaptic_reconstruction.morphology import compute_object_morphology
-from synaptic_reconstruction.tools.util import _save_table
-
-try:
-    from napari_skimage_regionprops import add_table
-except ImportError:
-    add_table = None
 
 
 class MorphologyWidget(BaseWidget):
@@ -69,7 +61,7 @@ class MorphologyWidget(BaseWidget):
             if 'z' not in table_data.columns
             else table_data[['x', 'y', 'z']].to_numpy()
         )
-        radii = table_data['radii'].to_numpy()
+        radii = table_data['radius'].to_numpy()
 
         if coords.shape[1] == 2:
             # For 2D data, create circular outlines using trigonometric functions
@@ -127,46 +119,18 @@ class MorphologyWidget(BaseWidget):
         assert len(coords) == len(radii), f"Shape mismatch: {coords.shape}, {radii.shape}"
 
         # Define columns based on dimension (2D or 3D)
-        col_names = ['x', 'y'] if coords.shape[1] == 2 else ['x', 'y', 'z']
+        col_names = ["x", "y"] if coords.shape[1] == 2 else ["x", "y", "z"]
         table_data = {
-            'label_id': [prop.label for prop in props],
+            "label_id": [prop.label for prop in props],
             **{col: coords[:, i] for i, col in enumerate(col_names)},
-            'radii': radii,
-            'intensity_max': [prop.intensity_max for prop in props],
-            'intensity_mean': [prop.intensity_mean for prop in props],
-            'intensity_min': [prop.intensity_min for prop in props],
-            'intensity_std': [prop.intensity_std for prop in props],
+            "radius": radii,
+            "intensity_max": [prop.intensity_max for prop in props],
+            "intensity_mean": [prop.intensity_mean for prop in props],
+            "intensity_min": [prop.intensity_min for prop in props],
+            "intensity_std": [prop.intensity_std for prop in props],
         }
 
         return pd.DataFrame(table_data)
-
-    def _add_table(self, coords, radii, props, name="Shapes Layer"):
-        """
-        Add a Shapes layer and table data to the Napari viewer.
-
-        Args:
-            viewer (napari.Viewer): The Napari viewer instance.
-            coords (np.ndarray): Array of 2D or 3D coordinates.
-            radii (np.ndarray): Array of radii corresponding to the coordinates.
-            props (list): List of properties containing intensity statistics.
-            name (str): Name of the Shapes layer.
-            save_path (str): Path to save the table data, if provided.
-        """
-        # Create table data
-        table_data = self._to_table_data(coords, radii, props)
-
-        # Add the shapes layer
-        layer = self._create_shapes_layer(table_data, name)
-
-        if add_table is not None:
-            add_table(layer, self.viewer)
-
-        # Save the table to a file if a save path is provided
-        if self.save_path.text():
-            table_data.to_csv(self.save_path, index=False)
-            print(f"INFO: Added table and saved file to {self.save_path}.")
-        else:
-            print("INFO: Table added to viewer.")
 
     def on_measure_vesicle_morphology(self):
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
@@ -178,26 +142,26 @@ class MorphologyWidget(BaseWidget):
             show_info("INFO: Please choose an image.")
             return
 
-        # get metadata from layer if available
-        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
-        resolution = metadata.get("voxel_size", None)
-        if resolution is not None:
-            resolution = [v for v in resolution.values()]
-        # if user input is present override metadata
-        if self.voxel_size_param.value() != 0.0:  # changed from default
-            resolution = segmentation.ndim * [self.voxel_size_param.value()]
+        # Get the resolution / voxel size.
+        metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
+        resolution = self._handle_resolution(metadata, self.voxel_size_param, segmentation.ndim)
 
+        # Compute the mophology parameter.
         props = regionprops(label_image=segmentation, intensity_image=image)
-
         coords, radii = convert_segmentation_to_spheres(
             segmentation=segmentation,
             resolution=resolution,
             props=props,
         )
-        self._add_table(coords, radii, props, name="Vesicles")
+
+        # Create table data and add the properties and table to the layer.
+        table_data = self._to_table_data(coords, radii, props)
+        layer = self._get_layer_selector_layer(self.image_selector_name1)
+        self._add_properties_and_table(layer, table_data, self.save_path.text())
 
     def on_measure_structure_morphology(self):
-        """add the structure measurements to the segmentation layer (via properties) 
+        """
+        Add the structure measurements to the segmentation layer (via properties)
         and visualize the properties table
         """
         segmentation = self._get_layer_selector_data(self.image_selector_name1)
@@ -205,34 +169,17 @@ class MorphologyWidget(BaseWidget):
             show_info("INFO: Please choose a segmentation.")
             return
         # get metadata from layer if available
-        metadata = self._get_layer_selector_data(self.image_selector_name1, return_metadata=True)
+        metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
         resolution = metadata.get("voxel_size", None)
         if resolution is not None:
             resolution = [v for v in resolution.values()]
         morphology = compute_object_morphology(
-            object_=segmentation, structure_name=self.image_selector_name1,
-            resolution=resolution
-            )
+            object_=segmentation, structure_name=self.image_selector_name1, resolution=resolution
+        )
 
-        self._add_table_structure(morphology)
-
-    def _add_table_structure(self, morphology):
-        # add properties to segmentation layer
-        segmentation_selector_widget = self.layer_selectors[self.image_selector_name1]
-        image_selector = segmentation_selector_widget.layout().itemAt(1).widget()
-        selected_layer_name = image_selector.currentText()
-        self.viewer.layers[selected_layer_name].properties = morphology
-
-        # Add a table layer to the Napari viewer
-        if add_table is not None:
-            add_table(self.viewer.layers[selected_layer_name], self.viewer)
-
-        # Save table to file if save path is provided
-        if self.save_path.text() != "":
-            file_path = _save_table(self.save_path.text(), self._to_table_data_structure(morphology))
-            show_info(f"INFO: Added table and saved file to {file_path}.")
-        else:
-            print("INFO: Table added to viewer.")
+        # Add the properties to the layer and add/save the table.
+        layer = self._get_layer_selector_layer(self.image_selector_name1)
+        self._add_properties_and_table(layer, morphology, self.save_path.text())
 
     def _create_settings_widget(self):
         setting_values = QWidget()
