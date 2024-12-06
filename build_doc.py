@@ -11,6 +11,6 @@ if __name__ == "__main__":
 
     if args.out:
         cmd.extend(["--out", "tmp/"])
-    cmd.append("synapse_net")
+    cmd.append("synapse_net/")
 
     run(cmd)

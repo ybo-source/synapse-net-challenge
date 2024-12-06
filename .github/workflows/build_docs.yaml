@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "doc/*.md"   # Trigger on changes to any markdown file
-      - "**/*.py"   # Optionally include changes in Python files
+      - "synapse_net/**/*.py"   # Optionally include changes in Python files
     branches:
       - main        # Run the workflow only on pushes to the main branch
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
 
     - name: Generate Documentation
       shell: bash -l {0}
-      run: pdoc synapse_net -d google -o doc/
+      run: pdoc synapse_net/ -d google -o doc/
 
     - name: Verify Documentation Output
       run: ls -la doc/
