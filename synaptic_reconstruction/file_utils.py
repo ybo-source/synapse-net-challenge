@@ -59,7 +59,6 @@ def read_voxel_size(path: str) -> Dict[str, float] | None:
     return voxel_size
 
 
-# TODO: double check axis ordering with elf
 def read_mrc(path: str) -> Tuple[np.ndarray, Dict[str, float]]:
     """Read data and voxel size from mrc/rec file.
 
@@ -73,11 +72,8 @@ def read_mrc(path: str) -> Tuple[np.ndarray, Dict[str, float]]:
     with mrcfile.open(path, permissive=True) as mrc:
         voxel_size = _parse_voxel_size(mrc.voxel_size)
         data = np.asarray(mrc.data[:])
+    assert data.ndim in (2, 3)
 
     # Transpose the data to match python axis order.
-    if data.ndim == 3:
-        data = np.flip(data, axis=1)
-    else:
-        data = np.flip(data, axis=0)
-
+    data = np.flip(data, axis=1) if data.ndim == 3 else np.flip(data, axis=0)
     return data, voxel_size

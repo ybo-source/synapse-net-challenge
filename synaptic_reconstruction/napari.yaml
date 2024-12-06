@@ -27,6 +27,9 @@ contributions:
     - id: synaptic_reconstruction.sample_data_tem_2d
       python_name: synaptic_reconstruction.sample_data:sample_data_tem_2d
       title: Load TEM 2D sample data
+    - id: synaptic_reconstruction.sample_data_tem_tomo
+      python_name: synaptic_reconstruction.sample_data:sample_data_tem_tomo
+      title: Load TEM Tomo sample data
 
   readers:
     - command: synaptic_reconstruction.file_reader
@@ -50,3 +53,6 @@ contributions:
     - command: synaptic_reconstruction.sample_data_tem_2d
       display_name: TEM 2D Sample Data
       key: synapse-net-tem-2d
+    - command: synaptic_reconstruction.sample_data_tem_tomo
+      display_name: TEM Tomo Sample Data
+      key: synapse-net-tem-tomo
