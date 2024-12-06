@@ -36,6 +36,10 @@ jobs:
       shell: bash -l {0}
       run: pip install -e .
 
+    - name: Install pdoc
+      shell: bash -l {0}
+      run: pip install pdoc
+
     - name: Generate Documentation
       shell: bash -l {0}
       run: pdoc synapse_net/ -d google -o doc/
