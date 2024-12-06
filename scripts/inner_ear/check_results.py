@@ -2,6 +2,7 @@ import os
 import sys
 from glob import glob
 
+import mrcfile
 import imageio.v3 as imageio
 import h5py
 import napari
@@ -10,12 +11,34 @@ import pandas
 
 from synaptic_reconstruction.distance_measurements import create_object_distance_lines, load_distances
 from synaptic_reconstruction.file_utils import get_data_path
-from synaptic_reconstruction.tools.distance_measurement import _downsample
 
 from elf.io import open_file
+from skimage.transform import rescale, resize
 from tqdm import tqdm
 
 sys.path.append("processing")
+
+
+def _downsample(data, scale, is_seg=False, target_shape=None):
+    if target_shape is not None:
+        if data.shape == target_shape:
+            return data
+
+        if is_seg:
+            data = resize(data, target_shape, order=0, anti_aliasing=False, preserve_range=True).astype(data.dtype)
+        else:
+            data = resize(data, target_shape, preserve_range=True).astype(data.dtype)
+        return data
+
+    if scale is None:
+        return data
+    rescale_factor = 1.0 / scale
+    if is_seg:
+        data = rescale(data, rescale_factor, order=0, anti_aliasing=False, preserve_range=True).astype(data.dtype)
+    else:
+        data = rescale(data, rescale_factor, preserve_range=True).astype(data.dtype)
+
+    return data
 
 
 def get_distance_visualization(
@@ -39,7 +62,7 @@ def get_distance_visualization(
         return tomo, segmentations, distance_lines
 
 
-def create_vesicle_pools(vesicles, result_path):
+def create_vesicle_pools(vesicles, result_path, use_default_color=True):
     vesicle_pools = np.zeros_like(vesicles)
 
     assignment_result = pandas.read_excel(result_path)
@@ -47,12 +70,20 @@ def create_vesicle_pools(vesicles, result_path):
     pool_assignments = assignment_result["pool"].values
     pool_assignments = {vid: pool for vid, pool in zip(vesicle_ids, pool_assignments)}
 
-    color_map = {
-        "RA-V": (0, 0.33, 0),
-        "MP-V": (1.0, 0.549, 0.0),
-        "Docked-V": (1, 1, 0),
-        "unassigned": (1, 1, 1),
-    }
+    if use_default_color:
+        color_map = {
+            "RA-V": (0, 0.33, 0),
+            "MP-V": (1.0, 0.549, 0.0),
+            "Docked-V": (1, 1, 0),
+            "unassigned": (1, 1, 1),
+        }
+    else:
+        color_map = {
+            "RA-V": (252. / 255, 228. / 255, 120. / 255),
+            "MP-V": (217. / 255, 221. / 255, 202. / 255),
+            "Docked-V": (108. / 255, 178. / 255, 115. / 255),
+            "unassigned": (1, 1, 1),
+        }
     colors = {}
     for pool_name in ("RA-V", "MP-V", "Docked-V"):
         ves_ids_pool = [vid for vid, pname in pool_assignments.items() if pname == pool_name]
@@ -76,11 +107,18 @@ def _load_segmentation(correction_file, seg_file, binning, tomo):
     return seg
 
 
-def _update_colors(colors):
-    colors["ribbon"] = {1: (1, 0, 0), 2: (1, 0, 0)}
-    colors["PD"] = {1: (0.784, 0.635, 0.784), 2: (0.784, 0.635, 0.784)}
-    colors["pd"] = {1: (0.784, 0.635, 0.784), 2: (0.784, 0.635, 0.784)}
-    colors["membrane"] = {1: (1.0, 0.753, 0.796), 2: (1.0, 0.753, 0.796)}
+def _update_colors(colors, use_default_colors=True):
+    if use_default_colors:  # this is our default color-scheme
+        colors["ribbon"] = {1: (1, 0, 0), 2: (1, 0, 0)}
+        colors["PD"] = {1: (0.784, 0.635, 0.784), 2: (0.784, 0.635, 0.784)}
+        colors["pd"] = {1: (0.784, 0.635, 0.784), 2: (0.784, 0.635, 0.784)}
+        colors["membrane"] = {1: (1.0, 0.753, 0.796), 2: (1.0, 0.753, 0.796)}
+    else:  # this is the color scheme used for the publication figures
+        colors["ribbon"] = {1: (1, 0, 0), 2: (1, 0, 0)}
+        colors["PD"] = {1: (80. / 255, 39. / 255, 107. / 255)}
+        # colors["PD"] = {1: (0.784, 0.635, 0.784), 2: (0.784, 0.635, 0.784)}
+        colors["pd"] = colors["PD"]
+        colors["membrane"] = {1: (180. / 255, 185. / 255, 191. / 255)}
     return colors
 
 
@@ -91,6 +129,9 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
     with open_file(raw_path, "r") as f:
         tomo = f["data"][:]
     tomo = _downsample(tomo, scale=binning)
+
+    with mrcfile.open(raw_path, "r") as f:
+        resolution = np.array(f.voxel_size).tolist()
 
     if segmentation_version is None:
 
@@ -152,25 +193,36 @@ def visualize_folder(folder, segmentation_version, visualize_distances, binning)
         else:
             distance_lines = {}
 
+        show_scale_bar = False
+        if show_scale_bar:
+            scale = tuple(res * binning / 10 for res in resolution)
+        else:
+            scale = None
+
         v = napari.Viewer()
-        v.add_image(tomo)
+        v.add_image(tomo, scale=scale)
         for name, seg in segmentations.items():
             # The function signature of the label layer has recently changed,
             # and we still need to support both versions.
             try:
-                v.add_labels(seg, name=name, color=colors.get(name, None))
+                v.add_labels(seg, name=name, color=colors.get(name, None), scale=scale)
             except TypeError:
-                v.add_labels(seg, name=name, colormap=colors.get(name, None))
+                v.add_labels(seg, name=name, colormap=colors.get(name, None), scale=scale)
 
         for name, lines in distance_lines.items():
-            v.add_shapes(lines, shape_type="line", name=name, visible=False)
+            v.add_shapes(lines, shape_type="line", name=name, visible=False, scale=scale)
 
         if os.path.exists(pool_correction_path):
             pool_correction = imageio.imread(pool_correction_path)
             pool_correction = _downsample(pool_correction, is_seg=True, scale=None, target_shape=tomo.shape)
         else:
             pool_correction = np.zeros(tomo.shape, dtype="uint8")
-        v.add_labels(name="pool_correction", data=pool_correction)
+        v.add_labels(name="pool_correction", data=pool_correction, scale=scale)
+
+        if show_scale_bar:
+            v.scale_bar.visible = True
+            v.scale_bar.unit = "nm"
+            v.scale_bar.font_size = 16
 
         v.title = f"{correction}: {folder}"
         napari.run()
