@@ -4,7 +4,7 @@ import os
 from glob import glob
 
 import numpy as np
-from synaptic_reconstruction.imod import get_label_names
+from synapse_net.imod import get_label_names
 from tqdm import tqdm
 
 ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/original_imod_data/20240909_cp_datatransfer"  # noqa

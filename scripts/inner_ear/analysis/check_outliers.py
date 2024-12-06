@@ -3,7 +3,7 @@ from pathlib import Path
 
 import imageio.v3 as imageio
 import napari
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.file_utils import get_data_path
 from elf.io import open_file
 
 

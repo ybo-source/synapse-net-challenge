@@ -3,7 +3,7 @@ from glob import glob
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from synaptic_reconstruction.training.domain_adaptation import mean_teacher_adaptation
+from synapse_net.training.domain_adaptation import mean_teacher_adaptation
 
 from train_structure_segmentation import noop  # noqa
 

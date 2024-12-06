@@ -9,12 +9,12 @@ from skimage.segmentation import relabel_sequential
 from scipy.ndimage import binary_dilation
 from tqdm import tqdm
 
-from synaptic_reconstruction.inference.vesicles import segment_vesicles
-# from synaptic_reconstruction.ground_truth import find_additional_objects
-from synaptic_reconstruction.inference.util import _get_file_paths
-from synaptic_reconstruction.ground_truth.shape_refinement import refine_vesicle_shapes, edge_filter
+from synapse_net.inference.vesicles import segment_vesicles
+# from synapse_net.ground_truth import find_additional_objects
+from synapse_net.inference.util import _get_file_paths
+from synapse_net.ground_truth.shape_refinement import refine_vesicle_shapes, edge_filter
 
-MODEL_PATH = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
+MODEL_PATH = "/scratch-grete/projects/nim00007/data/synapse_net/models/cooper/vesicles/3D-UNet-for-Vesicle-Segmentation-vesicles-010508model_v1r45_0105mr45_0105mr45.zip"  # noqa
 
 
 def extract_gt_bounding_box(raw, vesicle_gt, halo=[2, 32, 32]):

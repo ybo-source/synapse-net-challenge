@@ -1,5 +1,5 @@
 import os
-from synaptic_reconstruction.training.domain_adaptation import mean_teacher_adaptation
+from synapse_net.training.domain_adaptation import mean_teacher_adaptation
 
 ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/fernandez-busnadiego/from_arsen/tomos_actin_18924"  # noqa
 

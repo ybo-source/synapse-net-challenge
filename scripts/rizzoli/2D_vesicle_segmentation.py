@@ -8,8 +8,8 @@ import torch
 import torch_em
 import numpy as np
 
-from synaptic_reconstruction.inference.vesicles import segment_vesicles
-from synaptic_reconstruction.inference.util import parse_tiling
+from synapse_net.inference.vesicles import segment_vesicles
+from synapse_net.inference.util import parse_tiling
 
 def get_2D_tiling():
     """Determine the tile shape and halo depending on the available VRAM.

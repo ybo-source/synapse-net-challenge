@@ -5,7 +5,7 @@ import h5py
 import mrcfile
 from skimage.transform import rescale
 
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.file_utils import get_data_path
 from parse_table import get_data_root
 
 

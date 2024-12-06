@@ -6,13 +6,13 @@ import imageio.v3 as imageio
 import napari
 import numpy as np
 
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.file_utils import get_data_path
 
 from elf.io import open_file
 from tqdm import tqdm
 
 from napari_skimage_regionprops import add_table
-from synaptic_reconstruction.tools.distance_measurement import _downsample
+from synapse_net.tools.distance_measurement import _downsample
 from check_results import get_distance_visualization, create_vesicle_pools, _update_colors
 
 sys.path.append("processing")

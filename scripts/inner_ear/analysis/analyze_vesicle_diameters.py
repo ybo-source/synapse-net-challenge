@@ -7,8 +7,8 @@ import mrcfile
 import pandas as pd
 from tqdm import tqdm
 
-from synaptic_reconstruction.imod.export import load_points_from_imodinfo
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.imod.export import load_points_from_imodinfo
+from synapse_net.file_utils import get_data_path
 
 from common import get_finished_tomos
 

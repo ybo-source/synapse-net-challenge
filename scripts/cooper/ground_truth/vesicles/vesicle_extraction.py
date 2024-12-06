@@ -2,7 +2,7 @@ import os
 from glob import glob
 from pathlib import Path
 
-from synaptic_reconstruction.ground_truth import extract_vesicle_training_data
+from synapse_net.ground_truth import extract_vesicle_training_data
 
 ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/original_imod_data/20240909_cp_datatransfer"  # noqa
 OUT_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/extracted/20240909_cp_datatransfer"  # noqa

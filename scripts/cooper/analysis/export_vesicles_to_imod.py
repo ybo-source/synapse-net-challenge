@@ -3,7 +3,7 @@ from glob import glob
 
 import h5py
 
-from synaptic_reconstruction.imod.to_imod import write_segmentation_to_imod_as_points
+from synapse_net.imod.to_imod import write_segmentation_to_imod_as_points
 
 
 def export_all_to_imod(check_input=True, check_export=True):

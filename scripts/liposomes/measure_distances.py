@@ -7,8 +7,8 @@ import imageio.v3 as imageio
 import pandas as pd
 from elf.io import open_file
 
-from synaptic_reconstruction.distance_measurements import measure_pairwise_object_distances
-from synaptic_reconstruction.tools.distance_measurement import measure_distances, _downsample, create_distance_lines
+from synapse_net.distance_measurements import measure_pairwise_object_distances
+from synapse_net.tools.distance_measurement import measure_distances, _downsample, create_distance_lines
 
 # ON WORKSTATION
 TOMO_ROOT = "/home/user2/data/corrected_tomos_mrc"

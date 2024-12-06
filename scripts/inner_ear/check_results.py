@@ -9,8 +9,8 @@ import napari
 import numpy as np
 import pandas
 
-from synaptic_reconstruction.distance_measurements import create_object_distance_lines, load_distances
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.distance_measurements import create_object_distance_lines, load_distances
+from synapse_net.file_utils import get_data_path
 
 from elf.io import open_file
 from skimage.transform import rescale, resize

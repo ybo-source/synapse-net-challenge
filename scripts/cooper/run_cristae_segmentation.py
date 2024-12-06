@@ -1,8 +1,8 @@
 import argparse
 from functools import partial
 
-from synaptic_reconstruction.inference.cristae import segment_cristae
-from synaptic_reconstruction.inference.util import inference_helper, parse_tiling
+from synapse_net.inference.cristae import segment_cristae
+from synapse_net.inference.util import inference_helper, parse_tiling
 
 
 def run_cristae_segmentation(args):

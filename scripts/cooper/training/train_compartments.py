@@ -11,7 +11,7 @@ from skimage.filters import gaussian, rank
 from skimage.morphology import disk
 from scipy.ndimage import binary_dilation, distance_transform_edt
 
-from synaptic_reconstruction.training import supervised_training
+from synapse_net.training import supervised_training
 
 TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/ground_truth/compartments"
 # TRAIN_ROOT = "/home/pape/Work/my_projects/synaptic-reconstruction/scripts/cooper/ground_truth/compartments/output/compartment_gt"  # noqa

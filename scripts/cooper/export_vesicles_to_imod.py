@@ -1,7 +1,7 @@
 import argparse
 from functools import partial
 
-from synaptic_reconstruction.imod.to_imod import export_helper, write_segmentation_to_imod_as_points
+from synapse_net.imod.to_imod import export_helper, write_segmentation_to_imod_as_points
 
 
 def export_vesicles_to_imod(args):

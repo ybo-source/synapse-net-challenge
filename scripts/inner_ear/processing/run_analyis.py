@@ -8,15 +8,15 @@ import numpy as np
 import pandas
 import vigra
 
-from synaptic_reconstruction.file_utils import get_data_path
-from synaptic_reconstruction.distance_measurements import (
+from synapse_net.file_utils import get_data_path
+from synapse_net.distance_measurements import (
     filter_blocked_segmentation_to_object_distances,
     load_distances,
     measure_segmentation_to_object_distances,
 )
 
-from synaptic_reconstruction.morphology import compute_radii, compute_object_morphology
-from synaptic_reconstruction.inference.postprocessing import filter_border_vesicles
+from synapse_net.morphology import compute_radii, compute_object_morphology
+from synapse_net.inference.postprocessing import filter_border_vesicles
 from skimage.transform import resize
 from skimage.measure import regionprops, label
 

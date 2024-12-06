@@ -1,7 +1,7 @@
 import h5py
 import napari
 
-from synaptic_reconstruction.inference.vesicles import distance_based_vesicle_segmentation
+from synapse_net.inference.vesicles import distance_based_vesicle_segmentation
 
 
 def debug_vesicle_seg(path, pred_path):

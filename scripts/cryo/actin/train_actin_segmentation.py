@@ -1,6 +1,6 @@
 import numpy as np
 
-from synaptic_reconstruction.training import supervised_training
+from synapse_net.training import supervised_training
 from torch_em.data.sampler import MinForegroundSampler
 
 

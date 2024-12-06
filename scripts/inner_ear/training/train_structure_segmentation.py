@@ -4,7 +4,7 @@ from glob import glob
 import h5py
 import numpy as np
 
-from synaptic_reconstruction.training.supervised_training import supervised_training
+from synapse_net.training.supervised_training import supervised_training
 from sklearn.model_selection import train_test_split
 from torch_em.data.sampler import MinForegroundSampler
 from tqdm import tqdm

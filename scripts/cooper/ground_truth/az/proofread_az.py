@@ -8,8 +8,8 @@ from tqdm import tqdm
 from magicgui import magicgui
 
 from scipy.ndimage import binary_dilation, binary_closing
-from synaptic_reconstruction.morphology import skeletonize_object
-from synaptic_reconstruction.ground_truth.shape_refinement import edge_filter
+from synapse_net.morphology import skeletonize_object
+from synapse_net.ground_truth.shape_refinement import edge_filter
 
 
 def proofread_az(raw_path, seg_path):

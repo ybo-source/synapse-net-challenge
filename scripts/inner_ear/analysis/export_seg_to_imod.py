@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from elf.io import open_file
 from skimage.transform import resize
-from synaptic_reconstruction.imod.to_imod import write_segmentation_to_imod, write_segmentation_to_imod_as_points
+from synapse_net.imod.to_imod import write_segmentation_to_imod, write_segmentation_to_imod_as_points
 
 out_folder = "./auto_seg_export"
 os.makedirs(out_folder, exist_ok=True)

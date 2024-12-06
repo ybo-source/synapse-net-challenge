@@ -10,7 +10,7 @@ from scipy.ndimage import binary_erosion, binary_closing
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes
 from skimage.segmentation import watershed
-from synaptic_reconstruction.ground_truth.shape_refinement import edge_filter
+from synapse_net.ground_truth.shape_refinement import edge_filter
 from tqdm import tqdm
 
 

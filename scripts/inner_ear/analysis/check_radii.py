@@ -8,7 +8,7 @@ import pandas as pd
 from elf.io import open_file
 
 from tqdm import tqdm
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.file_utils import get_data_path
 
 sys.path.append("../processing")
 
@@ -79,7 +79,7 @@ def check_diameter_results():
 
 
 def test_export():
-    from synaptic_reconstruction.imod.to_imod import write_segmentation_to_imod_as_points
+    from synapse_net.imod.to_imod import write_segmentation_to_imod_as_points
     from subprocess import run
 
     mrc_path = "/home/pape/Work/data/moser/em-synapses/Electron-Microscopy-Susi/Analyse/WT strong stim/Mouse 1/pillar/1/Emb71M1aGridA3sec3pil12.rec"  # noqa

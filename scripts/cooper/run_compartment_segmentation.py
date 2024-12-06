@@ -1,8 +1,8 @@
 import argparse
 from functools import partial
 
-from synaptic_reconstruction.inference.compartments import segment_compartments
-from synaptic_reconstruction.inference.util import inference_helper, parse_tiling
+from synapse_net.inference.compartments import segment_compartments
+from synapse_net.inference.util import inference_helper, parse_tiling
 
 
 def run_compartment_segmentation(args):

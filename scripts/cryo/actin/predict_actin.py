@@ -5,7 +5,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 from elf.io import open_file
-from synaptic_reconstruction.inference.actin import segment_actin
+from synapse_net.inference.actin import segment_actin
 
 
 # Run prediction on the actin val volume.

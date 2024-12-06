@@ -4,8 +4,8 @@ from glob import glob
 import h5py
 from tqdm import tqdm
 
-from synaptic_reconstruction.inference.util import _Scaler
-from synaptic_reconstruction.inference.compartments import segment_compartments
+from synapse_net.inference.util import _Scaler
+from synapse_net.inference.compartments import segment_compartments
 
 INPUT_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/ground_truth/04Dataset_for_vesicle_eval"  # noqa
 # MODEL_PATH = "/mnt/lustre-emmy-hdd/projects/nim00007/compartment_models/compartment_model_3d.pt"

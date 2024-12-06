@@ -2,7 +2,7 @@ import os
 from glob import glob
 
 import h5py
-from synaptic_reconstruction.inference.mitochondria import segment_mitochondria
+from synapse_net.inference.mitochondria import segment_mitochondria
 from tqdm import tqdm
 
 ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/04_full_reconstruction"  # noqa

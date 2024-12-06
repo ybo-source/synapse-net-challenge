@@ -5,7 +5,7 @@ import numpy as np
 
 class TestDistanceMeasurement(unittest.TestCase):
     def test_measure_pairwise_object_distances(self):
-        from synaptic_reconstruction.distance_measurements import measure_pairwise_object_distances
+        from synapse_net.distance_measurements import measure_pairwise_object_distances
 
         shape = (4, 64, 64)
         seg = np.zeros(shape, dtype="uint32")

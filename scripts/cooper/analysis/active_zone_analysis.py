@@ -8,9 +8,9 @@ import pandas as pd
 
 from scipy.ndimage import binary_closing
 from skimage.measure import label
-from synaptic_reconstruction.ground_truth.shape_refinement import edge_filter
-from synaptic_reconstruction.morphology import skeletonize_object
-from synaptic_reconstruction.distance_measurements import measure_segmentation_to_object_distances
+from synapse_net.ground_truth.shape_refinement import edge_filter
+from synapse_net.morphology import skeletonize_object
+from synapse_net.distance_measurements import measure_segmentation_to_object_distances
 from tqdm import tqdm
 
 from compute_skeleton_area import calculate_surface_area

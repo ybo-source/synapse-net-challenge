@@ -32,7 +32,7 @@ def _size_filter(segmentation, min_size):
 
 
 def create_data_for_vesicle_annotation(view=True):
-    from synaptic_reconstruction.ground_truth import find_additional_objects
+    from synapse_net.ground_truth import find_additional_objects
 
     table = pd.read_excel(os.path.join(ROOT, "Validierungs-Tabelle-v3.xlsx"))
 

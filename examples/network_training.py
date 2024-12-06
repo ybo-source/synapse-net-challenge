@@ -12,7 +12,7 @@ import os
 from glob import glob
 
 from sklearn.model_selection import train_test_split
-from synaptic_reconstruction.training import supervised_training
+from synapse_net.training import supervised_training
 
 
 def main():

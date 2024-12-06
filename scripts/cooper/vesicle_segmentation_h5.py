@@ -6,8 +6,8 @@ from pathlib import Path
 from tqdm import tqdm
 from elf.io import open_file
 
-from synaptic_reconstruction.inference.vesicles import segment_vesicles
-from synaptic_reconstruction.inference.util import parse_tiling
+from synapse_net.inference.vesicles import segment_vesicles
+from synapse_net.inference.util import parse_tiling
 
 def _require_output_folders(output_folder):
     #seg_output = os.path.join(output_folder, "segmentations")
