@@ -1,12 +1,15 @@
+import copy
+
 import napari
+import numpy as np
+
 from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox
 
 from .base_widget import BaseWidget
 from .util import (run_segmentation, get_model, get_model_registry, _available_devices, get_device,
                    get_current_tiling, compute_scale_from_voxel_size, load_custom_model)
-from synaptic_reconstruction.inference.util import get_default_tiling
-import copy
+from ..inference.util import get_default_tiling
 
 
 class SegmentationWidget(BaseWidget):
@@ -79,37 +82,41 @@ class SegmentationWidget(BaseWidget):
             show_info("INFO: Please choose an image.")
             return
 
-        # load current tiling
+        # Get the current tiling.
         self.tiling = get_current_tiling(self.tiling, self.default_tiling, model_type)
 
+        # Get the voxel size.
         metadata = self._get_layer_selector_data(self.image_selector_name, return_metadata=True)
-        voxel_size = metadata.get("voxel_size", None)
-        scale = None
+        voxel_size = self._handle_resolution(metadata, self.voxel_size_param, image.ndim, return_as_list=False)
 
-        if self.voxel_size_param.value() != 0.0:  # changed from default
-            voxel_size = {}
-            # override voxel size with user input
-            if len(image.shape) == 3:
-                voxel_size["x"] = self.voxel_size_param.value()
-                voxel_size["y"] = self.voxel_size_param.value()
-                voxel_size["z"] = self.voxel_size_param.value()
-            else:
-                voxel_size["x"] = self.voxel_size_param.value()
-                voxel_size["y"] = self.voxel_size_param.value()
+        # Determine the scaling based on the voxel size.
+        scale = None
         if voxel_size:
             if model_type == "custom":
                 show_info("INFO: The image is not rescaled for a custom model.")
             else:
                 # calculate scale so voxel_size is the same as in training
                 scale = compute_scale_from_voxel_size(voxel_size, model_type)
-                show_info(f"INFO: Rescaled the image by {scale} to optimize for the selected model.")
+                scale_info = list(map(lambda x: np.round(x, 2), scale))
+                show_info(f"INFO: Rescaled the image by {scale_info} to optimize for the selected model.")
 
+        # Some models require an additional segmentation for inference or postprocessing.
+        # For these models we read out the 'Extra Segmentation' widget.
+        if model_type == "ribbon":  # Currently only the ribbon model needs the extra seg.
+            extra_seg = self._get_layer_selector_data(self.extra_seg_selector_name)
+            kwargs = {"extra_segmentation": extra_seg}
+        else:
+            kwargs = {}
         segmentation = run_segmentation(
-            image, model=model, model_type=model_type, tiling=self.tiling, scale=scale
+            image, model=model, model_type=model_type, tiling=self.tiling, scale=scale, **kwargs
         )
 
-        # Add the segmentation layer
-        self.viewer.add_labels(segmentation, name=f"{model_type}-segmentation", metadata=metadata)
+        # Add the segmentation layer(s).
+        if isinstance(segmentation, dict):
+            for name, seg in segmentation.items():
+                self.viewer.add_labels(seg, name=name, metadata=metadata)
+        else:
+            self.viewer.add_labels(segmentation, name=f"{model_type}-segmentation", metadata=metadata)
         show_info(f"INFO: Segmentation of {model_type} added to layers.")
 
     def _create_settings_widget(self):
@@ -155,6 +162,11 @@ class SegmentationWidget(BaseWidget):
             placeholder="path/to/checkpoint.pt",
         )
         setting_values.layout().addLayout(layout)
+
+        # Add selection UI for additional segmentation, which some models require for inference or postproc.
+        self.extra_seg_selector_name = "Extra Segmentation"
+        self.extra_selector_widget = self._create_layer_selector(self.extra_seg_selector_name, layer_type="Labels")
+        setting_values.layout().addWidget(self.extra_selector_widget)
 
         settings = self._make_collapsible(widget=setting_values, title="Advanced Settings")
         return settings

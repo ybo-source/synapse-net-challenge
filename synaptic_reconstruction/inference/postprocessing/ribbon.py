@@ -20,7 +20,7 @@ def segment_ribbon(
         n_slices_exclude: The number of slices to exclude on the top / bottom
             in order to avoid segmentation errors due to imaging artifacts in top and bottom.
         n_ribbons: The number of ribbons in the tomogram.
-        max_vesicle_distance: The maximal distance to associate a vesicle with a ribbon.
+        max_vesicle_distance: The maximal distance in pixels to associate a vesicle with a ribbon.
     """
     assert ribbon_prediction.shape == vesicle_segmentation.shape
 
