@@ -2,7 +2,7 @@ import os
 
 import mrcfile
 from elf.io import open_file
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.file_utils import get_data_path
 from tqdm import tqdm
 
 from parse_table import parse_table, get_data_root

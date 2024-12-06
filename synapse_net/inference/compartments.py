@@ -13,7 +13,7 @@ from skimage.measure import label, regionprops
 from skimage.segmentation import watershed
 from skimage.morphology import remove_small_holes
 
-from synaptic_reconstruction.inference.util import get_prediction, _Scaler, _postprocess_seg_3d
+from synapse_net.inference.util import get_prediction, _Scaler, _postprocess_seg_3d
 
 
 def _segment_compartments_2d(

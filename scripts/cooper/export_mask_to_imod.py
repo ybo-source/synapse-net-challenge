@@ -1,6 +1,6 @@
 import argparse
 
-from synaptic_reconstruction.imod.to_imod import write_segmentation_to_imod
+from synapse_net.imod.to_imod import write_segmentation_to_imod
 
 
 def export_mask_to_imod(args):

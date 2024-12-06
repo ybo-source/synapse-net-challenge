@@ -3,7 +3,7 @@ from glob import glob
 
 
 def main():
-    root_old = "/scratch-grete/projects/nim00007/data/synaptic_reconstruction/train_data_cooper"
+    root_old = "/scratch-grete/projects/nim00007/data/synapse_net/train_data_cooper"
     root_new = "/projects/extern/nhr/nhr_ni/nim00007/dir.project/data/synaptic-reconstruction/cooper/original_imod_data/20240909_cp_datatransfer"  # noqa
 
     old_folders = sorted(glob(os.path.join(root_old, "0*"))) + sorted(glob(os.path.join(root_old, "1*")))

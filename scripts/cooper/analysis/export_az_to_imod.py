@@ -7,7 +7,7 @@ from shutil import copyfile
 import h5py
 import pandas as pd
 
-from synaptic_reconstruction.imod.to_imod import write_segmentation_to_imod
+from synapse_net.imod.to_imod import write_segmentation_to_imod
 from scipy.ndimage import binary_dilation, binary_closing
 
 

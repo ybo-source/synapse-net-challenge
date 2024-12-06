@@ -13,8 +13,8 @@ import os
 from glob import glob
 
 from sklearn.model_selection import train_test_split
-from synaptic_reconstruction.training import mean_teacher_adaptation
-from synaptic_reconstruction.tools.util import get_model_path
+from synapse_net.training import mean_teacher_adaptation
+from synapse_net.tools.util import get_model_path
 
 
 def main():

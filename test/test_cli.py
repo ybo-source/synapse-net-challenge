@@ -6,7 +6,7 @@ from shutil import rmtree
 import imageio.v3 as imageio
 import mrcfile
 import pooch
-from synaptic_reconstruction.sample_data import get_sample_data
+from synapse_net.sample_data import get_sample_data
 
 
 class TestCLI(unittest.TestCase):

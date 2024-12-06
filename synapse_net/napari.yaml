@@ -1,0 +1,58 @@
+name: synapse_net
+display_name: SynapseNet
+
+# See https://napari.org/stable/plugins/manifest.html for valid categories.
+categories: ["Image Processing", "Annotation"]
+
+contributions:
+  commands:
+    # Commands for widgets.
+    - id: synapse_net.segment
+      python_name: synapse_net.tools.segmentation_widget:SegmentationWidget
+      title: Segment
+    - id: synapse_net.distance_measure
+      python_name: synapse_net.tools.distance_measure_widget:DistanceMeasureWidget
+      title: Distance Measurement
+    - id: synapse_net.file_reader
+      title: Read volumetric data
+      python_name: synapse_net.tools.volume_reader:get_reader
+    - id: synapse_net.morphology
+      python_name: synapse_net.tools.morphology_widget:MorphologyWidget
+      title: Morphology Analysis
+    - id: synapse_net.vesicle_pooling
+      python_name: synapse_net.tools.vesicle_pool_widget:VesiclePoolWidget
+      title: Vesicle Pooling
+
+    # Commands for sample data.
+    - id: synapse_net.sample_data_tem_2d
+      python_name: synapse_net.sample_data:sample_data_tem_2d
+      title: Load TEM 2D sample data
+    - id: synapse_net.sample_data_tem_tomo
+      python_name: synapse_net.sample_data:sample_data_tem_tomo
+      title: Load TEM Tomo sample data
+
+  readers:
+    - command: synapse_net.file_reader
+      filename_patterns:
+      - '*.mrc'
+      - '*.rec'
+      - '*.h5'
+      accepts_directories: false
+
+  widgets:
+    - command: synapse_net.segment
+      display_name: Segmentation
+    - command: synapse_net.distance_measure
+      display_name: Distance Measurement
+    - command: synapse_net.morphology
+      display_name: Morphology Analysis
+    - command: synapse_net.vesicle_pooling
+      display_name: Vesicle Pooling
+
+  sample_data:
+    - command: synapse_net.sample_data_tem_2d
+      display_name: TEM 2D Sample Data
+      key: synapse-net-tem-2d
+    - command: synapse_net.sample_data_tem_tomo
+      display_name: TEM Tomo Sample Data
+      key: synapse-net-tem-tomo

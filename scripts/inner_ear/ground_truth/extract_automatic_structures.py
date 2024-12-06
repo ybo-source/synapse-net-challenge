@@ -8,8 +8,8 @@ import numpy as np
 import pandas
 
 from elf.io import open_file
-from synaptic_reconstruction.file_utils import get_data_path
-from synaptic_reconstruction.tools.distance_measurement import _downsample
+from synapse_net.file_utils import get_data_path
+from synapse_net.tools.distance_measurement import _downsample
 from tqdm import tqdm
 
 sys.path.append("../processing")

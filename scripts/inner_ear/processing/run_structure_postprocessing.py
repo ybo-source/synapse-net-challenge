@@ -4,8 +4,8 @@ from pathlib import Path
 
 import mrcfile
 import imageio.v2 as imageio
-import synaptic_reconstruction.inference.postprocessing as postprocessing
-from synaptic_reconstruction.file_utils import get_data_path
+import synapse_net.inference.postprocessing as postprocessing
+from synapse_net.file_utils import get_data_path
 
 from elf.io import open_file
 from tqdm import tqdm

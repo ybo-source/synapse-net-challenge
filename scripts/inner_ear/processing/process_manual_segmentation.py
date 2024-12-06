@@ -11,8 +11,8 @@ from elf.io import open_file
 from skimage.transform import rescale
 from tqdm import tqdm
 
-from synaptic_reconstruction.imod import export_segmentation, export_point_annotations
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.imod import export_segmentation, export_point_annotations
+from synapse_net.file_utils import get_data_path
 
 from parse_table import parse_table, get_data_root
 

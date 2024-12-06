@@ -6,8 +6,8 @@ import pandas
 from tqdm import tqdm
 from elf.io import open_file
 
-from synaptic_reconstruction.morphology import compute_radii
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.morphology import compute_radii
+from synapse_net.file_utils import get_data_path
 from run_analyis import _load_segmentation, compute_morphology, to_excel
 from parse_table import parse_table, get_data_root, _match_correction_folder, _match_correction_file
 

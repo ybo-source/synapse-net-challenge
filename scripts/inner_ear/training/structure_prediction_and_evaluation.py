@@ -4,7 +4,7 @@ from glob import glob
 import h5py
 import pandas as pd
 from elf.evaluation.dice import dice_score
-from synaptic_reconstruction.inference.ribbon_synapse import segment_ribbon_synapse_structures
+from synapse_net.inference.ribbon_synapse import segment_ribbon_synapse_structures
 from torch_em.util import load_model
 from tqdm import tqdm
 
@@ -12,7 +12,7 @@ from train_structure_segmentation import get_train_val_test_split
 from train_structure_segmentation import noop  # noqa
 
 ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
-# ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
+# ROOT = "/home/pape/Work/data/synapse_net/moser"
 OUTPUT_ROOT = "./predictions"
 
 

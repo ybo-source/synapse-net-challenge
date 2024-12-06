@@ -4,10 +4,10 @@ from glob import glob
 import json
 
 from sklearn.model_selection import train_test_split
-from synaptic_reconstruction.training.domain_adaptation import mean_teacher_adaptation
+from synapse_net.training.domain_adaptation import mean_teacher_adaptation
 
 TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/fernandez-busnadiego/from_arsen"
-OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/DA_training"
+OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synapse_net/DA_training"
 
 def _require_train_val_test_split(datasets):
     train_ratio, val_ratio, test_ratio = 0.8, 0.1, 0.1
@@ -86,7 +86,7 @@ def vesicle_domain_adaptation(teacher_model, testset = True):
     patch_shape = [48, 256, 256]
     model_name = "vesicle-DA-cryo-v2"
     
-    model_root = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/models_v2/checkpoints/"
+    model_root = "/mnt/lustre-emmy-hdd/usr/u12095/synapse_net/models_v2/checkpoints/"
     checkpoint_path = os.path.join(model_root, teacher_model)
 
     mean_teacher_adaptation(
@@ -95,7 +95,7 @@ def vesicle_domain_adaptation(teacher_model, testset = True):
         unsupervised_val_paths=val_paths,
         raw_key="data",
         patch_shape=patch_shape,
-        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/DA_models",
+        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synapse_net/DA_models",
         source_checkpoint=checkpoint_path,
         confidence_threshold=0.75,
         n_iterations=int(5e4),

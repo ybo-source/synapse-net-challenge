@@ -5,15 +5,15 @@ import h5py
 import pandas as pd
 
 from elf.evaluation.dice import dice_score
-from synaptic_reconstruction.inference.vesicles import segment_vesicles
-from synaptic_reconstruction.inference.postprocessing.ribbon import segment_ribbon
-from synaptic_reconstruction.inference.postprocessing.presynaptic_density import segment_presynaptic_density
+from synapse_net.inference.vesicles import segment_vesicles
+from synapse_net.inference.postprocessing.ribbon import segment_ribbon
+from synapse_net.inference.postprocessing.presynaptic_density import segment_presynaptic_density
 from torch_em.util import load_model
 from tqdm import tqdm
 
 from train_structure_segmentation import get_train_val_test_split
 
-# ROOT = "/home/pape/Work/data/synaptic_reconstruction/moser"
+# ROOT = "/home/pape/Work/data/synapse_net/moser"
 ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/moser"
 MODEL_PATH = "/mnt/lustre-emmy-hdd/projects/nim00007/models/synaptic-reconstruction/vesicle-DA-inner_ear-v2"
 OUTPUT_ROOT = "./predictions"

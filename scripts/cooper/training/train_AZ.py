@@ -8,11 +8,11 @@ import torch
 
 from sklearn.model_selection import train_test_split
 
-from synaptic_reconstruction.training import supervised_training
-from synaptic_reconstruction.training import semisupervised_training
+from synapse_net.training import supervised_training
+from synapse_net.training import semisupervised_training
 
 TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/exported_imod_objects"
-OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/training_AZ_v1"
+OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synapse_net/training_AZ_v1"
 
 
 def _require_train_val_test_split(datasets):
@@ -112,7 +112,7 @@ def train(key, ignore_label = None, training_2D = False, testset = True):
         sampler = torch_em.data.sampler.MinInstanceSampler(min_num_instances=1),
         n_samples_train=None, n_samples_val=25,
         check=check,
-        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/AZ_models",
+        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synapse_net/AZ_models",
         n_iterations=int(5e3),
         ignore_label= ignore_label,
         label_transform=torch_em.transform.label.labels_to_binary,

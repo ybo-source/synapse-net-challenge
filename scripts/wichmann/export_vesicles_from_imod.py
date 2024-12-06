@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse
 import sys
 sys.path.append('/home/smuth/Documents/PhD/code/synaptic-reconstruction')
-from synaptic_reconstruction.ground_truth import extract_vesicle_training_data
+from synapse_net.ground_truth import extract_vesicle_training_data
 
 ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/wichmann/original_imod_data/endbulb_of_held/Adult"  # noqa
 OUT_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/wichmann/extracted/endbulb_of_held/Adult"  # noqa

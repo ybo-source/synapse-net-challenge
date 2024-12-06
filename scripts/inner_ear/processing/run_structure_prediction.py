@@ -5,18 +5,18 @@ from pathlib import Path
 from tqdm import tqdm
 from elf.io import open_file
 
-from synaptic_reconstruction.file_utils import get_data_path
-from synaptic_reconstruction.inference import segment_structures
+from synapse_net.file_utils import get_data_path
+from synapse_net.inference import segment_structures
 from parse_table import parse_table, get_data_root
 
 VERSIONS = {
     1: {
-        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v4.zip",
+        "model": "/scratch/projects/nim00007/data/synapse_net/models/moser/structures/supervised-v4.zip",
     },
     2: {
-        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v4.zip",
+        "model": "/scratch/projects/nim00007/data/synapse_net/models/moser/structures/supervised-v4.zip",
         # The new model doesn't actually work better. it predicts too much for PD and for Ribbon.
-        # "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/structures/supervised-v5.zip",
+        # "model": "/scratch/projects/nim00007/data/synapse_net/models/moser/structures/supervised-v5.zip",
     },
 }
 

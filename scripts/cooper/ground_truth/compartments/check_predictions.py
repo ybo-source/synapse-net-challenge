@@ -4,7 +4,7 @@ from glob import glob
 import h5py
 import napari
 
-from synaptic_reconstruction.inference.compartments import _segment_compartments_3d
+from synapse_net.inference.compartments import _segment_compartments_3d
 
 
 def check_pred(path, pred_path, name):

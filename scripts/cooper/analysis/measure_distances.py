@@ -5,7 +5,7 @@ import h5py
 import pandas as pd
 from tqdm import tqdm
 
-from synaptic_reconstruction.distance_measurements import measure_segmentation_to_object_distances
+from synapse_net.distance_measurements import measure_segmentation_to_object_distances
 
 
 RESOLUTION = (1.554,) * 3

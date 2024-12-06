@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas
 
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.file_utils import get_data_path
 
 from elf.io import open_file
 from tqdm import tqdm

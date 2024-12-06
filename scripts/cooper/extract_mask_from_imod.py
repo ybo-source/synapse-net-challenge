@@ -2,7 +2,7 @@ import argparse
 import os
 from pathlib import Path
 
-from synaptic_reconstruction.imod.export import get_label_names, export_segmentation
+from synapse_net.imod.export import get_label_names, export_segmentation
 
 
 def extract_mask_from_imod(input_path, mod_file, name, output_folder, interpolation):

@@ -5,8 +5,8 @@ import imageio.v3 as imageio
 import numpy as np
 
 from elf.io import open_file
-from synaptic_reconstruction.ground_truth.shape_refinement import edge_filter, refine_vesicle_shapes
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.ground_truth.shape_refinement import edge_filter, refine_vesicle_shapes
+from synapse_net.file_utils import get_data_path
 
 from parse_table import get_data_root, parse_table
 from tqdm import tqdm

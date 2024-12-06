@@ -5,11 +5,11 @@ import json
 
 from sklearn.model_selection import train_test_split
 
-from synaptic_reconstruction.training import supervised_training
-from synaptic_reconstruction.training import semisupervised_training
+from synapse_net.training import supervised_training
+from synapse_net.training import semisupervised_training
 
 TRAIN_ROOT = "/mnt/lustre-emmy-hdd/projects/nim00007/data/synaptic-reconstruction/cooper/vesicles_processed_v2"
-OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/training_v2"
+OUTPUT_ROOT = "/mnt/lustre-emmy-hdd/usr/u12095/synapse_net/training_v2"
 
 
 def _require_train_val_test_split(datasets):
@@ -111,7 +111,7 @@ def train(key, ignore_label = None, training_2D = False, testset = True):
         patch_shape=patch_shape, batch_size=batch_size,
         n_samples_train=None, n_samples_val=25,
         check=check,
-        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synaptic_reconstruction/models_v2",
+        save_root="/mnt/lustre-emmy-hdd/usr/u12095/synapse_net/models_v2",
         ignore_label= ignore_label,
     )
 

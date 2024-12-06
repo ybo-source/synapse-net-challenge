@@ -5,7 +5,7 @@ from scipy.ndimage import distance_transform_edt
 from skimage.measure import regionprops
 
 from elf.parallel import label
-from synaptic_reconstruction.distance_measurements import compute_geodesic_distances
+from synapse_net.distance_measurements import compute_geodesic_distances
 
 
 def segment_membrane_next_to_object(

@@ -1,8 +1,8 @@
 import argparse
 from functools import partial
 
-from synaptic_reconstruction.inference.vesicles import segment_vesicles
-from synaptic_reconstruction.inference.util import inference_helper, parse_tiling
+from synapse_net.inference.vesicles import segment_vesicles
+from synapse_net.inference.util import inference_helper, parse_tiling
 
 
 def run_vesicle_segmentation(args):

@@ -3,7 +3,7 @@ from typing import Callable, List, Optional, Sequence, Union
 
 from elf.io import open_file, is_dataset
 from napari.types import LayerData
-from synaptic_reconstruction.file_utils import read_mrc
+from synapse_net.file_utils import read_mrc
 
 
 PathLike = str

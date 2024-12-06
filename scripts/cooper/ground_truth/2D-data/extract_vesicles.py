@@ -6,7 +6,7 @@ import napari
 import numpy as np
 from elf.io import open_file
 from magicgui import magicgui
-from synaptic_reconstruction.imod.export import export_point_annotations
+from synapse_net.imod.export import export_point_annotations
 
 EXPORT_FOLDER = "./exported"
 

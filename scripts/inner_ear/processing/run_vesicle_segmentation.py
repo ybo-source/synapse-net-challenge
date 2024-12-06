@@ -4,18 +4,18 @@ from pathlib import Path
 from tqdm import tqdm
 from elf.io import open_file
 
-from synaptic_reconstruction.file_utils import get_data_path
-from synaptic_reconstruction.inference import segment_vesicles
-from synaptic_reconstruction.inference.postprocessing import close_holes
+from synapse_net.file_utils import get_data_path
+from synapse_net.inference import segment_vesicles
+from synapse_net.inference.postprocessing import close_holes
 from parse_table import parse_table, get_data_root
 
 VERSIONS = {
     1: {
-        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/vesicles/mean-teacher-v3.zip",
+        "model": "/scratch/projects/nim00007/data/synapse_net/models/moser/vesicles/mean-teacher-v3.zip",
         "distance_based_segmentation": True,
     },
     2: {
-        "model": "/scratch/projects/nim00007/data/synaptic_reconstruction/models/moser/vesicles/mean-teacher-v5.zip",
+        "model": "/scratch/projects/nim00007/data/synapse_net/models/moser/vesicles/mean-teacher-v5.zip",
         "distance_based_segmentation": True,
         "closing_iterations": 4,
     }

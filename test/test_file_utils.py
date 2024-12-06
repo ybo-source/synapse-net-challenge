@@ -2,13 +2,13 @@ import unittest
 
 import numpy as np
 from elf.io import open_file
-from synaptic_reconstruction.sample_data import get_sample_data
+from synapse_net.sample_data import get_sample_data
 
 
 class TestFileUtils(unittest.TestCase):
 
     def test_read_mrc_2d(self):
-        from synaptic_reconstruction.file_utils import read_mrc
+        from synapse_net.file_utils import read_mrc
 
         file_path = get_sample_data("tem_2d")
         data, voxel_size = read_mrc(file_path)
@@ -25,7 +25,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertTrue(np.isclose(voxel_size["z"], 0.0))
 
     def test_read_mrc_3d(self):
-        from synaptic_reconstruction.file_utils import read_mrc
+        from synapse_net.file_utils import read_mrc
 
         file_path = get_sample_data("tem_tomo")
         data, voxel_size = read_mrc(file_path)

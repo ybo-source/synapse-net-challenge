@@ -4,7 +4,7 @@ import mrcfile
 import numpy as np
 
 from tqdm import tqdm
-from synaptic_reconstruction.file_utils import get_data_path
+from synapse_net.file_utils import get_data_path
 from parse_table import parse_table, get_data_root
 
 

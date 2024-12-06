@@ -5,7 +5,7 @@ import h5py
 import pandas as pd
 from tqdm import tqdm
 
-from synaptic_reconstruction.imod.to_imod import convert_segmentation_to_spheres
+from synapse_net.imod.to_imod import convert_segmentation_to_spheres
 
 RESOLUTION = (1.554,) * 3
 
