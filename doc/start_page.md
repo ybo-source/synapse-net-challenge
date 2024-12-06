@@ -3,10 +3,11 @@
 SynapseNet is a tool for automatic segmentation and analysis of synapses in electron micrographs.
 It provides deep neural networks for:
 - Synaptic vesicle segmentation in ssTEM (2d data) and (cryo-)electron tomography (3d data)
-- Active zone membrane segmentation in electron tomography
-- Mitochondrion segmentation in electron tomography
-- Synaptic compartment segmentation in electron tomography
-- Synaptic ribbon and pre-synaptic density segmentation for ribbon synapses in electron tomography
+- Active zone membrane segmentation in electron tomography.
+- Mitochondrion segmentation in electron tomography.
+- Synaptic compartment segmentation in electron tomography.
+- Synaptic ribbon and pre-synaptic density segmentation for ribbon synapses in electron tomography.
+
 It also offers functionality for quantifying synaptic ultrastructure based on segmentation results, for example by measuring vesicle or structure morphology, measuring distances between vesicles and structures, or assigning vesicles into different pools.
 SynapseNet mainly targets electron tomography, but can also be appled to other types of electron microscopy,
 especially throught the [domain adaptation](domain-adaptation) functionality.

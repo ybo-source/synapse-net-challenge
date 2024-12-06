@@ -37,8 +37,8 @@ jobs:
       run: pip install -e .
 
     - name: Generate Documentation
-      shell: bash -l {0} 
-      run: pdoc synaptic_reconstruction -o doc/
+      shell: bash -l {0}
+      run: pdoc synaptic_reconstruction -d google -o doc/
 
     - name: Verify Documentation Output
       run: ls -la doc/
@@ -68,6 +68,6 @@ jobs:
 
       - name: Deploy to GiHub Pages
         uses: actions/deploy-pages@v4
-        # with: 
+        # with:
         #   artifact_name: documentation
 
