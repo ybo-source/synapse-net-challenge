@@ -1,9 +1,12 @@
 name: synaptic_reconstruction
 display_name: SynapseNet
-# see https://napari.org/stable/plugins/manifest.html for valid categories
+
+# See https://napari.org/stable/plugins/manifest.html for valid categories.
 categories: ["Image Processing", "Annotation"]
+
 contributions:
   commands:
+    # Commands for widgets.
     - id: synaptic_reconstruction.segment
       python_name: synaptic_reconstruction.tools.segmentation_widget:SegmentationWidget
       title: Segment
@@ -19,6 +22,11 @@ contributions:
     - id: synaptic_reconstruction.vesicle_pooling
       python_name: synaptic_reconstruction.tools.vesicle_pool_widget:VesiclePoolWidget
       title: Vesicle Pooling
+
+    # Commands for sample data.
+    - id: synaptic_reconstruction.sample_data_tem_2d
+      python_name: synaptic_reconstruction.sample_data:sample_data_tem_2d
+      title: Load TEM 2D sample data
 
   readers:
     - command: synaptic_reconstruction.file_reader
@@ -37,3 +45,8 @@ contributions:
       display_name: Morphology Analysis
     - command: synaptic_reconstruction.vesicle_pooling
       display_name: Vesicle Pooling
+
+  sample_data:
+    - command: synaptic_reconstruction.sample_data_tem_2d
+      display_name: TEM 2D Sample Data
+      key: synapse-net-tem-2d

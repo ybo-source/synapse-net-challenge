@@ -23,12 +23,11 @@ class BaseWidget(QWidget):
         self.attribute_dict = {}
 
     def _create_layer_selector(self, selector_name, layer_type="Image"):
-        """
-        Create a layer selector for an image or labels and store it in a dictionary.
+        """Create a layer selector for an image or labels and store it in a dictionary.
 
-        Parameters:
-        - selector_name (str): The name of the selector, used as a key in the dictionary.
-        - layer_type (str): The type of layer to filter for ("Image" or "Labels").
+        Args:
+            selector_name (str): The name of the selector, used as a key in the dictionary.
+            layer_type (str): The type of layer to filter for ("Image" or "Labels").
         """
         if not hasattr(self, "layer_selectors"):
             self.layer_selectors = {}
@@ -286,17 +285,19 @@ class BaseWidget(QWidget):
             # Handle the case where the selected path is not a file
             print("Invalid file selected. Please try again.")
 
-    def _handle_resolution(self, metadata, voxel_size_param, ndim):
+    def _handle_resolution(self, metadata, voxel_size_param, ndim, return_as_list=True):
         # Get the resolution / voxel size from the layer metadata if available.
         resolution = metadata.get("voxel_size", None)
-        if resolution is not None:
-            resolution = [resolution[ax] for ax in ("zyx" if ndim == 3 else "yx")]
 
         # If user input was given then override resolution from metadata.
+        axes = "zyx" if ndim == 3 else "yx"
         if voxel_size_param.value() != 0.0:  # Changed from default.
-            resolution = ndim * [voxel_size_param.value()]
+            resolution = {ax: voxel_size_param.value() for ax in axes}
 
-        assert len(resolution) == ndim
+        if resolution is not None and return_as_list:
+            resolution = [resolution[ax] for ax in axes]
+            assert len(resolution) == ndim
+
         return resolution
 
     def _save_table(self, save_path, data):

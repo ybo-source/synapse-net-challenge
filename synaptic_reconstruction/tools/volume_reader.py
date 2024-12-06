@@ -1,10 +1,10 @@
 import os
-
-from typing import Callable, Dict, List, Optional, Sequence, Union
-import mrcfile
-from napari.types import LayerData
+from typing import Callable, List, Optional, Sequence, Union
 
 from elf.io import open_file, is_dataset
+from napari.types import LayerData
+from synaptic_reconstruction.file_utils import read_mrc
+
 
 PathLike = str
 PathOrPaths = Union[PathLike, Sequence[PathLike]]
@@ -19,21 +19,14 @@ def get_reader(path: PathOrPaths) -> Optional[ReaderFunction]:
     return None
 
 
-# For mrcfiles we just read the data from it.
 def _read_mrc(path, fname):
-    with open_file(path, mode="r") as f:
-        data = f["data"][:]
-    voxel_size = read_voxel_size(path)
-    metadata = {
-        "file_path": path,
-        "voxel_size": voxel_size
-    }
+    data, voxel_size = read_mrc(path)
+    metadata = {"file_path": path, "voxel_size": voxel_size}
     layer_attributes = {
         "name": fname,
         "colormap": "gray",
         "metadata": metadata
     }
-
     return [(data, layer_attributes)]
 
 
@@ -72,28 +65,3 @@ def read_image_volume(path: PathOrPaths) -> List[LayerData]:
     except Exception as e:
         print(f"Failed to read file: {e}")
         return
-
-
-def read_voxel_size(input_path: str) -> Dict[str, float] | None:
-    """Read voxel size from mrc/rec file and store it in layer_attributes.
-    The original unit of voxel size is Angstrom and we convert it to nanometers
-    by dividing it by ten.
-
-    Args:
-        input_path: Path to mrc/rec file.
-
-    Returns:
-        Mapping from the axis name to voxel size. None if the voxel size could not be read.
-    """
-    new_voxel_size = None
-    with mrcfile.open(input_path, permissive=True) as mrc:
-        try:
-            voxel_size = mrc.voxel_size
-            new_voxel_size = {
-                "x": voxel_size.x / 10,
-                "y": voxel_size.y / 10,
-                "z": voxel_size.z / 10,
-            }
-        except Exception as e:
-            print(f"Failed to read voxel size: {e}")
-    return new_voxel_size

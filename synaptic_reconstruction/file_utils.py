@@ -1,5 +1,8 @@
 import os
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
+
+import mrcfile
+import numpy as np
 
 
 def get_data_path(folder: str, n_tomograms: Optional[int] = 1) -> Union[str, List[str]]:
@@ -23,3 +26,58 @@ def get_data_path(folder: str, n_tomograms: Optional[int] = 1) -> Union[str, Lis
         return tomograms
     assert len(tomograms) == n_tomograms, f"{folder}: {len(tomograms)}, {n_tomograms}"
     return tomograms[0] if n_tomograms == 1 else tomograms
+
+
+def _parse_voxel_size(voxel_size):
+    parsed_voxel_size = None
+    try:
+        # The voxel sizes are stored in Angsrrom in the MRC header, but we want them
+        # in nanometer. Hence we divide by a factor of 10 here.
+        parsed_voxel_size = {
+            "x": voxel_size.x / 10,
+            "y": voxel_size.y / 10,
+            "z": voxel_size.z / 10,
+        }
+    except Exception as e:
+        print(f"Failed to read voxel size: {e}")
+    return parsed_voxel_size
+
+
+def read_voxel_size(path: str) -> Dict[str, float] | None:
+    """Read voxel size from mrc/rec file.
+
+    The original unit of voxel size is Angstrom and we convert it to nanometers by dividing it by ten.
+
+    Args:
+        path: Path to mrc/rec file.
+
+    Returns:
+        Mapping from the axis name to voxel size. None if the voxel size could not be read.
+    """
+    with mrcfile.open(path, permissive=True) as mrc:
+        voxel_size = _parse_voxel_size(mrc.voxel_size)
+    return voxel_size
+
+
+# TODO: double check axis ordering with elf
+def read_mrc(path: str) -> Tuple[np.ndarray, Dict[str, float]]:
+    """Read data and voxel size from mrc/rec file.
+
+    Args:
+        path: Path to mrc/rec file.
+
+    Returns:
+        The data read from the file.
+        The voxel size read from the file.
+    """
+    with mrcfile.open(path, permissive=True) as mrc:
+        voxel_size = _parse_voxel_size(mrc.voxel_size)
+        data = np.asarray(mrc.data[:])
+
+    # Transpose the data to match python axis order.
+    if data.ndim == 3:
+        data = np.flip(data, axis=1)
+    else:
+        data = np.flip(data, axis=0)
+
+    return data, voxel_size

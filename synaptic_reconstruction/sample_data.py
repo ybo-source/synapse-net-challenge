@@ -1,6 +1,8 @@
 import os
 import pooch
 
+from .file_utils import read_mrc
+
 
 def get_sample_data(name: str) -> str:
     """Get the filepath to SynapseNet sample data, stored as mrc file.
@@ -32,3 +34,11 @@ def get_sample_data(name: str) -> str:
     )
     file_path = data_registry.fetch(key)
     return file_path
+
+
+def sample_data_tem_2d():
+    file_path = get_sample_data("tem_2d")
+    data, voxel_size = read_mrc(file_path)
+    metadata = {"file_path": file_path, "voxel_size": voxel_size}
+    add_image_kwargs = {"name": "tem_2d", "metadata": metadata, "colormap": "gray"}
+    return [(data, add_image_kwargs)]
