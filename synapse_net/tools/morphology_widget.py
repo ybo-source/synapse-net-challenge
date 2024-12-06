@@ -9,8 +9,8 @@ from napari.utils.notifications import show_info
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 
 from .base_widget import BaseWidget
-from synaptic_reconstruction.imod.to_imod import convert_segmentation_to_spheres
-from synaptic_reconstruction.morphology import compute_object_morphology
+from synapse_net.imod.to_imod import convert_segmentation_to_spheres
+from synapse_net.morphology import compute_object_morphology
 
 
 class MorphologyWidget(BaseWidget):

@@ -76,7 +76,7 @@ def _segment_ribbon_AZ(image, model, tiling, scale, verbose, **kwargs):
 
     # Otherwise, just return the predictions.
     else:
-        from synaptic_reconstruction.inference.postprocessing import (
+        from synapse_net.inference.postprocessing import (
             segment_ribbon, segment_presynaptic_density, segment_membrane_distance_based,
         )
 

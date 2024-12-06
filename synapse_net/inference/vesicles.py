@@ -6,8 +6,8 @@ import numpy as np
 
 import torch
 
-from synaptic_reconstruction.inference.util import apply_size_filter, get_prediction, _Scaler
-from synaptic_reconstruction.inference.postprocessing.vesicles import filter_border_objects
+from synapse_net.inference.util import apply_size_filter, get_prediction, _Scaler
+from synapse_net.inference.postprocessing.vesicles import filter_border_objects
 
 
 def distance_based_vesicle_segmentation(

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from skimage.measure import label
-from synaptic_reconstruction.inference.util import apply_size_filter, get_prediction, _Scaler
+from synapse_net.inference.util import apply_size_filter, get_prediction, _Scaler
 
 
 # TODO: How exactly do we post-process the actin?

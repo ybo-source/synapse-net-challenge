@@ -3,7 +3,7 @@ from typing import Dict, Sequence, Optional, Union
 import numpy as np
 import torch
 
-from synaptic_reconstruction.inference.util import get_prediction, _Scaler
+from synapse_net.inference.util import get_prediction, _Scaler
 
 
 def segment_ribbon_synapse_structures(

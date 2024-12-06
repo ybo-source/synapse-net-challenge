@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from skimage.segmentation import find_boundaries
-from synaptic_reconstruction.inference.util import get_prediction, _Scaler
+from synapse_net.inference.util import get_prediction, _Scaler
 
 
 def find_intersection_boundary(segmented_AZ: np.ndarray, segmented_compartment: np.ndarray) -> np.ndarray:
