@@ -106,7 +106,7 @@ For more options supported by the IMOD exports, please run `synapse_net.export_t
 
 Using the `synapse_net` python library offers the most flexibility for using the SynapseNet functionality.
 We offer different functionality for segmenting and analyzing synapses in electron microscopy:
-- `synpase_net.inference` for segmenting synaptic structures with [our models](segmentation-models).
+- `synapse_net.inference` for segmenting synaptic structures with [our models](segmentation-models).
 - `synapse_net.distance_measurements` for measuring distances between segmented objects.
 - `synapse_net.imod` for importing and exporting segmentations from / to IMOD.
 - `synapse_net.training` for training U-Nets for synaptic structure segmentation, either via [domain adaptation](#domain-adaptation) or [using data with annotations](network-training).
