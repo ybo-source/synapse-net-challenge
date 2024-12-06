@@ -72,6 +72,10 @@ def _segment_ribbon_AZ(image, model, tiling, scale, verbose, **kwargs):
 
     # If the vesicles were passed then run additional post-processing.
     if vesicles is None:
+        segmentation = predictions
+
+    # Otherwise, just return the predictions.
+    else:
         from synaptic_reconstruction.inference.postprocessing import (
             segment_ribbon, segment_presynaptic_density, segment_membrane_distance_based,
         )
@@ -85,14 +89,10 @@ def _segment_ribbon_AZ(image, model, tiling, scale, verbose, **kwargs):
         )
         ref_segmentation = PD if PD.sum() > 0 else ribbon
         membrane = segment_membrane_distance_based(
-            predictions["membrane"], ref_segmentation, n_sclices_exclude=n_slices_exclude, max_distance=500
+            predictions["membrane"], ref_segmentation, max_distance=500, n_slices_exclude=n_slices_exclude,
         )
 
         segmentation = {"ribbon": ribbon, "PD": PD, "membrane": membrane}
-
-    # Otherwise, just return the predictions.
-    else:
-        segmentation = predictions
 
     return segmentation
 
