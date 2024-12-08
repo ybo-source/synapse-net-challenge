@@ -3,7 +3,7 @@ import pandas as pd
 
 from synapse_net.file_utils import read_mrc
 from synapse_net.sample_data import get_sample_data
-from synapse_net.tools.util import run_segmentation, get_model, compute_scale_from_voxel_size
+from synapse_net.inference import compute_scale_from_voxel_size, get_model, run_segmentation
 
 
 def segment_structures(tomogram, voxel_size):
@@ -65,6 +65,10 @@ def main():
 
     # Segment synaptic vesicles, the active zone, and the synaptic compartment.
     segmentations = segment_structures(tomogram, voxel_size)
+    import h5py
+    with h5py.File("seg.h5", "r") as f:
+        for name, seg in segmentations.items():
+            f.create_dataset(name, data=seg, compression="gzip")
 
     # Post-process the segmentations, to find the presynaptic terminal,
     # filter out vesicles not in the terminal, and to 'snape' the AZ to the presynaptic boundary.
