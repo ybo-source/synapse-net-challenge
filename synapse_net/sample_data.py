@@ -15,11 +15,11 @@ def get_sample_data(name: str) -> str:
     """
     registry = {
         "tem_2d.mrc": "3c6f9ff6d7673d9bf2fd46c09750c3c7dbb8fa1aa59dcdb3363b65cc774dcf28",
-        "tem_tomo.mrc": "24af31a10761b59fa6ad9f0e763f8f084304e4f31c59b482dd09dde8cd443ed7",
+        "tem_tomo.mrc": "eb790f83efb4c967c96961239ae52578d95da902fc32307629f76a26c3dc61fa",
     }
     urls = {
         "tem_2d.mrc": "https://owncloud.gwdg.de/index.php/s/5sAQ0U4puAspcHg/download",
-        "tem_tomo.mrc": "https://owncloud.gwdg.de/index.php/s/NeP7gOv76Vj26lm/download",
+        "tem_tomo.mrc": "https://owncloud.gwdg.de/index.php/s/TmLjDCXi42E49Ef/download",
     }
     key = f"{name}.mrc"
 
