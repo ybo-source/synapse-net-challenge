@@ -1,7 +1,7 @@
 import os
 import pooch
 
-from .file_utils import read_mrc
+from .file_utils import read_mrc, get_cache_dir
 
 
 def get_sample_data(name: str) -> str:
@@ -27,7 +27,7 @@ def get_sample_data(name: str) -> str:
         valid_names = [k[:-4] for k in registry.keys()]
         raise ValueError(f"Invalid sample name {name}, please choose one of {valid_names}.")
 
-    cache_dir = os.path.expanduser(pooch.os_cache("synapse-net"))
+    cache_dir = get_cache_dir()
     data_registry = pooch.create(
         path=os.path.join(cache_dir, "sample_data"),
         base_url="",
