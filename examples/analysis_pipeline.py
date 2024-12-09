@@ -6,10 +6,11 @@ from scipy.ndimage import binary_closing
 from skimage.measure import regionprops
 from skimage.segmentation import find_boundaries
 
-from synapse_net.file_utils import read_mrc
-from synapse_net.sample_data import get_sample_data
 from synapse_net.distance_measurements import measure_segmentation_to_object_distances
+from synapse_net.file_utils import read_mrc
+from synapse_net.imod.to_imod import convert_segmentation_to_spheres
 from synapse_net.inference import compute_scale_from_voxel_size, get_model, run_segmentation
+from synapse_net.sample_data import get_sample_data
 
 
 def segment_structures(tomogram, voxel_size):
@@ -72,15 +73,23 @@ def postprocess_segmentation(segmentations):
 
 
 def measure_distances(segmentations, voxel_size):
+    # Here, we measure the distances from each vesicle to the active zone.
+    # We use the function 'measure_segmentation_to_object_distances' for this,
+    # which uses an euclidean distance transform scaled with the voxel size
+    # to determine distances.
     vesicles, active_zone = segmentations["vesicles"], segmentations["active_zone"]
     voxel_size = tuple(voxel_size[ax] for ax in "zyx")
     distances, _, _, vesicle_ids = measure_segmentation_to_object_distances(
         vesicles, active_zone, resolution=voxel_size
     )
+    # We convert the result to a pandas data frame.
     return pd.DataFrame({"vesicle_id": vesicle_ids, "distance": distances})
 
 
 def assign_vesicle_pools(vesicle_attributes):
+    # We assign the vesicles to their respective pool, 'docked' and 'non-attached',
+    # based on the criterion of being within 2 nm from the active zone.
+    # We add the pool assignment as a new column to the dataframe with vesicle attributes.
     docked_vesicle_distance = 2  # nm
     vesicle_attributes["pool"] = vesicle_attributes["distance"].apply(
         lambda x: "docked" if x < docked_vesicle_distance else "non-attached"
@@ -89,6 +98,7 @@ def assign_vesicle_pools(vesicle_attributes):
 
 
 def visualize_results(tomogram, segmentations, vesicle_attributes):
+    # Here, we visualize the segmentation and pool assignment result in napari.
 
     # Create a segmentation to visualize the vesicle pools.
     docked_ids = vesicle_attributes[vesicle_attributes.pool == "docked"].vesicle_id
@@ -97,6 +107,7 @@ def visualize_results(tomogram, segmentations, vesicle_attributes):
     vesicle_pools = np.isin(vesicles, docked_ids).astype("uint8")
     vesicle_pools[np.isin(vesicles, non_attached_ids)] = 2
 
+    # Create a napari viewer, add the tomogram data and the segmentation results.
     viewer = napari.Viewer()
     viewer.add_image(tomogram)
     for name, segmentation in segmentations.items():
@@ -105,9 +116,16 @@ def visualize_results(tomogram, segmentations, vesicle_attributes):
     napari.run()
 
 
-# TODO compute the vesicle radii and other features and then save the attributes.
 def save_analysis(segmentations, vesicle_attributes, save_path):
-    pass
+    # Here, we compute the radii and centroid positions of the vesicles,
+    # add them to the vesicle attributes and then save all vesicle attributes to
+    # an excel table. You can use this table for evaluation of the analysis.
+    vesicles = segmentations["vesicles"]
+    coordinates, radii = convert_segmentation_to_spheres(vesicles, radius_factor=0.7)
+    vesicle_attributes["radius"] = radii
+    for ax_id, ax_name in enumerate("zyx"):
+        vesicle_attributes[f"center-{ax_name}"] = coordinates[:, ax_id]
+    vesicle_attributes.to_excel(save_path, index=False)
 
 
 def main():
@@ -119,16 +137,7 @@ def main():
     tomogram, voxel_size = read_mrc(mrc_path)
 
     # Segment synaptic vesicles, the active zone, and the synaptic compartment.
-    # segmentations = segment_structures(tomogram, voxel_size)
-
-    # Load saved segmentations for development.
-    import h5py
-    segmentations = {}
-    with h5py.File("seg.h5", "r") as f:
-        for name, ds in f.items():
-            # f.create_dataset(name, data=seg, compression="gzip")
-            seg = ds[:]
-            segmentations[name] = seg
+    segmentations = segment_structures(tomogram, voxel_size)
 
     # Post-process the segmentations, to find the presynaptic terminal,
     # filter out vesicles not in the terminal, and to 'snape' the AZ to the presynaptic boundary.
