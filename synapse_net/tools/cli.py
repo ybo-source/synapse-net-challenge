@@ -124,11 +124,11 @@ def segmentation_cli():
     )
     parser.add_argument(
         "--tile_shape", type=int, nargs=3,
-        help="The tile shape for prediction. Lower the tile shape if GPU memory is insufficient."
+        help="The tile shape for prediction, in ZYX order. Lower the tile shape if GPU memory is insufficient."
     )
     parser.add_argument(
         "--halo", type=int, nargs=3,
-        help="The halo for prediction. Increase the halo to minimize boundary artifacts."
+        help="The halo for prediction, in ZYX order. Increase the halo to minimize boundary artifacts."
     )
     parser.add_argument(
         "--data_ext", default=".mrc", help="The extension of the tomogram data. By default .mrc."

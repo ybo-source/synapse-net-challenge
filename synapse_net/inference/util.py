@@ -414,8 +414,8 @@ def get_default_tiling(is_2d: bool = False) -> Dict[str, Dict[str, int]]:
         return {"tile": tile, "halo": halo}
 
     if torch.cuda.is_available():
-        # We always use the same default halo.
-        halo = {"x": 64, "y": 64, "z": 16}  # before 64,64,8
+        # The default halo size.
+        halo = {"x": 64, "y": 64, "z": 16}
 
         # Determine the GPU RAM and derive a suitable tiling.
         vram = torch.cuda.get_device_properties(0).total_memory / 1e9
@@ -426,9 +426,11 @@ def get_default_tiling(is_2d: bool = False) -> Dict[str, Dict[str, int]]:
             tile = {"x": 512, "y": 512, "z": 64}
         elif vram >= 20:
             tile = {"x": 352, "y": 352, "z": 48}
+        elif vram >= 10:
+            tile = {"x": 256, "y": 256, "z": 32}
+            halo = {"x": 64, "y": 64, "z": 8}  # Choose a smaller halo in z.
         else:
-            # TODO determine tilings for smaller VRAM
-            raise NotImplementedError(f"Estimating the tile size for a GPU with {vram} GB is not yet supported.")
+            raise NotImplementedError(f"Infererence with a GPU with {vram} GB VRAM is not supported.")
 
         print(f"Determined tile size: {tile}")
         tiling = {"tile": tile, "halo": halo}
