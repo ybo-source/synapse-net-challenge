@@ -60,7 +60,7 @@ to use them.
 
 ## Segmentation Models
 
-We currently offer 7 different models for segmenting synaptic structures:
+We currently offer seven different models for segmenting synaptic structures:
 - `vesicles_3d` to segment vesicles in (room-temperature) electron tomograms.
 - `vesicles_2d` to segment vesicles in two-dimensional electron micrographs.
 - `vesicles_cryo` to segment vesicles in cryogenic electron tomograms.
@@ -72,7 +72,42 @@ We currently offer 7 different models for segmenting synaptic structures:
 
 ## Napari Plugin
 
-**The napari plugin will be documented in the next few days!**
+After installing SynapseNet you can start napari by activating the `synapse-net` environment (or another environment you installed it in) and executing the `napari` command.
+Once napari is opened, you can load a tomogram (or other image data), by drag'n'dropping the corresponding mrc file onto the napari window.
+
+You can find the SynapseNet widgets in the menu `Plugin->SynapseNet`, see also the screenshot below.
+We currently provide five different plugins, which are explained in the following paragraphs.
+
+<img src="https://raw.githubusercontent.com/computational-cell-analytics/synapse-net/refs/heads/main/doc/images/napari/napari1-plugin-menu.jpg" alt="The napari plugin widget with selection of the SynapseNet plugins." width="768">
+
+The `Segmentation` widget enables segmenting synaptic structures with the SynapseNet [models](#segmentation-models).
+You can select the image layer for which to run segmentation from the `Image data` dropdown and the model to use from the `Select Model` dropdown.
+Then press `Run Segmentation`. To display a progress bar click on `activity` in the lower right.
+The screenshot below shows the Segmentation UI and a segmentation result for 2D vesicle segmentation.
+
+<img src="https://raw.githubusercontent.com/computational-cell-analytics/synapse-net/refs/heads/main/doc/images/napari/napari2-segmentation-widget.jpg" alt="The napari plugin widget with selection of the SynapseNet plugins." width="768">
+
+The `Distance Measurement` widget measures distances between segmented vesicles and another object. You can select the vesicle segmentation from the `Segmentation` dropdown and the object from the `Object` dropdown.
+Then press `Measure Distances` to measure the distances, which will be displayed as red lines in the image.
+The measured values will be shown in a table, which can also be saved to a csv file.
+The screenshot below shows distances measured between the vesicles and active zone (red structure).
+Alternatively, you can measure the pairwise distances between individual vesicles via `Measure Pairwise Distances`.
+
+<img src="https://raw.githubusercontent.com/computational-cell-analytics/synapse-net/refs/heads/main/doc/images/napari/napari3-distance-widget.jpg" alt="The napari plugin widget with selection of the SynapseNet plugins." width="768">
+
+The `Morphology Analysis` widget measures morphometric features, such as radii and intensity statistics for vesicles, or surface area and volume for other structures. The widget functions similar to the distance measurement.
+
+<img src="https://raw.githubusercontent.com/computational-cell-analytics/synapse-net/refs/heads/main/doc/images/napari/napari4-morphology-widget.jpg" alt="The napari plugin widget with selection of the SynapseNet plugins." width="768">
+
+The `Pool Assignment` widget groups vesicles into different pools based on the distance and morphology measurements from the previous widgets.
+Select the vesicles via the `Vesicle Segmentation` dropdown and the distances to up to two different structures via `Distances to Structure` and `Distances to Structure 2`.
+Then, specify the name for a new layer where the pools will be saved via `Layer Name`, the name for the current pool via `Vesicle Pool` and the criterion for the pool via `Criterion`. Pressing `Create Vesicle Pool` creates the assignment for the pool by copying the vesicles that meet the criterion to the specified layer.
+You can press it multiple times for different criteria to group the vesicles into different pools.
+The screenshot below shows a grouping of vesicles into 'close' (red) and 'far' (blue) vesicles based on their distance to the active zone.
+
+<img src="https://raw.githubusercontent.com/computational-cell-analytics/synapse-net/refs/heads/main/doc/images/napari/napari5-pool-widget.jpg" alt="The napari plugin widget with selection of the SynapseNet plugins." width="768">
+
+In addition, the `Segmentation Postprocessing` widget can be used to filter out objects that do not overlap with a mask, e.g. a synaptic compartment, or to intersect a segmentation with the boundaries of a mask.
 
 
 ## Command Line Functionality
@@ -113,7 +148,7 @@ We offer different functionality for segmenting and analyzing synapses in electr
 - `synapse_net.imod` for importing and exporting segmentations from / to IMOD.
 - `synapse_net.training` for training U-Nets for synaptic structure segmentation, either via [domain adaptation](#domain-adaptation) or [using data with annotations](network-training).
 
-Please refer to the library documentation below for a full overview of our library's functionality.
+Please refer to the module documentation below for a full overview of our library's functionality.
 
 ### Domain Adaptation
 
