@@ -10,9 +10,9 @@ It provides deep neural networks for:
 
 It also offers functionality for quantifying synaptic ultrastructure based on segmentation results, for example by measuring vesicle or structure morphology, measuring distances between vesicles and structures, or assigning vesicles into different pools.
 SynapseNet mainly targets electron tomography, but can also be appled to other types of electron microscopy,
-especially throught the [domain adaptation](domain-adaptation) functionality.
+especially throught the [domain adaptation](#domain-adaptation) functionality.
 
-SynapseNet offers a [napari plugin](napari-plugin), [command line interface](command-line-interface), and [python library](python-library).
+SynapseNet offers a [napari plugin](#napari-plugin), [command line interface](#command-line-interface), and [python library](#python-library).
 Please cite our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2024.12.02.626387v1) if you use it in your research.
 
 
@@ -71,6 +71,8 @@ We currently offer seven different models for segmenting synaptic structures:
 
 
 ## Napari Plugin
+
+You can find a video tutorial for the SynapseNet napari plugin [on YouTube](https://youtu.be/7n8Oq1uAByE). Below, we explain the different plugin components with screenshots.
 
 After installing SynapseNet you can start napari by activating the `synapse-net` environment (or another environment you installed it in) and executing the `napari` command.
 Once napari is opened, you can load a tomogram (or other image data), by drag'n'dropping the corresponding mrc file onto the napari window.
