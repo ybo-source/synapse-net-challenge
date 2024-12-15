@@ -112,7 +112,7 @@ The screenshot below shows a grouping of vesicles into 'close' (red) and 'far' (
 In addition, the `Segmentation Postprocessing` widget can be used to filter out objects that do not overlap with a mask, e.g. a synaptic compartment, or to intersect a segmentation with the boundaries of a mask.
 
 
-## Command Line Functionality
+## Command Line Interface
 
 SynapseNet provides a command line interface to segment synaptic structures in mrc files (or other image formats), and to export segmentation results to IMOD.
 
