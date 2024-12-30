@@ -1,6 +1,4 @@
 channels:
-    - pytorch
-    - nvidia
     - conda-forge
 name:
     synapse-net
@@ -13,7 +11,6 @@ dependencies:
     - pyqt
     - python-elf
     - pytorch
-    - pytorch-cuda=12.4
     - tensorboard
     - torch_em
     - torchvision
