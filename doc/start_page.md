@@ -18,7 +18,7 @@ Please cite our [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2024.
 
 ## Requirements & Installation
 
-SynapseNet was developed and tested on Linux. It should be possible to install and use it on Mac or Windows, but we have not tested this.
+SynapseNet was developed and tested on Linux. It is possible to install and use it on Mac or Windows, but we have not extensively tested this.
 Furthermore, SynapseNet requires a GPU for segmentation of 3D volumes.
 
 You need a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) or [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) installation. Follow the instruction at the respective links if you have installed neither. We assume you have `conda` for the rest of the instructions. After installing it, you can use the `conda` command.
@@ -36,6 +36,7 @@ cd synapse-net
 ```bash
 conda env create -f environment.yaml
 ```
+    - If you are using Windows then you have to use a different environment file for the installation: Use `environment_gpu_win.yaml` if you have a GPU and `environment_cpu_win.yaml` without a GPU.
 - You will need to confirm this step. It will take a while. Afterwards you can activate the environment:
 ```bash
 conda activate synapse-net
