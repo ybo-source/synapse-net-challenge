@@ -33,9 +33,25 @@ from tqdm import tqdm
 
 class _Scaler:
     def __init__(self, scale, verbose):
-        self.scale = scale
         self.verbose = verbose
         self._original_shape = None
+
+        if scale is None:
+            self.scale = None
+            return
+
+        # Convert scale to a NumPy array (ensures consistency)
+        scale = np.atleast_1d(scale).astype(np.float64)
+
+        # Validate scale values
+        if not np.issubdtype(scale.dtype, np.number):
+            raise TypeError(f"Scale contains non-numeric values: {scale}")
+
+        # Check if scaling is effectively identity (1.0 in all dimensions)
+        if np.allclose(scale, 1.0, atol=1e-3):
+            self.scale = None
+        else:
+            self.scale = scale
 
     def scale_input(self, input_volume, is_segmentation=False):
         if self.scale is None:
