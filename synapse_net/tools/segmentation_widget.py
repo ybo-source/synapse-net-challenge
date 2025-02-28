@@ -120,7 +120,12 @@ class SegmentationWidget(BaseWidget):
         model_widget = QWidget()
         title_label = QLabel("Select Model:")
 
-        models = ["- choose -"] + list(_get_model_registry().urls.keys())
+        # Exclude the models that are only offered through the CLI and not in the plugin.
+        model_list = set(_get_model_registry().urls.keys())
+        excluded_models = ["vesicles_2d_maus", "vesicles_3d_endbulb", "vesicles_3d_innerear"]
+        model_list = [name for name in model_list if name not in excluded_models]
+
+        models = ["- choose -"] + model_list
         self.model_selector = QComboBox()
         self.model_selector.addItems(models)
         # Create a layout and add the title label and combo box

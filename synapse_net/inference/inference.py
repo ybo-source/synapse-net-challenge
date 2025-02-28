@@ -31,6 +31,10 @@ def _get_model_registry():
         "vesicles_2d": "eb0b74f7000a0e6a25b626078e76a9452019f2d1ea6cf2033073656f4f055df1",
         "vesicles_3d": "b329ec1f57f305099c984fbb3d7f6ae4b0ff51ec2fa0fa586df52dad6b84cf29",
         "vesicles_cryo": "782f5a21c3cda82c4e4eaeccc754774d5aaed5929f8496eb018aad7daf91661b",
+        # Additional models that are only available in the CLI, not in the plugin model selection.
+        "vesicles_2d_maus": "01506895df6343fc33ffc9c9eb3f975bf42eb4eaaaf4848bac83b57f1b46e460",
+        "vesicles_3d_endbulb": "8582c7e3e5f16ef2bf34d6f9e34644862ca3c76835c9e7d44475c9dd7891d228",
+        "vesicles_3d_innerear": "924f0f7cfb648a3a6931c1d48d8b1fdc6c0c0d2cb3330fe2cae49d13e7c3b69d",
     }
     urls = {
         "active_zone": "https://owncloud.gwdg.de/index.php/s/zvuY342CyQebPsX/download",
@@ -42,6 +46,10 @@ def _get_model_registry():
         "vesicles_2d": "https://owncloud.gwdg.de/index.php/s/d72QIvdX6LsgXip/download",
         "vesicles_3d": "https://owncloud.gwdg.de/index.php/s/A425mkAOSqePDhx/download",
         "vesicles_cryo": "https://owncloud.gwdg.de/index.php/s/e2lVdxjCJuZkLJm/download",
+        # Additional models that are only available in the CLI, not in the plugin model selection.
+        "vesicles_2d_maus": "https://owncloud.gwdg.de/index.php/s/sZ8woLr0zs5zOpv/download",
+        "vesicles_3d_endbulb": "https://owncloud.gwdg.de/index.php/s/16tmnWrEDpYIMzU/download",
+        "vesicles_3d_innerear": "https://owncloud.gwdg.de/index.php/s/UFUCYivsCxrqISX/download",
     }
     cache_dir = get_cache_dir()
     models = pooch.create(
@@ -108,6 +116,10 @@ def get_model_training_resolution(model_type: str) -> Dict[str, float]:
         "vesicles_2d": {"x": 1.35, "y": 1.35},
         "vesicles_3d": {"x": 1.35, "y": 1.35, "z": 1.35},
         "vesicles_cryo": {"x": 1.35, "y": 1.35, "z": 0.88},
+        # TODO add the correct resolutions, these are the resolutions of the source models.
+        "vesicles_2d_maus": {"x": 1.35, "y": 1.35},
+        "vesicles_3d_endbulb": {"x": 1.35, "y": 1.35, "z": 1.35},
+        "vesicles_3d_innerear": {"x": 1.35, "y": 1.35, "z": 1.35},
     }
     return resolutions[model_type]
 
