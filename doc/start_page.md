@@ -47,7 +47,7 @@ pip install -e .
 ```
 
 Now you can use all SynapseNet features. From now on, just activate the environment via
-```
+```bash
 conda activate synapse-net
 ```
 to use them.
@@ -58,6 +58,19 @@ to use them.
 
 > Note: If you have issues with the CUDA version then install a PyTorch that matches your nvidia drivers. See [pytorch.org](https://pytorch.org/) for details.
 
+### Updating SynapseNet
+
+If you have installed SynapseNet following the instructions above then you can update it like this:
+- Go to the foloder where you have downloaded SyanapseNet in a terminal, e.g. via `cd synapase-net`
+- Then get the latest changes via git:
+```bash
+git pull origin main
+```
+- And rerun the pip installation:
+```bash
+pip install -e .
+```
+After this SynapseNet will be up-to-date and you can use the latest features!
 
 ## Segmentation Models
 
