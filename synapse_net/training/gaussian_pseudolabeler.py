@@ -77,7 +77,7 @@ class GaussianPseudoLabeler:
                 #bounds=(bounds)
             )
             amp, x0, y0, z0, sx, sy, sz = popt
-            print(f"Fit succeeded at {peak_coord}: amp={amp:.3f}, sigmas=({sx:.2f},{sy:.2f},{sz:.2f})")
+            #print(f"Fit succeeded at {peak_coord}: amp={amp:.3f}, sigmas=({sx:.2f},{sy:.2f},{sz:.2f})")
             
             if (amp < self.min_amp or 
                 sx > self.max_sigma or 
@@ -89,7 +89,7 @@ class GaussianPseudoLabeler:
 
             return (z_start + z0, y_start + y0, x_start + x0, sz, sy, sx)
         except (RuntimeError, ValueError) as e:
-            print(f"Fit failed at {peak_coord}: {e}")
+            #print(f"Fit failed at {peak_coord}: {e}")
             return None
 
     def _compute_gaussian_mask(self, data: np.ndarray):
@@ -154,7 +154,7 @@ class GaussianPseudoLabeler:
             
             label_mask = gaussian_mask.bool() | torch.from_numpy(background_mask)
             label_mask = label_mask.to(pseudo_labels.device)
-            label_mask = gaussian_mask.bool()
+            #label_mask = gaussian_mask.bool()
             while label_mask.ndim < pseudo_labels.ndim:
                 label_mask = label_mask.unsqueeze(0)
         
